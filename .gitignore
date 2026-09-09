@@ -1,0 +1,81 @@
+# Microsoft Office temporary lock files
+~$*
+
+# Android and Gradle generated files
+.gradle/
+**/build/
+local.properties
+*.jks
+*.keystore
+
+# IDE and operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local document/spreadsheet rendering dependencies and QA previews
+work/milestone-1.1/node_modules/
+work/**/doc-renders*/
+work/**/workbook-renders/
+work/**/qa-contact-sheets/
+work/**/qa-contact-sheet.*
+work/**/render-tools/
+
+# Temporary files
+*.tmp
+*.bak
+tmp/
+.qa_*/
+output/qa/
+.codex_review/
+tracker-runtime/
+**/node_modules/
+
+# Never commit credentials or local environment files
+**/.env
+**/.env.*
+!**/.env.example
+**/*credentials*.md
+**/*credentials*.json
+**/*secret*.json
+
+# Python backend generated and secret files
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.coverage
+htmlcov/
+.venv/
+backend/.env
+backend/*.db
+backend/**/*.db
+backend/backups/
+
+# Binary delivery artifacts belong in private GitHub Releases or the approved artifact store
+outputs/**/*.apk
+outputs/**/*.zip
+
+# Public-repository boundary: local/client-confidential delivery material
+/*.docx
+/*.pdf
+/*.xlsx
+/Elder Engagement Platform
+/option_b_production_ready_plan
+/Client_Requirements_and_Testing_Checklist.csv
+/Start_Agile_Tracker.cmd
+/.npmrc
+/agile-tracker/
+/backend/
+/docs/
+/output/
+/outputs/
+/work/
+/architecture/Architecture_Decisions_v0.1.md
+/architecture/diagrams/
+/api/openapi/amiko-v1.openapi.json
+/api/postman/Amiko_*.json
+/database/amiko_v1_schema.sql
+/tools/build_*.py

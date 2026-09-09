@@ -1,0 +1,66 @@
+name: Verify
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  public-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Check public repository boundary
+        shell: pwsh
+        run: ./tools/check_public_repository.ps1 -Tracked
+
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: api/contract-tests/package-lock.json
+      - name: Validate configuration contract
+        run: |
+          node tools/validate_engagement_config.mjs
+          node --test config/engagement/validation.test.mjs
+      - name: Validate REST contract
+        run: node tools/validate_engagement_openapi.mjs
+      - name: Validate database scope
+        run: node tools/validate_engagement_schema.mjs
+      - name: Install REST contract checks
+        working-directory: api/contract-tests
+        run: npm ci
+      - name: Run REST contract checks
+        working-directory: api/contract-tests
+        run: npm test
+
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            services/engagement-api/requirements.lock
+            services/engagement-api/requirements-dev.lock
+      - name: Install locked dependencies
+        working-directory: services/engagement-api
+        run: python -m pip install -r requirements.lock -r requirements-dev.lock
+      - name: Lint
+        working-directory: services/engagement-api
+        run: python -m ruff check app tests tools
+      - name: Test with coverage gate
+        working-directory: services/engagement-api
+        run: python -m pytest --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=90

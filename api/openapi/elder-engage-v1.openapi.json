@@ -1,0 +1,1086 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "Elder Engagement REST API",
+    "version": "0.1.2",
+    "summary": "Controlled Week 1 contract draft for Android, iOS, Contributor and Administrator clients",
+    "description": "This draft covers the Week 2 identity, session, profile and account-control foundation. It contains no production hostname, credential or personal data. Circles, content, moderation, feed and events will be added to the same v1 contract before the Week 4 interface freeze."
+  },
+  "x-contract-status": "pre-sprint-draft",
+  "x-implementation-status": "Contract-only draft. No listed operation is claimed callable until the matching backend commit is deployed and its smoke-test evidence is recorded.",
+  "x-planned-expansions": [
+    {
+      "trackerItems": ["EE-017", "EE-018", "EE-019", "EE-020", "EE-021", "EE-022", "EE-023"],
+      "target": "Week 4",
+      "status": "Not available in this draft",
+      "capabilities": ["circles", "content upload", "moderation", "feed", "events", "notification preferences"]
+    },
+    {
+      "trackerItems": ["EE-040", "EE-041", "EE-042"],
+      "target": "Week 12",
+      "status": "Not available in this draft",
+      "capabilities": ["live broadcast control", "recording", "replay"]
+    }
+  ],
+  "x-client-error-actions": {
+    "ACCESS_TOKEN_EXPIRED": "Attempt one serialized refresh; if refresh fails, return to sign-in.",
+    "INVALID_REFRESH_TOKEN": "Delete local tokens and return to sign-in without retrying the same token.",
+    "REFRESH_OUTCOME_UNKNOWN": "Do not retry the same refresh token. Delete local tokens and return to sign-in because this draft defines no safe session-status recovery operation.",
+    "SESSION_REVOKED": "Delete local tokens and return to sign-in.",
+    "REFRESH_TOKEN_REUSED": "Delete all local tokens and return to sign-in because the token family is revoked.",
+    "ACCOUNT_SUSPENDED": "Delete local tokens, stop protected requests and show the client-approved support route.",
+    "PROFILE_NOT_PROVISIONED": "Stop sign-in and show the client-approved contact route because an Administrator must create the profile first.",
+    "MFA_REQUIRED": "Prompt the authorised staff user for the configured second factor and retry once.",
+    "RATE_LIMITED": "Wait for the Retry-After duration before retrying."
+  },
+  "x-http-status-by-error-code": {
+    "INVALID_REQUEST": 400,
+    "VALIDATION_FAILED": 400,
+    "AUTHENTICATION_FAILED": 401,
+    "ACCESS_TOKEN_EXPIRED": 401,
+    "INVALID_REFRESH_TOKEN": 401,
+    "SESSION_REVOKED": 401,
+    "REFRESH_TOKEN_REUSED": 409,
+    "REFRESH_OUTCOME_UNKNOWN": 409,
+    "ACCOUNT_SUSPENDED": 403,
+    "PROFILE_NOT_PROVISIONED": 403,
+    "MFA_REQUIRED": 403,
+    "FORBIDDEN": 403,
+    "NOT_FOUND": 404,
+    "CONFLICT": 409,
+    "RATE_LIMITED": 429,
+    "DEPENDENCY_UNAVAILABLE": 503,
+    "INTERNAL_ERROR": 500,
+    "PAYLOAD_TOO_LARGE": 413,
+    "METHOD_NOT_ALLOWED": 405
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8000",
+      "description": "Local development only; client-owned staging origin is pending"
+    }
+  ],
+  "tags": [
+    { "name": "Operations" },
+    { "name": "Authentication" },
+    { "name": "Profile" },
+    { "name": "Administration" }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["Operations"],
+        "operationId": "getHealth",
+        "summary": "Confirm that the process is running",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Process is running",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthResponse" }
+              }
+            }
+          },
+          "413": { "$ref": "#/components/responses/PayloadTooLarge" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "tags": ["Operations"],
+        "operationId": "getReadiness",
+        "summary": "Confirm that required dependencies are ready",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Service can accept traffic",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthResponse" }
+              }
+            }
+          },
+          "413": { "$ref": "#/components/responses/PayloadTooLarge" },
+          "500": { "$ref": "#/components/responses/InternalError" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/v1/auth/member/session": {
+      "post": {
+        "tags": ["Authentication"],
+        "operationId": "createMemberSession",
+        "summary": "Exchange a verified phone-identity token for a platform session",
+        "description": "The Android or iOS client completes phone one-time-password verification with the client-approved Firebase Authentication or Identity Platform project, then submits the resulting provider token. The backend accepts only the configured issuer and audience, requires a provider-verified phone identity, and resolves the Member role itself. The backend does not accept or log the one-time password. Version one follows the client's manual-profile rule: an Administrator must pre-provision a Member with the same phone number; otherwise PROFILE_NOT_PROVISIONED is returned.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MemberSessionRequest" },
+              "examples": { "syntheticMember": { "$ref": "#/components/examples/SyntheticMemberSessionRequest" } }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Session created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SessionResponse" },
+                "examples": { "syntheticSession": { "$ref": "#/components/examples/SyntheticSessionResponse" } }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/v1/auth/staff/session": {
+      "post": {
+        "tags": ["Authentication"],
+        "operationId": "createStaffSession",
+        "summary": "Create a Contributor or Administrator session",
+        "description": "The backend resolves Contributor or Administrator role from the stored account and never trusts a role supplied by the client. The stronger Administrator second-factor rule remains subject to client approval. The backend may require secondFactorCode according to account role and policy.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/StaffSessionRequest" },
+              "examples": { "syntheticContributor": { "$ref": "#/components/examples/SyntheticStaffSessionRequest" } }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Session created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SessionResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/v1/auth/refresh": {
+      "post": {
+        "tags": ["Authentication"],
+        "operationId": "refreshSession",
+        "summary": "Rotate a refresh token and issue a new access token",
+        "description": "Mobile clients must serialize refresh so only one request uses a token at a time. A successful response replaces both stored tokens atomically. After an uncertain network outcome, do not retry the same refresh token: clear local tokens and return to sign-in because this draft defines no safe recovery/status operation.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RefreshRequest" },
+              "examples": { "placeholder": { "$ref": "#/components/examples/SyntheticRefreshRequest" } }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token family rotated",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SessionResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/v1/auth/logout": {
+      "post": {
+        "tags": ["Authentication"],
+        "operationId": "logoutSession",
+        "summary": "Revoke the current session",
+        "responses": {
+          "204": { "description": "Session revoked; response has no body" },
+          "401": { "$ref": "#/components/responses/Unauthorised" }
+        }
+      }
+    },
+    "/v1/me/profile": {
+      "get": {
+        "tags": ["Profile"],
+        "operationId": "getMyProfile",
+        "summary": "Get the authenticated user's detailed profile",
+        "responses": {
+          "200": {
+            "description": "Profile returned",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Profile" },
+                "examples": {
+                  "syntheticMember": { "$ref": "#/components/examples/SyntheticProfile" }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "tags": ["Profile"],
+        "operationId": "updateMyProfile",
+        "summary": "Update permitted profile fields",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ProfileUpdate" },
+              "examples": { "languageAndWindow": { "$ref": "#/components/examples/SyntheticProfileUpdate" } }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Profile" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/v1/me/profile/photo-upload": {
+      "post": {
+        "tags": ["Profile"],
+        "operationId": "startMyProfilePhotoUpload",
+        "summary": "Create a short-lived profile-photo upload authorisation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PhotoUploadRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Upload authorised",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UploadAuthorisation" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/v1/me/profile/photo-upload/{uploadId}/complete": {
+      "post": {
+        "tags": ["Profile"],
+        "operationId": "completeMyProfilePhotoUpload",
+        "summary": "Validate the uploaded object and attach it to the profile",
+        "parameters": [
+          {
+            "name": "uploadId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Photo attached and profile returned",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Profile" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/v1/me/sessions": {
+      "get": {
+        "tags": ["Authentication"],
+        "operationId": "listMySessions",
+        "summary": "List active sessions for the authenticated account",
+        "responses": {
+          "200": {
+            "description": "Sessions returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/SessionSummary" }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorised" }
+        }
+      }
+    },
+    "/v1/me/sessions/{sessionId}": {
+      "delete": {
+        "tags": ["Authentication"],
+        "operationId": "revokeMySession",
+        "summary": "Revoke one session",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "Session revoked; response has no body" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/v1/admin/users": {
+      "get": {
+        "tags": ["Administration"],
+        "operationId": "listUsers",
+        "summary": "List users for authorised Administrators",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": { "type": "string", "maxLength": 512 }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 25 }
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "schema": { "$ref": "#/components/schemas/UserRole" }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": { "$ref": "#/components/schemas/UserStatus" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Users returned",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserPage" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "tags": ["Administration"],
+        "operationId": "createUserProfile",
+        "summary": "Manually create a detailed user profile",
+        "description": "Supports the client's manual profile-creation requirement. Final mandatory fields remain subject to the approved profile-field decision.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AdminCreateUserRequest" },
+              "examples": {
+                "member": { "$ref": "#/components/examples/SyntheticAdminCreateMember" },
+                "contributor": { "$ref": "#/components/examples/SyntheticAdminCreateContributor" }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User and profile created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Profile" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/v1/admin/users/{userId}/status": {
+      "patch": {
+        "tags": ["Administration"],
+        "operationId": "changeUserStatus",
+        "summary": "Suspend or reactivate a user",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/StatusChangeRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status changed and audited",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserSummary" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/v1/admin/users/{userId}/role": {
+      "patch": {
+        "tags": ["Administration"],
+        "operationId": "changeUserRole",
+        "summary": "Change a user role with an audit reason",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RoleChangeRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Role changed and audited",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserSummary" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "responses": {
+      "InvalidRequest": {
+        "description": "Request is invalid",
+        "content": {
+          "application/problem+json": {
+            "schema": { "$ref": "#/components/schemas/Problem" }
+          }
+        }
+      },
+      "Unauthorised": {
+        "description": "Authentication is missing or invalid",
+        "content": {
+          "application/problem+json": {
+            "schema": { "$ref": "#/components/schemas/Problem" }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "The authenticated user is not permitted to perform the operation",
+        "content": {
+          "application/problem+json": {
+            "schema": { "$ref": "#/components/schemas/Problem" }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "The resource is unavailable to the caller",
+        "content": {
+          "application/problem+json": {
+            "schema": { "$ref": "#/components/schemas/Problem" }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "The request conflicts with the current resource or session state",
+        "content": {
+          "application/problem+json": {
+            "schema": { "$ref": "#/components/schemas/Problem" }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Request rate exceeded; Retry-After is expressed in seconds",
+        "headers": {
+          "Retry-After": {
+            "required": true,
+            "schema": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "content": {
+          "application/problem+json": {
+            "schema": { "$ref": "#/components/schemas/Problem" }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "A required dependency is unavailable",
+        "headers": {
+          "Retry-After": {
+            "required": false,
+            "schema": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "content": {
+          "application/problem+json": {
+            "schema": { "$ref": "#/components/schemas/Problem" }
+          }
+        }
+      },
+      "PayloadTooLarge": {
+        "description": "The received request body exceeds the configured maximum",
+        "content": {
+          "application/problem+json": {
+            "schema": { "$ref": "#/components/schemas/Problem" }
+          }
+        }
+      },
+      "MethodNotAllowed": {
+        "description": "The HTTP method is not supported for this resource",
+        "headers": {
+          "Allow": {
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        },
+        "content": {
+          "application/problem+json": {
+            "schema": { "$ref": "#/components/schemas/Problem" }
+          }
+        }
+      },
+      "InternalError": {
+        "description": "An unexpected internal error occurred; sensitive details are not returned",
+        "content": {
+          "application/problem+json": {
+            "schema": { "$ref": "#/components/schemas/Problem" }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "UserRole": {
+        "type": "string",
+        "enum": ["member", "contributor", "administrator"]
+      },
+      "UserStatus": {
+        "type": "string",
+        "enum": ["invited", "active", "suspended", "deleted"]
+      },
+      "HealthResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status"],
+        "properties": {
+          "status": { "type": "string", "enum": ["ok"] }
+        }
+      },
+      "MemberSessionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["providerIdToken", "installationId", "platform"],
+        "properties": {
+          "providerIdToken": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 8192,
+            "writeOnly": true
+          },
+          "installationId": { "type": "string", "format": "uuid" },
+          "platform": { "type": "string", "enum": ["android", "ios"] },
+          "deviceName": { "type": "string", "maxLength": 120 }
+        }
+      },
+      "StaffSessionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["username", "password", "installationId", "platform"],
+        "properties": {
+          "username": { "type": "string", "minLength": 3, "maxLength": 120 },
+          "password": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 256,
+            "writeOnly": true
+          },
+          "secondFactorCode": {
+            "type": "string",
+            "pattern": "^[0-9]{6,8}$",
+            "writeOnly": true
+          },
+          "installationId": { "type": "string", "format": "uuid" },
+          "platform": { "type": "string", "enum": ["android", "ios", "web"] },
+          "deviceName": { "type": "string", "maxLength": 120 }
+        }
+      },
+      "RefreshRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["refreshToken"],
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 512,
+            "writeOnly": true
+          }
+        }
+      },
+      "SessionResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["accessToken", "refreshToken", "tokenType", "expiresInSeconds", "user"],
+        "properties": {
+          "accessToken": { "type": "string", "description": "Sensitive response value. Store only in operating-system protected storage and never log it." },
+          "refreshToken": { "type": "string", "description": "Sensitive rotating response value. Store only in operating-system protected storage and never log it." },
+          "tokenType": { "type": "string", "const": "Bearer" },
+          "expiresInSeconds": { "type": "integer", "minimum": 60, "maximum": 3600 },
+          "user": { "$ref": "#/components/schemas/UserSummary" }
+        }
+      },
+      "UserSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "role", "status", "displayName", "preferredLanguage", "createdAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "readOnly": true },
+          "role": { "$ref": "#/components/schemas/UserRole" },
+          "status": { "$ref": "#/components/schemas/UserStatus" },
+          "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "preferredLanguage": { "type": "string", "enum": ["bn", "hi"] },
+          "createdAt": { "type": "string", "format": "date-time", "readOnly": true },
+          "updatedAt": { "type": "string", "format": "date-time", "readOnly": true }
+        }
+      },
+      "BroadLocation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "countryCode": { "type": "string", "pattern": "^[A-Z]{2}$", "default": "IN" },
+          "state": { "type": "string", "maxLength": 120 },
+          "city": { "type": "string", "maxLength": 120 }
+        }
+      },
+      "Profile": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "role", "status", "displayName", "preferredLanguage", "createdAt", "updatedAt", "interests", "notificationWindow"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "readOnly": true },
+          "role": { "$ref": "#/components/schemas/UserRole" },
+          "status": { "$ref": "#/components/schemas/UserStatus" },
+          "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "preferredLanguage": { "type": "string", "enum": ["bn", "hi"] },
+          "createdAt": { "type": "string", "format": "date-time", "readOnly": true },
+          "updatedAt": { "type": "string", "format": "date-time", "readOnly": true },
+          "ageGroup": { "type": ["string", "null"], "maxLength": 64 },
+          "interests": {
+            "type": "array",
+            "maxItems": 30,
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1, "maxLength": 80 }
+          },
+          "broadLocation": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/BroadLocation" },
+              { "type": "null" }
+            ]
+          },
+          "photoUrl": { "type": ["string", "null"], "format": "uri", "readOnly": true },
+          "notificationWindow": { "$ref": "#/components/schemas/NotificationWindow" }
+        }
+      },
+      "NotificationWindow": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["enabled", "timeZone"],
+        "description": "If enabled is true, both local times are required. A start later than the end represents a window crossing midnight. The server validates timeZone against its supported IANA time-zone database. If enabled is false, both times must be null or omitted.",
+        "properties": {
+          "enabled": { "type": "boolean" },
+          "startLocalTime": { "type": ["string", "null"], "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$" },
+          "endLocalTime": { "type": ["string", "null"], "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$" },
+          "timeZone": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^(UTC|[A-Za-z_]+/[A-Za-z0-9_+\\-]+(?:/[A-Za-z0-9_+\\-]+)*)$",
+            "example": "Asia/Kolkata"
+          }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "enabled": { "const": true } }, "required": ["enabled"] },
+            "then": {
+              "required": ["startLocalTime", "endLocalTime"],
+              "properties": {
+                "startLocalTime": { "type": "string" },
+                "endLocalTime": { "type": "string" }
+              }
+            },
+            "else": {
+              "properties": {
+                "startLocalTime": { "type": "null" },
+                "endLocalTime": { "type": "null" }
+              }
+            }
+          }
+        ]
+      },
+      "ProfileUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "description": "This is a documented partial-update object carried as application/json, not JSON Merge Patch. Omitted fields remain unchanged. Explicit null clears only fields whose schema permits null. Arrays replace the complete previous array. notificationWindow replaces the complete nested object and must therefore contain enabled and timeZone plus both local times when enabled.",
+        "properties": {
+          "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "preferredLanguage": { "type": "string", "enum": ["bn", "hi"] },
+          "ageGroup": { "type": ["string", "null"], "maxLength": 64 },
+          "interests": {
+            "type": "array",
+            "maxItems": 30,
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1, "maxLength": 80 }
+          },
+          "broadLocation": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/BroadLocation" },
+              { "type": "null" }
+            ]
+          },
+          "notificationWindow": { "$ref": "#/components/schemas/NotificationWindow" }
+        }
+      },
+      "SessionSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "installationId", "platform", "current", "createdAt", "lastSeenAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "installationId": { "type": "string", "format": "uuid" },
+          "platform": { "type": "string", "enum": ["android", "ios", "web"] },
+          "deviceName": { "type": ["string", "null"] },
+          "current": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "lastSeenAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "UserPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "nextCursor"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/UserSummary" }
+          },
+          "nextCursor": { "type": ["string", "null"] }
+        }
+      },
+      "StatusChangeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status", "reason"],
+        "properties": {
+          "status": { "type": "string", "enum": ["active", "suspended"] },
+          "reason": { "type": "string", "minLength": 3, "maxLength": 500 }
+        }
+      },
+      "RoleChangeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "reason"],
+        "properties": {
+          "role": { "$ref": "#/components/schemas/UserRole" },
+          "reason": { "type": "string", "minLength": 3, "maxLength": 500 }
+        }
+      },
+      "AdminCreateUserRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Manual onboarding follows role-specific identity rules. A Member requires a non-null phone number matching the later verified provider identity and cannot use a username. A Contributor or Administrator requires a non-null username; an optional phone may also be recorded. Staff accounts are created with invited status and cannot authenticate until the separate EE-010 credential-activation flow is implemented and completed.",
+        "required": ["role", "displayName", "preferredLanguage", "interests", "notificationWindow"],
+        "properties": {
+          "role": { "$ref": "#/components/schemas/UserRole" },
+          "phoneE164": { "type": ["string", "null"], "pattern": "^\\+[1-9][0-9]{7,14}$" },
+          "username": { "type": ["string", "null"], "minLength": 3, "maxLength": 120 },
+          "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "preferredLanguage": { "type": "string", "enum": ["bn", "hi"] },
+          "ageGroup": { "type": ["string", "null"], "maxLength": 64 },
+          "interests": {
+            "type": "array",
+            "maxItems": 30,
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1, "maxLength": 80 }
+          },
+          "broadLocation": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/BroadLocation" },
+              { "type": "null" }
+            ]
+          },
+          "notificationWindow": { "$ref": "#/components/schemas/NotificationWindow" }
+        },
+        "oneOf": [
+          {
+            "required": ["phoneE164"],
+            "properties": {
+              "role": { "const": "member" },
+              "phoneE164": { "type": "string", "pattern": "^\\+[1-9][0-9]{7,14}$" },
+              "username": { "type": "null" }
+            }
+          },
+          {
+            "required": ["username"],
+            "properties": {
+              "role": { "enum": ["contributor", "administrator"] },
+              "username": { "type": "string", "minLength": 3, "maxLength": 120 }
+            }
+          }
+        ]
+      },
+      "PhotoUploadRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["contentType", "sizeBytes", "sha256"],
+        "properties": {
+          "contentType": { "type": "string", "enum": ["image/jpeg", "image/png", "image/webp"] },
+          "sizeBytes": { "type": "integer", "minimum": 1, "maximum": 5242880 },
+          "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" }
+        }
+      },
+      "UploadAuthorisation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["uploadId", "uploadUrl", "method", "requiredHeaders", "expiresAt"],
+        "properties": {
+          "uploadId": { "type": "string", "format": "uuid" },
+          "uploadUrl": { "type": "string", "format": "uri", "description": "Sensitive short-lived value that must not be logged." },
+          "method": { "type": "string", "const": "PUT" },
+          "requiredHeaders": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          },
+          "expiresAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "title", "status", "code", "traceId"],
+        "properties": {
+          "type": { "type": "string", "format": "uri-reference" },
+          "title": { "type": "string", "maxLength": 200 },
+          "status": { "type": "integer", "minimum": 400, "maximum": 599 },
+          "detail": { "type": "string", "maxLength": 1000 },
+          "code": { "$ref": "#/components/schemas/ErrorCode" },
+          "traceId": { "type": "string", "minLength": 8, "maxLength": 128 },
+          "retryable": { "type": "boolean", "default": false },
+          "fieldErrors": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["field", "code"],
+              "properties": {
+                "field": { "type": "string", "maxLength": 200 },
+                "code": { "type": "string", "maxLength": 64 }
+              }
+            }
+          }
+        }
+      },
+      "ErrorCode": {
+        "type": "string",
+        "enum": [
+          "INVALID_REQUEST",
+          "VALIDATION_FAILED",
+          "AUTHENTICATION_FAILED",
+          "ACCESS_TOKEN_EXPIRED",
+          "INVALID_REFRESH_TOKEN",
+          "REFRESH_OUTCOME_UNKNOWN",
+          "SESSION_REVOKED",
+          "REFRESH_TOKEN_REUSED",
+          "ACCOUNT_SUSPENDED",
+          "PROFILE_NOT_PROVISIONED",
+          "MFA_REQUIRED",
+          "FORBIDDEN",
+          "NOT_FOUND",
+          "CONFLICT",
+          "RATE_LIMITED",
+          "DEPENDENCY_UNAVAILABLE",
+          "INTERNAL_ERROR",
+          "PAYLOAD_TOO_LARGE",
+          "METHOD_NOT_ALLOWED"
+        ]
+      }
+    },
+    "examples": {
+      "SyntheticMemberSessionRequest": {
+        "summary": "Synthetic provider-token exchange; token is not a real credential",
+        "value": {
+          "providerIdToken": "synthetic-provider-token-not-a-real-secret",
+          "installationId": "22222222-2222-4222-8222-222222222222",
+          "platform": "ios",
+          "deviceName": "iOS contract-test device"
+        }
+      },
+      "SyntheticStaffSessionRequest": {
+        "summary": "Synthetic Contributor sign-in; password is a non-working placeholder",
+        "value": {
+          "username": "synthetic.contributor",
+          "password": "not-a-real-password-value",
+          "installationId": "33333333-3333-4333-8333-333333333333",
+          "platform": "ios",
+          "deviceName": "iOS contract-test device"
+        }
+      },
+      "SyntheticRefreshRequest": {
+        "summary": "Non-working refresh-token placeholder",
+        "value": { "refreshToken": "synthetic-refresh-token-not-a-real-secret-value" }
+      },
+      "SyntheticSessionResponse": {
+        "summary": "Synthetic response; token strings are not usable credentials",
+        "value": {
+          "accessToken": "synthetic-access-token-not-a-real-secret",
+          "refreshToken": "synthetic-refresh-token-not-a-real-secret-value",
+          "tokenType": "Bearer",
+          "expiresInSeconds": 900,
+          "user": {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "role": "member",
+            "status": "active",
+            "displayName": "Test Member",
+            "preferredLanguage": "bn",
+            "createdAt": "2026-09-09T09:00:00Z",
+            "updatedAt": "2026-09-09T09:00:00Z"
+          }
+        }
+      },
+      "SyntheticProfileUpdate": {
+        "summary": "Replace preferred language and complete notification window",
+        "value": {
+          "preferredLanguage": "hi",
+          "notificationWindow": {
+            "enabled": true,
+            "startLocalTime": "20:00",
+            "endLocalTime": "08:00",
+            "timeZone": "Asia/Kolkata"
+          }
+        }
+      },
+      "SyntheticAdminCreateMember": {
+        "summary": "Pre-provision a synthetic Member",
+        "value": {
+          "role": "member",
+          "phoneE164": "+919999999901",
+          "displayName": "Synthetic Member",
+          "preferredLanguage": "bn",
+          "interests": ["music"],
+          "notificationWindow": { "enabled": false, "timeZone": "Asia/Kolkata" }
+        }
+      },
+      "SyntheticAdminCreateContributor": {
+        "summary": "Create an invited synthetic Contributor profile",
+        "value": {
+          "role": "contributor",
+          "username": "synthetic.contributor",
+          "displayName": "Synthetic Contributor",
+          "preferredLanguage": "hi",
+          "interests": ["community"],
+          "notificationWindow": { "enabled": false, "timeZone": "Asia/Kolkata" }
+        }
+      },
+      "SyntheticProfile": {
+        "summary": "Synthetic Bengali-speaking Member",
+        "value": {
+          "id": "11111111-1111-4111-8111-111111111111",
+          "role": "member",
+          "status": "active",
+          "displayName": "Test Member",
+          "preferredLanguage": "bn",
+          "createdAt": "2026-09-09T09:00:00Z",
+          "updatedAt": "2026-09-09T09:00:00Z",
+          "ageGroup": "65-74",
+          "interests": ["music", "community"],
+          "broadLocation": {
+            "countryCode": "IN",
+            "state": "West Bengal",
+            "city": "Kolkata"
+          },
+          "photoUrl": null,
+          "notificationWindow": {
+            "enabled": true,
+            "startLocalTime": "09:00",
+            "endLocalTime": "20:00",
+            "timeZone": "Asia/Kolkata"
+          }
+        }
+      }
+    }
+  },
+  "security": [{ "BearerAuth": [] }]
+}

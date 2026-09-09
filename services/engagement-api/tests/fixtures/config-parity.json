@@ -1,0 +1,20 @@
+{
+  "requiredCoreSecretRefs": [
+    "EE_DATABASE_URL_SECRET_REF",
+    "EE_SESSION_SIGNING_KEY_SECRET_REF",
+    "EE_REFRESH_TOKEN_PEPPER_SECRET_REF",
+    "EE_FIELD_ENCRYPTION_KEY_SECRET_REF"
+  ],
+  "cases": [
+    {
+      "name": "all core references populated",
+      "valid": true,
+      "env": "EE_ENVIRONMENT=development\nEE_APP_NAME=Elder Engage Local\nEE_API_PREFIX=/v1\nEE_LOG_LEVEL=INFO\nEE_GCP_PROJECT_ID=example-development-project\nEE_GCP_REGION=asia-south1\nEE_PUBLIC_API_ORIGIN=http://127.0.0.1:8000\nEE_TRUSTED_HOSTS=127.0.0.1,localhost,testserver\nEE_CORS_ORIGINS=http://127.0.0.1:3000\nEE_CLOUD_SQL_INSTANCE=example-development-project:asia-south1:example-postgres\nEE_DATABASE_URL_SECRET_REF=projects/example-development-project/secrets/ee-database-url/versions/latest\nEE_RATE_LIMIT_STORE=memory\nEE_REDIS_URL_SECRET_REF=\nEE_SESSION_SIGNING_KEY_SECRET_REF=projects/example-development-project/secrets/ee-session-signing-key/versions/latest\nEE_REFRESH_TOKEN_PEPPER_SECRET_REF=projects/example-development-project/secrets/ee-refresh-token-pepper/versions/latest\nEE_FIELD_ENCRYPTION_KEY_SECRET_REF=projects/example-development-project/secrets/ee-field-encryption-key/versions/latest\nEE_MEMBER_IDENTITY_PROVIDER=mock\nEE_FIREBASE_PROJECT_ID=\nEE_MEMBER_TOKEN_AUDIENCE=\nEE_UPLOADS_BUCKET=example-development-quarantine\nEE_APPROVED_MEDIA_BUCKET=example-development-approved-media\nEE_UPLOAD_SIGNER_SERVICE_ACCOUNT=ee-upload-signer@example-development-project.iam.gserviceaccount.com\nEE_UPLOAD_MAX_BYTES=10485760\nEE_UPLOAD_ALLOWED_MIME_TYPES=video/mp4\nEE_UPLOAD_AUTHORIZATION_SECONDS=300\nEE_FCM_ENABLED=false\nEE_FCM_PROJECT_ID=\nEE_YOUTUBE_ENABLED=false\nEE_YOUTUBE_API_KEY_SECRET_REF=\nEE_MEET_MODE=disabled\nEE_MEET_OAUTH_CLIENT_SECRET_REF=\nEE_BROADCAST_PROVIDER=disabled\nEE_AGORA_APP_ID=\nEE_AGORA_APP_CERTIFICATE_SECRET_REF=\nEE_ACCESS_TOKEN_MINUTES=10\nEE_REFRESH_TOKEN_DAYS=30"
+    },
+    {
+      "name": "empty database reference",
+      "valid": false,
+      "env": "EE_ENVIRONMENT=development\nEE_APP_NAME=Elder Engage Local\nEE_API_PREFIX=/v1\nEE_LOG_LEVEL=INFO\nEE_GCP_PROJECT_ID=example-development-project\nEE_GCP_REGION=asia-south1\nEE_PUBLIC_API_ORIGIN=http://127.0.0.1:8000\nEE_TRUSTED_HOSTS=127.0.0.1,localhost,testserver\nEE_CORS_ORIGINS=http://127.0.0.1:3000\nEE_CLOUD_SQL_INSTANCE=instance\nEE_DATABASE_URL_SECRET_REF=\nEE_RATE_LIMIT_STORE=memory\nEE_REDIS_URL_SECRET_REF=\nEE_SESSION_SIGNING_KEY_SECRET_REF=projects/example-development-project/secrets/session/versions/latest\nEE_REFRESH_TOKEN_PEPPER_SECRET_REF=projects/example-development-project/secrets/refresh/versions/latest\nEE_FIELD_ENCRYPTION_KEY_SECRET_REF=projects/example-development-project/secrets/encryption/versions/latest\nEE_MEMBER_IDENTITY_PROVIDER=mock\nEE_FIREBASE_PROJECT_ID=\nEE_MEMBER_TOKEN_AUDIENCE=\nEE_UPLOADS_BUCKET=quarantine\nEE_APPROVED_MEDIA_BUCKET=approved\nEE_UPLOAD_SIGNER_SERVICE_ACCOUNT=ee-upload-signer@example-development-project.iam.gserviceaccount.com\nEE_UPLOAD_MAX_BYTES=10485760\nEE_UPLOAD_ALLOWED_MIME_TYPES=video/mp4\nEE_UPLOAD_AUTHORIZATION_SECONDS=300\nEE_FCM_ENABLED=false\nEE_FCM_PROJECT_ID=\nEE_YOUTUBE_ENABLED=false\nEE_YOUTUBE_API_KEY_SECRET_REF=\nEE_MEET_MODE=disabled\nEE_MEET_OAUTH_CLIENT_SECRET_REF=\nEE_BROADCAST_PROVIDER=disabled\nEE_AGORA_APP_ID=\nEE_AGORA_APP_CERTIFICATE_SECRET_REF=\nEE_ACCESS_TOKEN_MINUTES=10\nEE_REFRESH_TOKEN_DAYS=30"
+    }
+  ]
+}
