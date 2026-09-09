@@ -1,5 +1,7 @@
 # Elder Engagement Platform
 
+[![Verify](https://github.com/Anit0607/elder-engagement-platform/actions/workflows/verify.yml/badge.svg)](https://github.com/Anit0607/elder-engagement-platform/actions/workflows/verify.yml)
+
 Public engineering repository for the Elder Engagement Platform. It contains the current backend foundation, REST contract, database draft, configuration contract and technical architecture.
 
 ## Current status

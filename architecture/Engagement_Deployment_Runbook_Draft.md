@@ -143,8 +143,8 @@ No evidence record may contain tokens, personal data, secret values, signed stor
 | Architecture and release sequence | Drafted locally |
 | Current engagement schema | Drafted; static scope check passed |
 | Week 2 REST contract | Local draft package independently reviewed; runtime implementation remains pending |
-| GitHub repository | Public repository created under the Project Manager account; first audited baseline pending |
-| GitHub deployment pipeline | Planned; Google Cloud connection remains pending |
+| GitHub repository | Public repository created under the Project Manager account; audited baseline pushed to `main` |
+| GitHub verification pipeline | Public-boundary, contract and backend jobs passed; Google Cloud deployment stage remains pending |
 | Google Cloud resources | Not created; client project/region/access not provided |
 | PostgreSQL migration execution | Not run for current schema; no approved runtime available |
 | Cloud smoke test, monitoring and rollback | Not run; dependent on deployed client environment |
