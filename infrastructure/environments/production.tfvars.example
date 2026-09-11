@@ -1,0 +1,16 @@
+environment          = "production"
+project_id           = "replace-with-production-project-id"
+region               = "replace-with-approved-region"
+billing_account_id   = "replace-locally-never-commit"
+state_bucket_name    = "replace-with-globally-unique-state-bucket"
+github_owner         = "replace-with-github-owner"
+github_repository    = "replace-with-repository-name"
+github_owner_id      = "replace-with-numeric-owner-id"
+github_repository_id = "replace-with-numeric-repository-id"
+monthly_budget_units = 25000
+budget_currency      = "USD"
+database_tier        = "db-custom-2-7680"
+database_disk_gb     = 50
+environment_isolation_acknowledged = true
+deploy_application   = false
+allow_unauthenticated = false

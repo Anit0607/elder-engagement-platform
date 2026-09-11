@@ -1,12 +1,19 @@
 [CmdletBinding()]
 param(
-    [switch]$Tracked
+    [switch]$Tracked,
+    [switch]$WorkingTree
 )
 
 $ErrorActionPreference = 'Stop'
 
+if ($Tracked -and $WorkingTree) {
+    throw 'Choose either -Tracked or -WorkingTree, not both.'
+}
+
 $staged = if ($Tracked) {
     @(git ls-files)
+} elseif ($WorkingTree) {
+    @(@(git diff --name-only HEAD --diff-filter=ACMR) + @(git ls-files --others --exclude-standard) | Sort-Object -Unique)
 } else {
     @(git diff --cached --name-only --diff-filter=ACMR)
 }
@@ -14,7 +21,7 @@ if ($LASTEXITCODE -ne 0) {
     throw 'Unable to read the Git staging area.'
 }
 if ($staged.Count -eq 0) {
-    throw "No $($(if ($Tracked) { 'tracked' } else { 'staged' })) files were found."
+    throw "No $($(if ($Tracked) { 'tracked' } elseif ($WorkingTree) { 'working-tree' } else { 'staged' })) files were found."
 }
 
 $allowed = @(
@@ -27,6 +34,7 @@ $allowed = @(
     '^architecture/(Engagement_Deployment_Runbook_Draft|Engagement_Platform_Architecture_v1|Schema_REST_Permission_Mapping)\.md$',
     '^config/engagement/',
     '^database/(ENGAGEMENT_SCHEMA_NOTES\.md|engagement_platform_v1_schema\.sql)$',
+    '^infrastructure/',
     '^services/engagement-api/',
     '^tools/(check_public_repository\.ps1|generate_engagement_postman\.mjs|validate_engagement_config\.mjs|validate_engagement_openapi\.mjs|validate_engagement_schema\.mjs)$'
 )
@@ -58,7 +66,9 @@ foreach ($path in $staged) {
         continue
     }
 
-    $content = if ($Tracked) {
+    $content = if ($WorkingTree) {
+        Get-Content -LiteralPath (Join-Path (Get-Location) $normalized)
+    } elseif ($Tracked) {
         git show "HEAD:$normalized"
     } else {
         git show ":$normalized"
@@ -80,5 +90,5 @@ if ($failures.Count -gt 0) {
     throw "Public repository check failed with $($failures.Count) finding(s)."
 }
 
-$source = if ($Tracked) { 'tracked' } else { 'staged' }
+$source = if ($Tracked) { 'tracked' } elseif ($WorkingTree) { 'working-tree' } else { 'staged' }
 Write-Host "Public repository check passed for $($staged.Count) $source file(s)."

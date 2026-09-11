@@ -34,6 +34,19 @@ tools-runtime/
 secure-runtime/
 **/node_modules/
 
+# Terraform runtime state and environment-specific values
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+*.backend.hcl
+!backend.hcl.example
+crash.log
+crash.*.log
+
 # Never commit credentials or local environment files
 **/.env
 **/.env.*

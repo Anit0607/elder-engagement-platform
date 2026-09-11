@@ -37,6 +37,8 @@ jobs:
         run: node tools/validate_engagement_openapi.mjs
       - name: Validate database scope
         run: node tools/validate_engagement_schema.mjs
+      - name: Validate infrastructure safety controls
+        run: npm test --prefix infrastructure
       - name: Install REST contract checks
         working-directory: api/contract-tests
         run: npm ci

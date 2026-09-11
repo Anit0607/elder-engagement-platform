@@ -15,6 +15,7 @@ This is a dependency-free Pre-Sprint foundation, not a production release. The h
 - `database/` — current PostgreSQL schema draft.
 - `architecture/` — current architecture, permission mapping and deployment runbook.
 - `config/engagement/` — non-secret local configuration example and validation.
+- `infrastructure/` — parameterised Google Cloud foundation, keyless GitHub identity and plan-first deployment controls.
 - `tools/` — contract, configuration and public-repository checks.
 
 ## Local checks
