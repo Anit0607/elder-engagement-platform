@@ -67,8 +67,14 @@ resource "google_cloud_run_v2_service" "api" {
         period_seconds        = 30
         failure_threshold     = 3
 
-        tcp_socket {
+        http_get {
+          path = "/health"
           port = 8080
+
+          http_headers {
+            name  = "Host"
+            value = local.cloud_run_hostname
+          }
         }
       }
 

@@ -46,7 +46,9 @@ assert.match(source, /startswith\(var\.container_image,\s*local\.approved_image_
 assert.match(source, /immutable_tags\s*=\s*true/, 'Artifact Registry tags must be immutable');
 assert.match(source, /var\.environment\s*==\s*"development"/, 'the current health-service candidate must be development-only');
 assert.match(source, /startup_probe\s*\{[\s\S]*?tcp_socket\s*\{/m, 'Cloud Run must have a startup probe');
-assert.match(source, /liveness_probe\s*\{[\s\S]*?tcp_socket\s*\{/m, 'Cloud Run must have a liveness probe');
+assert.match(source, /liveness_probe\s*\{[\s\S]*?http_get\s*\{[\s\S]*?path\s*=\s*"\/health"/m, 'Cloud Run liveness must call the HTTP health endpoint');
+assert.match(source, /http_headers\s*\{[\s\S]*?name\s*=\s*"Host"[\s\S]*?value\s*=\s*local\.cloud_run_hostname/m, 'Cloud Run liveness must use the configured trusted host');
+assert.doesNotMatch(source, /liveness_probe\s*\{[\s\S]*?tcp_socket\s*\{/m, 'Cloud Run does not support TCP liveness probes');
 assert.match(source, /container_port\s*=\s*8080/, 'Cloud Run and the container must agree on port 8080');
 assert.doesNotMatch(source, /cloudbuild\.googleapis\.com|google_cloudbuild_/, 'GitHub Actions is the approved builder; Cloud Build must not be enabled');
 assert.doesNotMatch(source, /local-exec|\.sql["']/, 'infrastructure planning must not execute an application schema');
