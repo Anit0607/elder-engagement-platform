@@ -30,6 +30,8 @@ tmp/
 output/qa/
 .codex_review/
 tracker-runtime/
+tools-runtime/
+secure-runtime/
 **/node_modules/
 
 # Never commit credentials or local environment files
