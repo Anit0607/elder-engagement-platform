@@ -38,3 +38,12 @@ def test_container_runtime_contract_is_cloud_run_compatible():
     assert "--port ${PORT}" in dockerfile
     assert "USER engagement" in dockerfile
     assert "COPY tests" not in dockerfile
+
+
+def test_candidate_smoke_request_uses_the_configured_trusted_host():
+    workflow_path = (
+        SERVICE_ROOT.parents[1] / ".github" / "workflows" / "build-development-candidate.yml"
+    )
+    workflow = workflow_path.read_text(encoding="utf-8")
+    assert "EE_TRUSTED_HOSTS=localhost" in workflow
+    assert "--header 'Host: localhost' http://127.0.0.1:18080/health" in workflow

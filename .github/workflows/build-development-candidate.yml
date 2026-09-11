@@ -146,7 +146,7 @@ jobs:
             -e EE_REFRESH_TOKEN_DAYS=30 \
             "$IMAGE@$DIGEST"
           for attempt in {1..20}; do
-            if response=$(curl --fail --silent --show-error http://127.0.0.1:18080/health); then
+            if response=$(curl --fail --silent --show-error --header 'Host: localhost' http://127.0.0.1:18080/health); then
               [[ "$response" == '{"status":"ok"}' ]]
               [[ "$(docker exec "$container" id -u)" != '0' ]]
               exit 0
