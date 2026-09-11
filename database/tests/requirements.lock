@@ -1,0 +1,2 @@
+# Test-only PostgreSQL driver. Do not add application runtime dependencies here.
+psycopg[binary]==3.3.5

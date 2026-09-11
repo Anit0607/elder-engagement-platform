@@ -2,7 +2,7 @@ resource "google_cloud_run_v2_service" "api" {
   count = var.deploy_application ? 1 : 0
 
   project             = var.project_id
-  name                = "${local.name_prefix}-api"
+  name                = local.cloud_run_service_name
   location            = var.region
   deletion_protection = var.environment == "production"
   ingress             = "INGRESS_TRAFFIC_ALL"
@@ -29,6 +29,11 @@ resource "google_cloud_run_v2_service" "api" {
     containers {
       image = coalesce(var.container_image, "invalid.invalid/requires-approved-image@sha256:0000000000000000000000000000000000000000000000000000000000000000")
 
+      ports {
+        name           = "http1"
+        container_port = 8080
+      }
+
       resources {
         limits = {
           cpu    = "1"
@@ -37,34 +42,34 @@ resource "google_cloud_run_v2_service" "api" {
         cpu_idle = true
       }
 
-      env {
-        name  = "EE_ENVIRONMENT"
-        value = var.environment
+      dynamic "env" {
+        for_each = local.cloud_run_environment
+        content {
+          name  = env.key
+          value = env.value
+        }
       }
 
-      env {
-        name  = "EE_GCP_PROJECT_ID"
-        value = var.project_id
+      startup_probe {
+        initial_delay_seconds = 0
+        timeout_seconds       = 3
+        period_seconds        = 5
+        failure_threshold     = 12
+
+        tcp_socket {
+          port = 8080
+        }
       }
 
-      env {
-        name  = "EE_GCP_REGION"
-        value = var.region
-      }
+      liveness_probe {
+        initial_delay_seconds = 10
+        timeout_seconds       = 3
+        period_seconds        = 30
+        failure_threshold     = 3
 
-      env {
-        name  = "EE_CLOUD_SQL_INSTANCE"
-        value = google_sql_database_instance.postgres.connection_name
-      }
-
-      env {
-        name  = "EE_UPLOADS_BUCKET"
-        value = google_storage_bucket.uploads.name
-      }
-
-      env {
-        name  = "EE_APPROVED_MEDIA_BUCKET"
-        value = google_storage_bucket.approved_media.name
+        tcp_socket {
+          port = 8080
+        }
       }
 
       volume_mounts {
@@ -83,8 +88,16 @@ resource "google_cloud_run_v2_service" "api" {
 
   lifecycle {
     precondition {
-      condition     = !var.deploy_application || (var.container_image != null && can(regex("@sha256:[0-9a-f]{64}$", var.container_image)))
-      error_message = "Cloud Run deployment requires an immutable image reference ending in @sha256:<64 lowercase hexadecimal characters>."
+      condition = !var.deploy_application || (
+        var.container_image != null &&
+        startswith(var.container_image, local.approved_image_prefix) &&
+        can(regex("@sha256:[0-9a-f]{64}$", var.container_image))
+      )
+      error_message = "Cloud Run requires an immutable engagement-api digest from this environment's approved Artifact Registry repository."
+    }
+    precondition {
+      condition     = !var.deploy_application || var.environment == "development"
+      error_message = "The current health-service deployment candidate is development-only."
     }
   }
 

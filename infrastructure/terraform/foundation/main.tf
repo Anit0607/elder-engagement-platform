@@ -26,6 +26,10 @@ resource "google_artifact_registry_repository" "containers" {
   format        = "DOCKER"
   labels        = local.common_labels
 
+  docker_config {
+    immutable_tags = true
+  }
+
   cleanup_policies {
     id     = "delete-untagged"
     action = "DELETE"
