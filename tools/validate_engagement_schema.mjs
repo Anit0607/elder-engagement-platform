@@ -5,6 +5,10 @@ import { fileURLToPath } from "node:url";
 const workspace = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const schemaPath = path.join(workspace, "database", "engagement_platform_v1_schema.sql");
 const sql = await readFile(schemaPath, "utf8");
+const concurrencyTest = await readFile(
+  path.join(workspace, "database", "tests", "test_staff_role_concurrency.py"),
+  "utf8",
+);
 const errors = [];
 
 const requiredTables = [
@@ -51,9 +55,33 @@ for (const requiredControl of [
   "viewer_cap integer",
   "trace_id varchar",
   "youtube_video_id",
+  "^[+][1-9][0-9]{7,14}$",
+  "UNIQUE NULLS NOT DISTINCT",
+  "circle_memberships_one_active_idx",
+  "staff_credentials_role_guard",
+  "app_users_staff_role_guard",
+  "FOR UPDATE",
 ]) {
   if (!sql.toLowerCase().includes(requiredControl.toLowerCase()))
     errors.push(`Required control is missing: ${requiredControl}`);
+}
+
+for (const forbiddenControl of [
+  "phone_e164 ~ '^\\\\+",
+  "PRIMARY KEY (circle_id, user_id)",
+  "staff_credentials_role_enforced CHECK",
+]) {
+  if (sql.toLowerCase().includes(forbiddenControl.toLowerCase()))
+    errors.push(`Unsafe inherited control found: ${forbiddenControl}`);
+}
+
+for (const requiredConcurrencyCase of [
+  "test_insert_waits_for_concurrent_demotion",
+  "test_demotion_waits_for_concurrent_insert",
+  "wait_event_type = 'Lock'",
+]) {
+  if (!concurrencyTest.includes(requiredConcurrencyCase))
+    errors.push(`Required staff-role concurrency case is missing: ${requiredConcurrencyCase}`);
 }
 
 const tableNames = [...sql.matchAll(/CREATE\s+TABLE\s+([a-z_][a-z0-9_]*)\s*\(/gi)].map(

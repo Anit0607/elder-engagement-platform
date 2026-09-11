@@ -31,7 +31,7 @@ CREATE TABLE app_users (
     phone_e164 IS NOT NULL OR username IS NOT NULL OR identity_provider_subject IS NOT NULL
   ),
   CONSTRAINT app_users_phone_shape CHECK (
-    phone_e164 IS NULL OR phone_e164 ~ '^\\+[1-9][0-9]{7,14}$'
+    phone_e164 IS NULL OR phone_e164 ~ '^[+][1-9][0-9]{7,14}$'
   ),
   CONSTRAINT app_users_deleted_state CHECK (
     (status = 'deleted' AND deleted_at IS NOT NULL) OR status <> 'deleted'
@@ -45,8 +45,51 @@ CREATE TABLE staff_credentials (
   second_factor_enabled boolean NOT NULL DEFAULT false,
   failed_attempts integer NOT NULL DEFAULT 0 CHECK (failed_attempts >= 0),
   locked_until timestamptz,
-  CONSTRAINT staff_credentials_role_enforced CHECK (length(password_hash) >= 20)
+  CONSTRAINT staff_credentials_password_hash_shape CHECK (length(password_hash) >= 20)
 );
+
+CREATE FUNCTION enforce_staff_credentials_user_role()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  target_role user_role;
+BEGIN
+  SELECT role
+    INTO target_role
+    FROM app_users
+   WHERE id = NEW.user_id
+     FOR UPDATE;
+
+  IF target_role IS NULL OR target_role NOT IN ('contributor', 'administrator') THEN
+    RAISE EXCEPTION 'staff credentials require a contributor or administrator account'
+      USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER staff_credentials_role_guard
+BEFORE INSERT OR UPDATE OF user_id ON staff_credentials
+FOR EACH ROW EXECUTE FUNCTION enforce_staff_credentials_user_role();
+
+CREATE FUNCTION prevent_staff_role_demotion()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW.role = 'member'
+     AND EXISTS (SELECT 1 FROM staff_credentials WHERE user_id = NEW.id) THEN
+    RAISE EXCEPTION 'remove staff credentials before changing this account to member'
+      USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER app_users_staff_role_guard
+BEFORE UPDATE OF role ON app_users
+FOR EACH ROW EXECUTE FUNCTION prevent_staff_role_demotion();
 
 CREATE TABLE user_profiles (
   user_id uuid PRIMARY KEY REFERENCES app_users(id) ON DELETE CASCADE,
@@ -97,12 +140,12 @@ CREATE TABLE circles (
 );
 
 CREATE TABLE circle_memberships (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   circle_id uuid NOT NULL REFERENCES circles(id) ON DELETE CASCADE,
   user_id uuid NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
   selected_by_user boolean NOT NULL DEFAULT true,
   joined_at timestamptz NOT NULL DEFAULT now(),
   left_at timestamptz,
-  PRIMARY KEY (circle_id, user_id),
   CONSTRAINT circle_memberships_time_order CHECK (left_at IS NULL OR left_at >= joined_at)
 );
 
@@ -152,7 +195,7 @@ CREATE TABLE content_audiences (
     (audience = 'circle' AND circle_id IS NOT NULL)
     OR (audience = 'all_members' AND circle_id IS NULL)
   ),
-  CONSTRAINT content_audiences_unique UNIQUE (content_item_id, audience, circle_id)
+  CONSTRAINT content_audiences_unique UNIQUE NULLS NOT DISTINCT (content_item_id, audience, circle_id)
 );
 
 CREATE TABLE moderation_decisions (
@@ -191,7 +234,7 @@ CREATE TABLE event_audiences (
     (audience = 'circle' AND circle_id IS NOT NULL)
     OR (audience = 'all_members' AND circle_id IS NULL)
   ),
-  CONSTRAINT event_audiences_unique UNIQUE (event_id, audience, circle_id)
+  CONSTRAINT event_audiences_unique UNIQUE NULLS NOT DISTINCT (event_id, audience, circle_id)
 );
 
 CREATE TABLE notification_preferences (
@@ -236,7 +279,7 @@ CREATE TABLE broadcast_audiences (
     (audience = 'circle' AND circle_id IS NOT NULL)
     OR (audience = 'all_members' AND circle_id IS NULL)
   ),
-  CONSTRAINT broadcast_audiences_unique UNIQUE (broadcast_id, audience, circle_id)
+  CONSTRAINT broadcast_audiences_unique UNIQUE NULLS NOT DISTINCT (broadcast_id, audience, circle_id)
 );
 
 CREATE TABLE recordings (
@@ -283,6 +326,8 @@ CREATE TABLE audit_events (
 
 CREATE INDEX auth_sessions_user_active_idx
   ON auth_sessions (user_id, expires_at DESC) WHERE revoked_at IS NULL;
+CREATE UNIQUE INDEX circle_memberships_one_active_idx
+  ON circle_memberships (circle_id, user_id) WHERE left_at IS NULL;
 CREATE INDEX circle_memberships_user_active_idx
   ON circle_memberships (user_id, joined_at DESC) WHERE left_at IS NULL;
 CREATE INDEX content_items_feed_idx
@@ -297,7 +342,7 @@ CREATE INDEX notification_deliveries_queue_idx
 CREATE INDEX audit_events_entity_idx ON audit_events (entity_type, entity_id, occurred_at DESC);
 
 COMMENT ON TABLE staff_credentials IS
-  'Only contributor/administrator rows are permitted by application authorization; PostgreSQL role enforcement will be added in the immutable migration after the final identity decision.';
+  'Database triggers allow credentials only for contributor/administrator accounts and prevent demotion while credentials exist.';
 COMMENT ON COLUMN content_items.youtube_video_id IS
   'Official YouTube identifier only. YouTube media is never copied into platform storage.';
 COMMENT ON COLUMN broadcasts.viewer_cap IS

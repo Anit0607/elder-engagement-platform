@@ -52,6 +52,17 @@ Use the guarded runner from the repository root:
 
 That command only creates a plan. Applying requires both `-Action Apply` and `-ConfirmApply APPLY-development`. A reviewed saved plan must be supplied for production.
 
+The separate development-candidate workflow tests the backend, publishes a provenance- and software-bill-of-materials-bearing candidate and smoke-tests the exact Artifact Registry digest. It does not deploy. Set `deploy_application=true` and copy only the reported digest into the ignored development values file, then review a new Terraform plan. After an authorised apply, verify the private service without exposing the identity token:
+
+```powershell
+.\infrastructure\scripts\Test-CloudRunHealth.ps1 `
+  -ProjectId replace-with-approved-project `
+  -Region replace-with-approved-region `
+  -ServiceName ee-development-api
+```
+
+The verifier resolves the service origin directly from Google Cloud, requests a short-lived token scoped to that exact origin, checks its audience and refuses redirects before validating the health response.
+
 ## Secret-value procedure
 
 Terraform creates these empty secret containers: database URL, session signing key, refresh-token pepper and field-encryption key. An authorised operator adds values without printing them, then records only the secret version identifier in private deployment evidence. Secret values must never enter Terraform variables, state, console output, GitHub variables or repository files.

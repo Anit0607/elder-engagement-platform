@@ -22,6 +22,18 @@ jobs:
 
   contracts:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-node@v7.0.0
@@ -37,6 +49,17 @@ jobs:
         run: node tools/validate_engagement_openapi.mjs
       - name: Validate database scope
         run: node tools/validate_engagement_schema.mjs
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: database/tests/requirements.lock
+      - name: Test database role guards on PostgreSQL 16
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: |
+          python -m pip install -r database/tests/requirements.lock
+          python database/tests/test_staff_role_concurrency.py
       - name: Validate infrastructure safety controls
         run: npm test --prefix infrastructure
       - name: Install REST contract checks
@@ -66,3 +89,8 @@ jobs:
       - name: Test with coverage gate
         working-directory: services/engagement-api
         run: python -m pytest --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=90
+      - name: Security and locked-dependency audit
+        working-directory: services/engagement-api
+        run: |
+          python -m bandit --quiet --recursive app
+          python -m pip_audit --requirement requirements.lock --disable-pip --no-deps

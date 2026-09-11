@@ -8,6 +8,11 @@ output "cloud_run_service" {
   value       = try(google_cloud_run_v2_service.api[0].name, null)
 }
 
+output "cloud_run_uri" {
+  description = "Cloud Run URI when application deployment is enabled."
+  value       = try(google_cloud_run_v2_service.api[0].uri, null)
+}
+
 output "database_connection_name" {
   description = "Cloud SQL connector name; this is not a credential."
   value       = google_sql_database_instance.postgres.connection_name

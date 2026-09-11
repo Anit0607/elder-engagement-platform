@@ -34,6 +34,7 @@ $allowed = @(
     '^architecture/(Engagement_Deployment_Runbook_Draft|Engagement_Platform_Architecture_v1|Schema_REST_Permission_Mapping)\.md$',
     '^config/engagement/',
     '^database/(ENGAGEMENT_SCHEMA_NOTES\.md|engagement_platform_v1_schema\.sql)$',
+    '^database/tests/(requirements\.lock|test_staff_role_concurrency\.py)$',
     '^infrastructure/',
     '^services/engagement-api/',
     '^tools/(check_public_repository\.ps1|generate_engagement_postman\.mjs|validate_engagement_config\.mjs|validate_engagement_openapi\.mjs|validate_engagement_schema\.mjs)$'
