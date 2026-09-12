@@ -246,3 +246,19 @@ variable "allow_unauthenticated" {
   type        = bool
   default     = false
 }
+
+variable "alert_notification_email" {
+  description = "Client-approved operational alert recipient. Keep the real address only in an ignored environment values file."
+  type        = string
+  default     = null
+  nullable    = true
+  sensitive   = true
+
+  validation {
+    condition = var.alert_notification_email == null ? true : can(regex(
+      "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+      var.alert_notification_email
+    ))
+    error_message = "alert_notification_email must be null or a valid email address."
+  }
+}

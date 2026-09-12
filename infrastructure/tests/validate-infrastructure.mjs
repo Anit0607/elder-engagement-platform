@@ -24,6 +24,7 @@ const migrationDockerfile = readFileSync(
   resolve(root, '..', 'database', 'Dockerfile'),
   'utf8'
 );
+const operationalAlertTester = read('scripts/Test-OperationalAlerts.ps1');
 const bootstrapTemplate = readFileSync(
   resolve(root, '..', 'database', 'bootstrap', 'V0001__establish_schema_ownership.sql.template'),
   'utf8'
@@ -56,6 +57,21 @@ assert.match(source, /point_in_time_recovery_enabled\s*=\s*true/);
 assert.match(source, /data_api_access\s*=\s*"DISALLOW_DATA_API"/, 'Cloud SQL Data API must be closed during normal operation');
 assert.match(source, /edition\s*=\s*"ENTERPRISE"/, 'shared-core development SQL must explicitly use Enterprise edition');
 assert.match(source, /google_billing_budget/, 'a project budget is mandatory');
+assert.match(source, /google_monitoring_uptime_check_config" "api_health"/, 'the deployed API requires an uptime check');
+assert.match(source, /service_agent_authentication\s*\{[\s\S]*?type\s*=\s*"OIDC_TOKEN"/m, 'the private API uptime check must authenticate');
+assert.match(source, /gcp-sa-monitoring-notification\.iam\.gserviceaccount\.com/, 'only the Google Monitoring service agent may invoke the private uptime check');
+assert.match(source, /google_monitoring_alert_policy" "api_unavailable"/, 'API availability must have an alert policy');
+assert.match(source, /REDUCE_COUNT_FALSE/, 'availability alerts must require failed checks');
+assert.match(source, /google_monitoring_alert_policy" "api_error_log"/, 'Cloud Run error logs must have an alert policy');
+assert.match(source, /severity>=ERROR/, 'the error alert must match error-or-higher log severity');
+assert.match(source, /alert_notification_email/, 'alerts must support a client-approved recipient');
+assert.doesNotMatch(source, /labels\s*=\s*\{[\s\S]*?email_address\s*=\s*"[^\"]+@/m, 'a real alert email must not be committed');
+assert.match(operationalAlertTester, /TEST-EE-007-development/, 'the live notification test requires explicit confirmation');
+assert.match(operationalAlertTester, /EE007_NOTIFICATION_TEST/, 'the notification test must use a recognisable synthetic event');
+assert.match(operationalAlertTester, /notificationChannels/, 'the notification test must reject policies without a recipient');
+assert.match(operationalAlertTester, /resource\.type=.*cloud_run_revision/, 'the synthetic event must match the protected Cloud Run error policy');
+assert.match(operationalAlertTester, /Ask the approved recipient to confirm/, 'human receipt remains an explicit acceptance gate');
+assert.doesNotMatch(operationalAlertTester, /@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/, 'the public notification test must not contain a real email address');
 assert.match(source, /billing_project\s*=\s*var\.project_id/, 'user credential API quota must be charged to the selected project');
 assert.match(source, /user_project_override\s*=\s*true/, 'Google provider must override the default user quota project');
 assert.match(source, /projects\/\$\{data\.google_project\.current\.number\}/, 'budget must filter by immutable project number');
@@ -235,6 +251,7 @@ for (const environment of ['development', 'staging', 'production']) {
   const example = read(`environments/${environment}.tfvars.example`);
   assert.match(example, new RegExp(`environment\\s*=\\s*"${environment}"`));
   assert.match(example, /public_api_origin\s*=\s*null/, `${environment} example must not guess a service origin`);
+  assert.match(example, /alert_notification_email\s*=\s*null/, `${environment} example must not contain an alert recipient`);
   assert.match(example, /deploy_database_migration_job\s*=\s*false/, `${environment} example must keep the migration job disabled`);
   assert.match(example, /database_migration_image\s*=\s*null/, `${environment} example must not guess a migration image`);
   assert.match(example, /database_migration_source_revision\s*=\s*null/, `${environment} example must not guess a source revision`);
