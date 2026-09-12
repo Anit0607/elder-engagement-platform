@@ -1,10 +1,11 @@
 locals {
-  name_prefix            = "ee-${var.environment}"
-  cloud_run_service_name = "ee-${var.environment}-api"
-  bootstrap_api_origin   = "https://${local.cloud_run_service_name}.bootstrap.invalid"
-  cloud_run_origin       = coalesce(var.public_api_origin, local.bootstrap_api_origin)
-  cloud_run_hostname     = trimprefix(local.cloud_run_origin, "https://")
-  approved_image_prefix  = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.containers.repository_id}/engagement-api@sha256:"
+  name_prefix                     = "ee-${var.environment}"
+  cloud_run_service_name          = "ee-${var.environment}-api"
+  bootstrap_api_origin            = "https://${local.cloud_run_service_name}.bootstrap.invalid"
+  cloud_run_origin                = coalesce(var.public_api_origin, local.bootstrap_api_origin)
+  cloud_run_hostname              = trimprefix(local.cloud_run_origin, "https://")
+  approved_image_prefix           = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.containers.repository_id}/engagement-api@sha256:"
+  approved_migration_image_prefix = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.containers.repository_id}/engagement-migration@sha256:"
 
   common_labels = {
     application = "elder-engage"

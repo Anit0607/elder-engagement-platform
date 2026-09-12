@@ -91,12 +91,13 @@ jobs:
           cache-dependency-path: |
             services/engagement-api/requirements.lock
             services/engagement-api/requirements-dev.lock
+            database/requirements.lock
       - name: Install locked dependencies
         working-directory: services/engagement-api
         run: python -m pip install -r requirements.lock -r requirements-dev.lock
       - name: Lint
         working-directory: services/engagement-api
-        run: python -m ruff check app tests tools
+        run: python -m ruff check app tests tools ../../database/migration_runner.py ../../tools/validate_database_migrations.py
       - name: Test with coverage gate
         working-directory: services/engagement-api
         run: python -m pytest --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=90
@@ -104,5 +105,7 @@ jobs:
         working-directory: services/engagement-api
         run: |
           python -m bandit --quiet --recursive app
+          python -m bandit --quiet ../../database/migration_runner.py
           python -m pip_audit --requirement requirements.lock --disable-pip --no-deps
           python -m pip_audit --requirement ../../database/tests/requirements.lock --disable-pip --no-deps
+          python -m pip_audit --requirement ../../database/requirements.lock --disable-pip --no-deps

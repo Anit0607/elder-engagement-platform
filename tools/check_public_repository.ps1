@@ -33,7 +33,7 @@ $allowed = @(
     '^api/postman/(Elder_Engage_Week2_Draft\.postman_collection\.json|README\.md)$',
     '^architecture/(Engagement_Deployment_Runbook_Draft|Engagement_Platform_Architecture_v1|Schema_REST_Permission_Mapping)\.md$',
     '^config/engagement/',
-    '^database/(ENGAGEMENT_SCHEMA_NOTES\.md|migration_runner\.py)$',
+    '^database/(Dockerfile|ENGAGEMENT_SCHEMA_NOTES\.md|migration_runner\.py|requirements\.lock)$',
     '^database/migrations/(manifest\.json|V[0-9]{4}__[a-z0-9_]+\.sql)$',
     '^database/tests/(requirements\.lock|test_migration_runner\.py|test_staff_role_concurrency\.py)$',
     '^infrastructure/',

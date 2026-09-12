@@ -19,7 +19,7 @@ This package defines an idempotent Google Cloud foundation without storing a rea
 - Cloud Run creation is off by default until an immutable reviewed image digest is provided.
 - A generated Cloud Run hostname is never guessed. The exact assigned origin is recorded in ignored environment values and in the protected GitHub development environment before acceptance.
 - A project-scoped monthly budget and threshold notifications are mandatory.
-- Infrastructure creates an empty application database only. It never executes the application schema or a data migration.
+- Infrastructure creates an empty application database and can optionally create a dormant migration job. Terraform never executes the application schema or starts the job.
 
 ## Layout
 
@@ -54,6 +54,14 @@ Use the guarded runner from the repository root:
 That command only creates a plan. Applying requires both `-Action Apply` and `-ConfirmApply APPLY-development`. A reviewed saved plan must be supplied for production.
 
 The separate development-candidate workflow tests the backend, publishes a provenance- and software-bill-of-materials-bearing candidate and smoke-tests the exact Artifact Registry digest. It does not deploy. Set `deploy_application=true` and copy only the reported digest into the ignored development values file, then review a new Terraform plan.
+
+The separate database-migration candidate workflow validates and audits the checksum-locked runner, publishes a dedicated immutable image with provenance and a software bill of materials, verifies that it runs as a non-root user and confirms that it refuses to start without an explicit mode. It does not connect to Cloud SQL, create a job or execute a migration.
+
+The Cloud Run migration job is also disabled by default. Creating the dormant job requires `deploy_database_migration_job=true`, its exact approved image digest and source revision, and two distinct client-approved schema names. The job has one task, no automatic retry and private network egress. No job-invoker permission or automatic execution token is defined. Running it remains a separate controlled change after the database bootstrap, backup and final migration plan are approved.
+
+The migration identity uses automatic Identity and Access Management database authentication. It is not permitted to read the application's password-style database connection secret.
+
+The federated GitHub identity has read-only Cloud Run discovery access plus invoke access on the health service only. It has no project-level Cloud Run developer role, because that broader role would also allow migration-job execution.
 
 For an initial private development bootstrap without an assigned URL, Terraform uses an invalid placeholder origin that cannot receive external traffic. After the service is created, copy its exact reported HTTPS origin into the ignored `public_api_origin` value and the protected GitHub `GCP_CLOUD_RUN_ORIGIN` environment variable, review a second plan, and apply it before acceptance. Non-development and unauthenticated deployments cannot use the placeholder.
 

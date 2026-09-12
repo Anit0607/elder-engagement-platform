@@ -1,6 +1,6 @@
 # Engagement database baseline
 
-Status: Sprint 1 checksum-locked migration candidate under EE-003. Its expanded migration tests are awaiting protected continuous-integration evidence, and it has not been applied to the client database.
+Status: Sprint 1 checksum-locked migration candidate under EE-003. PostgreSQL 16, rollback, rerun, concurrency, driver-compatibility and least-privilege checks pass in protected continuous integration. It has not been applied to the client database.
 
 `migrations/V0001__engagement_baseline.sql` is the canonical PostgreSQL 16 baseline for the approved engagement product. Its approved repository bytes are locked by `migrations/manifest.json`. `amiko_v1_schema.sql` belongs to the inherited booking/caregiver scope and is retained only as history.
 
