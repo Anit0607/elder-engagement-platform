@@ -51,4 +51,24 @@ The current Cloud Run configuration is deliberately development-only. It supplie
 
 A real local `docker build` remains pending until a Docker daemon is available.
 
+## Private development phone-login trial
+
+The operator-only trial reads fictional identities from the approved Google
+configuration and refuses missing test entries or a country mismatch. It checks
+wrong-code rejection, genuine Google phone proof, Android/iOS session exchange,
+repeat-account reuse, fake-proof rejection and private-service access. It prints
+only a credential-free result. It retains the fictional Member and development
+sessions; it never exercises real text-message delivery, Android Play Integrity,
+profile screens, refresh/logout or production acceptance.
+
+From this service directory, an authorised operator can run:
+
+```powershell
+.\.venv\Scripts\python.exe -m tools.test_development_member_login --project approved-development-project --region approved-region --confirm TEST-EE-009-development
+```
+
+The command uses the existing D-drive Cloud CLI/configuration and the existing
+development verifier identity. Do not paste tokens or codes into the terminal,
+chat or repository. A phone/login screen for client acceptance comes later.
+
 Do not copy `config/engagement/.env.example` into a staging or production deployment. It contains explicit non-operational development identifiers which secure-environment validation rejects.
