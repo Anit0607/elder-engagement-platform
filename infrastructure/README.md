@@ -69,6 +69,8 @@ The migration identity uses automatic Identity and Access Management database au
 
 The steady-state Cloud SQL configuration explicitly disables the Data API. After client approval and a fresh successful on-demand backup, `scripts/Invoke-DatabaseBootstrap.ps1` can open that authenticated administrative path for only the duration of the initial empty-schema setup. It uses the active named human Google identity, not a stored administrator password. The script creates a temporary Cloud SQL IAM user, executes the reviewed SQL template, disables the Data API first, removes the temporary user and verifies that public Internet Protocol access is still off. Cleanup runs after success or failure. The runner requires PowerShell 7.
 
+Member phone sign-in is controlled by `enable_identity_platform`. When enabled, Google Identity Platform accepts phone authentication, real messages are restricted to the explicitly approved country list, and fictional number/code pairs come only from an ignored environment file. Those testing pairs are never committed, must be rotated, and must not be built into the Android application. Android Firebase application registration and Play Integrity fingerprints remain a separate change after the signing configuration exists.
+
 The default action is a read-only safety plan. It accepts only an ignored Terraform backend file; project, region, instance, database, account names and repository identity are read from the protected Terraform state rather than entered by the operator:
 
 ```powershell

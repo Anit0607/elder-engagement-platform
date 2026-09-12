@@ -21,3 +21,6 @@ database_migration_schema = null
 public_api_origin     = null
 allow_unauthenticated = false
 alert_notification_email = null
+enable_identity_platform = false
+identity_test_phone_numbers = {}
+identity_sms_allowed_regions = ["IN"]
