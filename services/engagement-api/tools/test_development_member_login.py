@@ -124,11 +124,8 @@ def run_test(arguments):
     )
     if not re.fullmatch(r"https://[a-z0-9.-]+\.run\.app", origin):
         raise SafeTestFailure("Unexpected development Cloud Run origin")
-    gateway_token = cloud_cli(
-        "auth", "print-identity-token",
-        f"--impersonate-service-account=ee-development-github@{project}.iam.gserviceaccount.com",
-        f"--audiences={origin}",
-    )
+    # Use the operator's existing development access, not service-account impersonation.
+    gateway_token = cloud_cli("auth", "print-identity-token")
     headers = {"Authorization": f"Bearer {gateway_token}"}
     member_ids = []
     for platform in ["android", "ios"]:

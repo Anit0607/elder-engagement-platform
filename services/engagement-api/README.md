@@ -67,8 +67,15 @@ From this service directory, an authorised operator can run:
 .\.venv\Scripts\python.exe -m tools.test_development_member_login --project approved-development-project --region approved-region --confirm TEST-EE-009-development
 ```
 
-The command uses the existing D-drive Cloud CLI/configuration and the existing
-development verifier identity. Do not paste tokens or codes into the terminal,
-chat or repository. A phone/login screen for client acceptance comes later.
+The command uses the existing D-drive Cloud CLI/configuration and the currently
+authenticated operator's existing permission to invoke private development Cloud
+Run. It does not impersonate the GitHub service account, grant roles or make the
+service public. Do not paste tokens or codes into the terminal, chat or repository.
+A phone/login screen for client acceptance comes later.
+
+The first live development trial passed all eight checks against the deployed
+Google identity service and private Cloud SQL. Both Android and iOS request shapes
+returned one Member account. This is backend evidence, not an Android device test
+or production acceptance.
 
 Do not copy `config/engagement/.env.example` into a staging or production deployment. It contains explicit non-operational development identifiers which secure-environment validation rejects.
