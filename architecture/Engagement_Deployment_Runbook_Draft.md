@@ -2,7 +2,7 @@
 
 Status: Sprint 1 controlled runbook under EE-008
 Target: client-owned Google Cloud development, staging, and production environments
-Production readiness: not yet verified
+Development foundation: verified; final production readiness: not yet verified
 
 ## Purpose and boundary
 
@@ -17,7 +17,7 @@ The runbook becomes acceptance evidence for EE-008 only after its steps are exec
 | Project Manager-owned public GitHub repository, default branch, required reviewers | Project Manager | Before pipeline connection |
 | Google Cloud project(s), billing, region, named access | Client | Before infrastructure work |
 | Development, staging, and production isolation model | Client and Lead | Before resource creation |
-| Application name, domains and Android package identifier | Client | Before permanent naming and public routing |
+| Application name, domains and Android package identifier | Client | Name and package approved; domains required before public routing |
 | Identity, YouTube, Meet, Firebase Cloud Messaging and Agora accounts | Client | Before the corresponding integration sprint |
 | Privacy, retention, deletion/export and broad-location decisions | Client | Before real personal data or production retention jobs |
 
@@ -89,7 +89,7 @@ The version-one backend remains a modular monolith. Database migration runs as a
 8. Create the dormant immutable migration job from a reviewed saved plan, grant one named operator job-only execution permission, run once without overrides and verify `V0001` plus its checksum, table count, ownership and permissions.
 9. Remove job execution permission and destroy the dormant job using another reviewed saved plan. Retain the migration identity, immutable image, backup and private evidence.
 
-The guarded migration runner must compare the live job with the reviewed saved plan and use organization-scoped Cloud Asset Inventory analysis to reject unexpected inherited `run.jobs.run` access. It must create a durable ignored recovery marker before adding job-level invocation permission, remove that permission even after a normal failure, and support explicit Cleanup after interruption. Never rerun Apply when a marker or execution record exists. Verify the exact execution resource, one successful task, zero failed tasks and one execution-scoped `V0001` success record before accepting the migration.
+The guarded migration runner must compare the live job with the reviewed saved plan. Organisation-wide Cloud Asset inspection is not required. The runner checks the explicit job-level permission that this project controls, creates a durable ignored recovery marker before adding temporary execution permission, removes that permission after execution and supports explicit cleanup after interruption. Never rerun Apply when a marker or execution record exists. Verify the exact execution resource, one successful task, zero failed tasks and one execution-scoped `V0001` success record before accepting the migration.
 
 Only one Plan, Apply or Cleanup process may run at a time; the protected exclusive lock must be held through final cleanup, and an existing recovery marker must never be overwritten. The lock coordinates only this workstation, so the release owner must prohibit concurrent execution from any second computer. If the runner or computer is interrupted, do not repeat Apply. Use the explicit guarded Cleanup action; it reads the ignored recovery marker, closes the Data API first, removes only the recorded temporary operator and deletes the protected temporary SQL. A different authorised named human may perform this recovery. After successful cleanup, make and verify a new on-demand backup before retrying. If any bootstrap preflight or cleanup check fails, stop. Do not run the table migration and do not attempt an improvised repair.
 
@@ -157,10 +157,10 @@ No evidence record may contain tokens, personal data, secret values, signed stor
 | Part | Status |
 |---|---|
 | Architecture and release sequence | Versioned in the protected public repository; Cloud Run build and deployment steps executed using an immutable digest |
-| Current engagement schema | Corrected logical draft; static checks and both staff-role race directions pass on PostgreSQL 16; not migrated |
+| Current engagement schema | Checksum-locked baseline; static checks and both staff-role race directions pass on PostgreSQL 16; applied once and verified in development |
 | Week 2 REST contract | Local draft package independently reviewed; runtime implementation remains pending |
 | GitHub repository | Public repository under the Project Manager account; protected `main`, required checks and pull-request merges are active |
 | GitHub verification pipeline | Boundary, contract, backend, security, dependency, container-build and private deployment-health checks have passed |
 | Google Cloud resources | Development foundation active: private Cloud Run, private PostgreSQL, private storage, service identities, secret containers, remote state and budget alerts. Staging and production are not created |
-| PostgreSQL migration execution | Not run for current schema; no approved runtime available |
-| Cloud smoke test, monitoring and rollback | Authenticated private `/health` passed and Terraform reports no drift; dependency readiness, error/uptime notification delivery and rollback rehearsal remain pending |
+| PostgreSQL migration execution | `V0001` completed once: one successful task, zero failures, post-checks passed and temporary execution access removed |
+| Cloud smoke test, monitoring and rollback | Authenticated private `/health` passed; Google Monitoring also receives successful health responses; uptime and error policies plus budget alerts exist. Alert-email delivery, dependency readiness and rollback rehearsal remain pending |

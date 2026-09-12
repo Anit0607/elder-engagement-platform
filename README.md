@@ -1,12 +1,14 @@
-# Elder Engagement Platform
+# Amiko Elder Engagement Platform
 
 [![Verify](https://github.com/Anit0607/elder-engagement-platform/actions/workflows/verify.yml/badge.svg)](https://github.com/Anit0607/elder-engagement-platform/actions/workflows/verify.yml)
 
-Public engineering repository for the Elder Engagement Platform. It contains the current backend foundation, REST contract, database draft, configuration contract and technical architecture.
+Public engineering repository for Amiko. It contains the current backend foundation, versioned REST contract, applied database baseline, configuration contract, Google Cloud infrastructure and technical architecture.
 
 ## Current status
 
-This is a dependency-free Pre-Sprint foundation, not a production release. The health/readiness service and local contracts are tested, but authentication, profiles, circles, content, moderation, events, notifications, broadcasting, mobile applications and cloud deployment are not yet implemented unless a later release explicitly says otherwise.
+Sprint 1's development foundation is deployed in the client-owned Google Cloud project. The private Cloud Run health service, private PostgreSQL database, storage, service identities, secrets, immutable database migration, logging, uptime monitoring, error alerts and budget alerts are in place and verified. Alert-email delivery still requires a client-approved recipient.
+
+This is not the final production release. A separate production environment, completed application functions and client acceptance remain later milestones. Week 2's Member-session code and REST draft exist, but the production identity-provider connection, self-registration flow, profiles and staff access are not yet complete.
 
 ## Repository contents
 
