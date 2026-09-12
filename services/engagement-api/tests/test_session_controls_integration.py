@@ -32,6 +32,7 @@ async def test_real_postgres_owner_isolation_suspension_expiry_and_logout():
     controls = PostgresSessionControls(
         pool, signing_key=key, refresh_pepper=b"integration-refresh-material-at-least-32-bytes",
         issuer="https://api.synthetic.example",
+        member_session_limit=5,
     )
     try:
         members = []
@@ -80,6 +81,14 @@ async def test_real_postgres_owner_isolation_suspension_expiry_and_logout():
         rejected = next(result for result in outcomes if result is not None)
         assert isinstance(rejected, MemberSessionFailure)
         assert rejected.status == 401
+        attempts = await asyncio.gather(
+            *(controls.issue(members[0], uuid4(), "android", None) for _ in range(6)),
+            return_exceptions=True,
+        )
+        assert sum(not isinstance(result, Exception) for result in attempts) == 3
+        limits = [result for result in attempts if isinstance(result, MemberSessionFailure)]
+        assert len(limits) == 3
+        assert all(result.status == 429 for result in limits)
         with pytest.raises(MemberSessionFailure) as error:
             await controls.list_sessions(first.access_token)
         assert error.value.status == 401

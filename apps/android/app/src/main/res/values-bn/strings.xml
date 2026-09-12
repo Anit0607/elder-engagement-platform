@@ -1,0 +1,23 @@
+<resources>
+    <string name="sign_in">ফোন নম্বর দিয়ে প্রবেশ করুন</string>
+    <string name="phone_hint">ভারতের ফোন নম্বর (+91)</string>
+    <string name="code_hint">ছয় সংখ্যার যাচাই কোড</string>
+    <string name="consent">প্রবেশের জন্য এই নম্বর ব্যবহারে আমি সম্মত। পরিচয় যাচাই ও অপব্যবহার রোধে Google এই নম্বর প্রক্রিয়া করে।</string>
+    <string name="send_code">কোড পাঠান</string><string name="resend_code">নতুন কোড পাঠান</string>
+    <string name="verify">যাচাই করে প্রবেশ করুন</string><string name="change_phone">ফোন নম্বর বদলান</string>
+    <string name="retry_connection">অ্যাপের সংযোগ আবার চেষ্টা করুন</string>
+    <string name="wait_seconds">%1$d সেকেন্ড পরে আবার পাঠান</string>
+    <string name="enter_phone">শুরু করতে আপনার ফোন নম্বর লিখুন।</string>
+    <string name="invalid_phone">ভারতের সঠিক দশ সংখ্যার ফোন নম্বর লিখুন।</string>
+    <string name="invalid_code">কোড ভুল অথবা মেয়াদ শেষ। আবার চেষ্টা করুন।</string>
+    <string name="consent_required">এগিয়ে যাওয়ার আগে ফোন যাচাইয়ের সম্মতি দিন।</string>
+    <string name="sending">আপনার কোড চাওয়া হচ্ছে…</string><string name="verifying">কোড যাচাই করা হচ্ছে…</string>
+    <string name="code_sent">কোড লিখুন। সময় গণনা শেষ হলে নতুন কোড চাইতে পারবেন।</string>
+    <string name="request_new_code">অনেকবার ভুল কোড দেওয়া হয়েছে। অপেক্ষা করে নতুন কোড চান।</string>
+    <string name="rate_limited">অনেকবার অনুরোধ হয়েছে। অপেক্ষা করে আবার চেষ্টা করুন।</string>
+    <string name="connection_failed">সংযোগ করা যাচ্ছে না। ইন্টারনেট দেখে আবার চেষ্টা করুন।</string>
+    <string name="verification_failed">ফোন যাচাই শুরু হয়নি। অপেক্ষা করে আবার চেষ্টা করুন।</string>
+    <string name="connecting">Amiko-তে প্রবেশ করা হচ্ছে…</string>
+    <string name="signed_in">সফলভাবে প্রবেশ করেছেন। পরের নির্ধারিত কাজে আপনার প্রোফাইলের পর্দা আসবে।</string>
+    <string name="configuration_missing">এই পরীক্ষার অ্যাপ এখনও সংযুক্ত নয়। সংযুক্ত সংস্করণের জন্য প্রকল্পের দলকে বলুন।</string>
+</resources>

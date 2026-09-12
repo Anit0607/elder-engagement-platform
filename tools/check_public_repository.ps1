@@ -39,6 +39,7 @@ $allowed = @(
     '^database/tests/(requirements\.lock|test_bootstrap_sql\.py|test_migration_runner\.py|test_staff_role_concurrency\.py)$',
     '^infrastructure/',
     '^services/engagement-api/',
+    '^apps/android/',
     '^tools/(check_public_repository\.ps1|generate_engagement_postman\.mjs|validate_database_migrations\.py|validate_engagement_config\.mjs|validate_engagement_openapi\.mjs|validate_engagement_schema\.mjs)$'
 )
 

@@ -80,6 +80,7 @@ async def member_runtime(
                     issuer=settings.public_api_origin,
                     access_token_minutes=settings.access_token_minutes,
                     refresh_token_days=settings.refresh_token_days,
+                    member_session_limit=5,
                 )
                 yield MemberSessionService(
                     verifier,

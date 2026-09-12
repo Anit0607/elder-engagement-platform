@@ -48,7 +48,10 @@ class HealthResponse(BaseModel):
 
 
 def _problem(request: Request, status: int, code: str, title: str, *, retryable=False) -> JSONResponse:
-    return problem_response(request.state.trace_id, status, code, title, retryable=retryable)
+    response = problem_response(request.state.trace_id, status, code, title, retryable=retryable)
+    if status == 429:
+        response.headers["Retry-After"] = "600"
+    return response
 
 
 def _route_template(request: Request) -> str:
