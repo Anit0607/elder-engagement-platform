@@ -77,6 +77,20 @@ The version-one backend remains a modular monolith. Database migration runs as a
 - Verify the expected migration version and schema checksum.
 - Stop the release if migration verification fails. Do not allow the application process to repair or create tables automatically.
 
+### First development database setup
+
+1. Record the client's approval of the database, schema names and one-time access method.
+2. Confirm PostgreSQL 16 is running with private addressing, automatic backups and point-in-time recovery.
+3. Create an on-demand backup and wait for `SUCCESSFUL`; an asynchronous request by itself is not evidence of a usable backup.
+4. Using PowerShell 7, run `Invoke-DatabaseBootstrap.ps1` in its default plan mode with the ignored backend file. The runner reads the exact target, database accounts and approved repository identity from protected Terraform state.
+5. Merge the reviewed bootstrap template, tests and steady-state Data API disabled control. Live bootstrap is allowed only from a clean `main` branch.
+6. Run the guarded apply once with the exact reviewed 40-character `origin/main` revision and confirmation. It verifies the repository address before contacting it, temporarily registers the active named operator, opens the authenticated Data API and creates the two empty schemas in one checked transaction. It rejects database errors carried inside an otherwise successful Google Cloud response, rejects partial results and requires the final database/schema checks to all be true. It then closes the Data API, removes the operator and verifies cleanup. It does not use or store a database password.
+7. Confirm Terraform has no unplanned change and Cloud SQL still has no public address.
+8. Create the dormant immutable migration job from a reviewed saved plan, grant one named operator job-only execution permission, run once without overrides and verify `V0001` plus its checksum, table count, ownership and permissions.
+9. Remove job execution permission and destroy the dormant job using another reviewed saved plan. Retain the migration identity, immutable image, backup and private evidence.
+
+Only one Plan, Apply or Cleanup process may run at a time; the protected exclusive lock must be held through final cleanup, and an existing recovery marker must never be overwritten. The lock coordinates only this workstation, so the release owner must prohibit concurrent execution from any second computer. If the runner or computer is interrupted, do not repeat Apply. Use the explicit guarded Cleanup action; it reads the ignored recovery marker, closes the Data API first, removes only the recorded temporary operator and deletes the protected temporary SQL. A different authorised named human may perform this recovery. After successful cleanup, make and verify a new on-demand backup before retrying. If any bootstrap preflight or cleanup check fails, stop. Do not run the table migration and do not attempt an improvised repair.
+
 ### 6. Deploy the service
 
 - Deploy the approved image digest as a new Cloud Run revision without sending production traffic immediately.

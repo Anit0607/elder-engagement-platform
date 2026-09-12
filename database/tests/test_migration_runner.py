@@ -22,7 +22,7 @@ from psycopg.conninfo import conninfo_to_dict, make_conninfo
 DATABASE_DIRECTORY = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(DATABASE_DIRECTORY))
 
-from migration_runner import (
+from migration_runner import (  # noqa: E402
     MigrationError,
     _validate_schema_name,
     apply_migrations,
@@ -33,7 +33,7 @@ from migration_runner import (
 
 ADMIN_DATABASE_URL = os.environ["DATABASE_URL"]
 BASELINE_MANIFEST = DATABASE_DIRECTORY / "migrations" / "manifest.json"
-TEST_PASSWORD = "ci-only-migration-password"
+TEST_PASSWORD = "ci-only-migration-password"  # noqa: S105
 
 
 @dataclass(frozen=True)
@@ -509,6 +509,29 @@ def test_transitive_administrative_role_is_rejected() -> None:
                 )
 
 
+def test_runtime_and_migration_role_inheritance_is_rejected() -> None:
+    with database_fixture() as fixture:
+        try:
+            with psycopg.connect(ADMIN_DATABASE_URL, autocommit=True) as admin:
+                admin.execute(
+                    sql.SQL("GRANT {} TO {}").format(
+                        sql.Identifier(fixture.migration_role),
+                        sql.Identifier(fixture.runtime_role),
+                    )
+                )
+            _expect_migration_error(
+                lambda: _run(fixture), "must not inherit from each other"
+            )
+        finally:
+            with psycopg.connect(ADMIN_DATABASE_URL, autocommit=True) as admin:
+                admin.execute(
+                    sql.SQL("REVOKE {} FROM {}").format(
+                        sql.Identifier(fixture.migration_role),
+                        sql.Identifier(fixture.runtime_role),
+                    )
+                )
+
+
 def test_concurrent_runners_serialize() -> None:
     with database_fixture() as fixture, tempfile.TemporaryDirectory() as temp_directory:
         baseline_sql = (
@@ -596,7 +619,8 @@ def test_runtime_role_has_dml_but_not_ddl_or_ledger_access() -> None:
                 "SELECT set_config('search_path', %s, false)", (fixture.app_schema,)
             )
             runtime.execute(
-                "INSERT INTO app_users (public_id, role, username) VALUES ('CI-MEMBER-1', 'member', 'ci-member')"
+                "INSERT INTO app_users (public_id, role, username) "
+                "VALUES ('CI-MEMBER-1', 'member', 'ci-member')"
             )
             runtime.execute(
                 "UPDATE app_users SET status = 'active' WHERE public_id = 'CI-MEMBER-1'"
@@ -682,6 +706,7 @@ def main() -> None:
         test_permission_and_owner_drift_are_rejected,
         test_ledger_grant_drift_is_rejected,
         test_transitive_administrative_role_is_rejected,
+        test_runtime_and_migration_role_inheritance_is_rejected,
         test_concurrent_runners_serialize,
         test_failed_sql_rolls_back_everything,
         test_runtime_role_has_dml_but_not_ddl_or_ledger_access,

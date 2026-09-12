@@ -18,9 +18,49 @@ output "database_connection_name" {
   value       = google_sql_database_instance.postgres.connection_name
 }
 
+output "deployment_environment" {
+  description = "Environment recorded in the protected Terraform state."
+  value       = var.environment
+}
+
+output "deployment_project_id" {
+  description = "Google Cloud project recorded in the protected Terraform state."
+  value       = var.project_id
+}
+
+output "deployment_region" {
+  description = "Google Cloud region recorded in the protected Terraform state."
+  value       = var.region
+}
+
+output "database_instance_name" {
+  description = "Cloud SQL instance recorded in the protected Terraform state."
+  value       = google_sql_database_instance.postgres.name
+}
+
+output "database_name" {
+  description = "PostgreSQL database recorded in the protected Terraform state."
+  value       = google_sql_database.application.name
+}
+
+output "github_repository_slug" {
+  description = "GitHub owner and repository recorded in the protected Terraform state."
+  value       = "${var.github_owner}/${var.github_repository}"
+}
+
 output "database_migration_job" {
   description = "Dormant migration job name when explicitly enabled; Terraform does not execute it."
   value       = try(google_cloud_run_v2_job.database_migration[0].name, null)
+}
+
+output "database_runtime_iam_user" {
+  description = "PostgreSQL IAM username used by the application runtime."
+  value       = google_sql_user.runtime_iam.name
+}
+
+output "database_migration_iam_user" {
+  description = "PostgreSQL IAM username used only by the controlled migration runner."
+  value       = google_sql_user.migration_iam.name
 }
 
 output "github_deployer_service_account" {

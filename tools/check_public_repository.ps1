@@ -34,8 +34,9 @@ $allowed = @(
     '^architecture/(Engagement_Deployment_Runbook_Draft|Engagement_Platform_Architecture_v1|Schema_REST_Permission_Mapping)\.md$',
     '^config/engagement/',
     '^database/(Dockerfile|ENGAGEMENT_SCHEMA_NOTES\.md|migration_runner\.py|requirements\.lock)$',
+    '^database/bootstrap/V[0-9]{4}__[a-z0-9_]+\.sql\.template$',
     '^database/migrations/(manifest\.json|V[0-9]{4}__[a-z0-9_]+\.sql)$',
-    '^database/tests/(requirements\.lock|test_migration_runner\.py|test_staff_role_concurrency\.py)$',
+    '^database/tests/(requirements\.lock|test_bootstrap_sql\.py|test_migration_runner\.py|test_staff_role_concurrency\.py)$',
     '^infrastructure/',
     '^services/engagement-api/',
     '^tools/(check_public_repository\.ps1|generate_engagement_postman\.mjs|validate_database_migrations\.py|validate_engagement_config\.mjs|validate_engagement_openapi\.mjs|validate_engagement_schema\.mjs)$'

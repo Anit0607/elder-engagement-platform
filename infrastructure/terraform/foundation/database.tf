@@ -9,6 +9,7 @@ resource "google_sql_database_instance" "postgres" {
     tier              = var.database_tier
     edition           = "ENTERPRISE"
     availability_type = var.environment == "production" ? "REGIONAL" : "ZONAL"
+    data_api_access   = "DISALLOW_DATA_API"
     disk_type         = "PD_SSD"
     disk_size         = var.database_disk_gb
     disk_autoresize   = true
