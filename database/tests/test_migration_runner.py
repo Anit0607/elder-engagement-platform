@@ -520,7 +520,7 @@ def test_concurrent_runners_serialize() -> None:
         for thread in threads:
             thread.join(timeout=10)
         assert all(not thread.is_alive() for thread in threads)
-        assert failures == []
+        assert failures == [], [repr(failure) for failure in failures]
         assert sorted(results, key=len) == [[], ["V9000"]]
 
 
