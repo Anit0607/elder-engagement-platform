@@ -54,6 +54,13 @@ resource "google_monitoring_uptime_check_config" "api_health" {
     matcher = "CONTAINS_STRING"
   }
 
+  lifecycle {
+    # A private Cloud Run check is tied to a serving revision. Create its
+    # successor before retiring the old check so the referencing availability
+    # policy can move safely without a monitoring gap or Google API rejection.
+    create_before_destroy = true
+  }
+
   depends_on = [google_cloud_run_v2_service.api]
 }
 
