@@ -13,6 +13,7 @@ const allowedKeys = new Set([
   "EE_YOUTUBE_API_KEY_SECRET_REF", "EE_MEET_MODE", "EE_MEET_OAUTH_CLIENT_SECRET_REF",
   "EE_BROADCAST_PROVIDER", "EE_AGORA_APP_ID", "EE_AGORA_APP_CERTIFICATE_SECRET_REF",
   "EE_ACCESS_TOKEN_MINUTES", "EE_REFRESH_TOKEN_DAYS",
+  "EE_MEMBER_SESSION_ENABLED", "EE_DATABASE_IAM_USER",
 ]);
 
 const alwaysRequired = [
@@ -114,6 +115,17 @@ export function validateConfig(values) {
   ]);
 
   boundedInteger(values, errors, "EE_ACCESS_TOKEN_MINUTES", 5, 30);
+  if (values.EE_MEMBER_SESSION_ENABLED && !["true", "false"].includes(values.EE_MEMBER_SESSION_ENABLED)) {
+    errors.push("EE_MEMBER_SESSION_ENABLED must be true or false");
+  }
+  if (values.EE_MEMBER_SESSION_ENABLED === "true") {
+    if (values.EE_MEMBER_IDENTITY_PROVIDER === "mock") errors.push("live Member sessions require Google phone identity");
+    if (values.EE_FIREBASE_PROJECT_ID !== values.EE_GCP_PROJECT_ID || values.EE_MEMBER_TOKEN_AUDIENCE !== values.EE_GCP_PROJECT_ID) {
+      errors.push("Member identity project and audience must match the environment");
+    }
+    if (!values.EE_DATABASE_IAM_USER || /\s/.test(values.EE_DATABASE_IAM_USER)) errors.push("live Member sessions require the application IAM database user");
+    if (!values.EE_CLOUD_SQL_INSTANCE?.startsWith(`${values.EE_GCP_PROJECT_ID}:${values.EE_GCP_REGION}:`)) errors.push("Cloud SQL must match the environment project and region");
+  }
   boundedInteger(values, errors, "EE_REFRESH_TOKEN_DAYS", 1, 90);
   boundedInteger(values, errors, "EE_UPLOAD_MAX_BYTES", 32768, 1073741824);
   boundedInteger(values, errors, "EE_UPLOAD_AUTHORIZATION_SECONDS", 60, 900);

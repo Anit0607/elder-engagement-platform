@@ -50,6 +50,19 @@ resource "google_cloud_run_v2_service" "api" {
         }
       }
 
+      dynamic "env" {
+        for_each = var.enable_member_session ? var.member_session_secret_versions : {}
+        content {
+          name = env.key == "session-signing-key" ? "AMIKO_SESSION_SIGNING_KEY_BASE64" : "AMIKO_REFRESH_PEPPER_BASE64"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.application[env.key].secret_id
+              version = env.value
+            }
+          }
+        }
+      }
+
       startup_probe {
         initial_delay_seconds = 0
         timeout_seconds       = 3
@@ -94,6 +107,15 @@ resource "google_cloud_run_v2_service" "api" {
 
   lifecycle {
     precondition {
+      condition = !var.enable_member_session || (
+        var.enable_identity_platform &&
+        var.database_application_schema == "engagement_app" &&
+        contains(keys(var.member_session_secret_versions), "session-signing-key") &&
+        contains(keys(var.member_session_secret_versions), "refresh-token-pepper")
+      )
+      error_message = "Member login requires enabled Google identity, the approved application schema and both numeric session-secret versions."
+    }
+    precondition {
       condition = !var.deploy_application || (
         var.container_image != null &&
         startswith(var.container_image, local.approved_image_prefix) &&
@@ -113,7 +135,7 @@ resource "google_cloud_run_v2_service" "api" {
     }
   }
 
-  depends_on = [google_project_service.required]
+  depends_on = [google_project_service.required, google_secret_manager_secret_iam_member.runtime]
 }
 
 resource "google_cloud_run_v2_service_iam_member" "github_verifier" {

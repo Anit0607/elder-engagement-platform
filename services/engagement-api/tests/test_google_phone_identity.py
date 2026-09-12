@@ -4,8 +4,9 @@ from copy import deepcopy
 
 import pytest
 from google.auth import exceptions as google_auth_exceptions
+from google.auth.transport.requests import Request
 
-from app.google_phone_identity import GooglePhoneIdentityVerifier
+from app.google_phone_identity import BoundedCertificateRequest, GooglePhoneIdentityVerifier
 from app.member_auth import AuthenticationDependencyUnavailable, IdentityTokenRejected
 
 PROJECT_ID = "synthetic-development-project"
@@ -101,3 +102,15 @@ async def test_google_certificate_network_failure_is_retryable():
 def test_project_and_audience_must_match():
     with pytest.raises(ValueError, match="audience"):
         GooglePhoneIdentityVerifier(PROJECT_ID, "different-project")
+
+
+def test_certificate_requests_have_a_short_network_timeout(monkeypatch):
+    observed = {}
+
+    def fake_request(self, *args, **kwargs):
+        observed.update(kwargs)
+        return object()
+
+    monkeypatch.setattr(Request, "__call__", fake_request)
+    BoundedCertificateRequest()("https://synthetic.example", timeout=120)
+    assert observed["timeout"] == 5

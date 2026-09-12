@@ -7,6 +7,7 @@ import secrets
 import time
 import uuid
 from collections.abc import Mapping
+from contextlib import asynccontextmanager
 from typing import Literal
 
 from fastapi import FastAPI, Request
@@ -27,6 +28,7 @@ from app.member_auth import (
     SessionResponse,
     UnconfiguredMemberSessionService,
 )
+from app.member_runtime import member_runtime
 from app.problems import problem_response
 from app.readiness import REQUIRED_DEPENDENCIES, DependencyProbe, NotConfiguredProbe
 from app.request_limits import RequestBodyLimitMiddleware
@@ -74,6 +76,7 @@ def create_app(
     probes: Mapping[str, DependencyProbe] | None = None,
     *,
     member_session_handler: MemberSessionHandler | None = None,
+    member_runtime_factory=member_runtime,
     probe_timeout_seconds: float = 2.0,
     max_request_body_bytes: int = 1_048_576,
 ) -> FastAPI:
@@ -92,7 +95,18 @@ def create_app(
         name: provided_probes.get(name, NotConfiguredProbe()) for name in REQUIRED_DEPENDENCIES
     }
 
+    @asynccontextmanager
+    async def lifespan(application):
+        if config.member_session_enabled and member_session_handler is None:
+            async with member_runtime_factory(config) as handler:
+                application.state.member_session_handler = handler
+                yield
+                application.state.member_session_handler = UnconfiguredMemberSessionService()
+        else:
+            yield
+
     app = FastAPI(
+        lifespan=lifespan,
         title=config.app_name,
         version=__version__,
         docs_url=None if config.environment == "production" else "/docs",

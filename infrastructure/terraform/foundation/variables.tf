@@ -269,6 +269,26 @@ variable "enable_identity_platform" {
   default     = false
 }
 
+variable "enable_member_session" {
+  description = "Connect reviewed Member sign-in to private Cloud SQL and injected Secret Manager session keys."
+  type        = bool
+  default     = false
+}
+
+variable "member_session_secret_versions" {
+  description = "Numeric Secret Manager versions for session-signing-key and refresh-token-pepper. No secret values."
+  type        = map(string)
+  default     = {}
+
+  validation {
+    condition = alltrue([
+      for key, version in var.member_session_secret_versions :
+      contains(["session-signing-key", "refresh-token-pepper"], key) && can(regex("^[1-9][0-9]*$", version))
+    ])
+    error_message = "Only the two approved session secret names with numeric versions are allowed."
+  }
+}
+
 variable "identity_test_phone_numbers" {
   description = "Fictional E.164 phone numbers mapped to six-digit test codes. Keep values only in an ignored environment file and rotate them regularly."
   type        = map(string)

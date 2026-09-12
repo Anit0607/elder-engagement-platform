@@ -21,6 +21,12 @@ from app.member_auth import (
 FirebaseTokenVerifier = Callable[..., Mapping[str, Any]]
 
 
+class BoundedCertificateRequest(Request):
+    def __call__(self, *args, **kwargs):
+        kwargs["timeout"] = 5
+        return super().__call__(*args, **kwargs)
+
+
 class GooglePhoneIdentityVerifier:
     """Verify a Google-issued Firebase/Identity Platform phone identity token."""
 
@@ -39,13 +45,16 @@ class GooglePhoneIdentityVerifier:
         self._token_audience = token_audience
         self._verify_token = verify_token
         self._now = now
-        self._request = request or Request(
-            session=cachecontrol.CacheControl(requests.Session())
-        )
+        self._session = None if request is not None else cachecontrol.CacheControl(requests.Session())
+        self._request = request or BoundedCertificateRequest(session=self._session)
         # The cached HTTP session is intentionally shared and serialized. This
         # avoids fetching Google's public signing certificates for every login
         # without assuming that the session is safe for simultaneous threads.
         self._verification_lock = asyncio.Lock()
+
+    def close(self) -> None:
+        if self._session is not None:
+            self._session.close()
 
     async def verify(self, provider_id_token: str) -> VerifiedPhoneIdentity:
         try:
