@@ -500,10 +500,13 @@ def test_transitive_administrative_role_is_rejected() -> None:
 
 def test_concurrent_runners_serialize() -> None:
     with database_fixture() as fixture, tempfile.TemporaryDirectory() as temp_directory:
+        baseline_sql = (
+            DATABASE_DIRECTORY / "migrations" / "V0001__engagement_baseline.sql"
+        ).read_text(encoding="utf-8")
         manifest = _temporary_manifest(
             Path(temp_directory),
             "V9000",
-            "SELECT pg_sleep(0.5); CREATE TABLE concurrency_probe (id integer PRIMARY KEY);",
+            f"SELECT pg_sleep(0.5);\n{baseline_sql}",
         )
         results: list[list[str]] = []
         failures: list[BaseException] = []
