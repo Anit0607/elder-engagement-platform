@@ -2,6 +2,10 @@
 
 Native Kotlin Android application, permanent package `com.eldercaresaathi.amiko`.
 This first build implements phone sign-in only, not the complete platform.
+It is a small native test harness for the EE-009 backend acceptance checks.
+The tracker still plans the complete React Native Android shell under EE-028;
+this harness does not approve a change to that delivery stack or complete
+EE-028/EE-029. Final app-screen integration remains in those planned items.
 Minimum Android version is 8.0; this is a delivery assumption for device acceptance,
 not evidence that the client's device fleet has been checked.
 
