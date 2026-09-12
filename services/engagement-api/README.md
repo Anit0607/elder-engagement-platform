@@ -13,9 +13,11 @@ Implemented now:
 - a non-root, immutable-source container foundation for a later Cloud Run deployment;
 - exact runtime/development dependency locks and automated checks.
 - a tested Member identity-token exchange and session-service boundary;
+- a Google Identity Platform/Firebase phone-token verifier that checks the
+  signature, intended project, issuer, phone provider and verified phone claim;
 - a versioned Week 2 REST contract for identity, profiles and account controls.
 
-The development container is deployed to private Cloud Run, and database migration `V0001` is applied to private Cloud SQL. The Member-session service now follows the approved immediate-access boundary: the repository atomically finds or creates an active Member for a verified phone identity, and `profileComplete=false` routes a new Member to self-service profile setup. It is not yet connected to live Identity Platform/Firebase or PostgreSQL. Contributors remain Administrator-created. Profiles, staff sign-in, circles, content, moderation, feeds, events, notifications and media providers are not yet implemented.
+The development container is deployed to private Cloud Run, and database migration `V0001` is applied to private Cloud SQL. The Member-session service now follows the approved immediate-access boundary: the repository atomically finds or creates an active Member for a verified phone identity, and `profileComplete=false` routes a new Member to self-service profile setup. The Google phone-token verifier is implemented and locally tested, but it is not yet wired to the deployed endpoint because the PostgreSQL repository and session issuer are still pending. Contributors remain Administrator-created. Profiles, staff sign-in, circles, content, moderation, feeds, events, notifications and media providers are not yet implemented.
 
 ## Local verification
 
