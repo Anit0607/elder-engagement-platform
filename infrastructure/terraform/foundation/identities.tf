@@ -38,10 +38,15 @@ resource "google_project_iam_member" "migration_cloudsql" {
   member  = "serviceAccount:${google_service_account.migration.email}"
 }
 
-resource "google_project_iam_member" "github_run_developer" {
+resource "google_project_iam_member" "github_run_viewer" {
   project = var.project_id
-  role    = "roles/run.developer"
+  role    = "roles/run.viewer"
   member  = "serviceAccount:${google_service_account.github_deployer.email}"
+}
+
+moved {
+  from = google_project_iam_member.github_run_developer
+  to   = google_project_iam_member.github_run_viewer
 }
 
 resource "google_service_account_iam_member" "github_uses_runtime" {

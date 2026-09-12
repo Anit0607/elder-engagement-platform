@@ -169,6 +169,63 @@ variable "container_image" {
   nullable    = true
 }
 
+variable "deploy_database_migration_job" {
+  description = "Create the dormant Cloud Run migration job only after bootstrap inputs and an immutable image are approved. Terraform never executes it."
+  type        = bool
+  default     = false
+}
+
+variable "database_migration_image" {
+  description = "Approved immutable engagement-migration image ending in a sha256 digest."
+  type        = string
+  default     = null
+  nullable    = true
+}
+
+variable "database_migration_source_revision" {
+  description = "Exact 40-character Git revision embedded in the approved migration image."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.database_migration_source_revision == null ? true : can(regex("^[0-9a-f]{40}$", var.database_migration_source_revision))
+    error_message = "database_migration_source_revision must be an exact lowercase 40-character Git revision."
+  }
+}
+
+variable "database_application_schema" {
+  description = "Client-approved PostgreSQL application schema name."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = var.database_application_schema == null ? true : (
+      can(regex("^[a-z][a-z0-9_]{0,62}$", var.database_application_schema)) &&
+      !startswith(var.database_application_schema, "pg_") &&
+      !contains(["information_schema", "public"], var.database_application_schema)
+    )
+    error_message = "database_application_schema must be an approved lowercase non-system PostgreSQL identifier."
+  }
+}
+
+variable "database_migration_schema" {
+  description = "Client-approved PostgreSQL migration-control schema name."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = var.database_migration_schema == null ? true : (
+      can(regex("^[a-z][a-z0-9_]{0,62}$", var.database_migration_schema)) &&
+      !startswith(var.database_migration_schema, "pg_") &&
+      !contains(["information_schema", "public"], var.database_migration_schema)
+    )
+    error_message = "database_migration_schema must be an approved lowercase non-system PostgreSQL identifier."
+  }
+}
+
 variable "public_api_origin" {
   description = "Exact externally assigned HTTPS origin for this Cloud Run service or approved custom domain."
   type        = string

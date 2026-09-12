@@ -24,6 +24,7 @@ sys.path.insert(0, str(DATABASE_DIRECTORY))
 
 from migration_runner import (
     MigrationError,
+    _validate_schema_name,
     apply_migrations,
     load_manifest,
     run_test_migrations,
@@ -347,6 +348,16 @@ def test_transaction_control_forms_are_rejected() -> None:
         )
 
 
+def test_system_schema_names_are_rejected() -> None:
+    for schema_name in ("public", "information_schema", "pg_catalog", "pg_custom"):
+        _expect_migration_error(
+            lambda schema_name=schema_name: _validate_schema_name(
+                schema_name, "Application schema"
+            ),
+            "non-system PostgreSQL identifier",
+        )
+
+
 def test_pg8000_apply_rerun_and_rollback() -> None:
     with database_fixture() as fixture:
         assert _run_pg8000(fixture) == ["V0001"]
@@ -666,6 +677,7 @@ def main() -> None:
         test_public_or_other_schema_objects_are_rejected,
         test_control_schema_object_and_fake_ledger_are_rejected,
         test_transaction_control_forms_are_rejected,
+        test_system_schema_names_are_rejected,
         test_pg8000_apply_rerun_and_rollback,
         test_permission_and_owner_drift_are_rejected,
         test_ledger_grant_drift_is_rejected,

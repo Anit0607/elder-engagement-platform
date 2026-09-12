@@ -124,8 +124,8 @@ def validate_current() -> list[str]:
 
 
 def _git(*arguments: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["git", *arguments],
+    return subprocess.run(  # noqa: S603
+        ["git", *arguments],  # noqa: S607
         cwd=WORKSPACE,
         check=False,
         capture_output=True,

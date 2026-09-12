@@ -49,8 +49,14 @@ def _qualified(schema_name: str, object_name: str) -> str:
 
 
 def _validate_schema_name(name: str, label: str) -> str:
-    if not SCHEMA_NAME_PATTERN.fullmatch(name):
-        raise MigrationError(f"{label} must be a lowercase PostgreSQL identifier.")
+    if (
+        not SCHEMA_NAME_PATTERN.fullmatch(name)
+        or name.startswith("pg_")
+        or name in {"information_schema", "public"}
+    ):
+        raise MigrationError(
+            f"{label} must be an approved lowercase non-system PostgreSQL identifier."
+        )
     return name
 
 
@@ -490,7 +496,7 @@ def _verify_ledger(cursor: Any, migration_schema: str, migration_role: str) -> N
 
 def _read_ledger(cursor: Any, migration_schema: str) -> list[tuple[str, str, str]]:
     statement = (
-        f"SELECT migration_id, migration_name, checksum "  # nosec B608
+        f"SELECT migration_id, migration_name, checksum "  # noqa: S608  # nosec B608
         f"FROM {_qualified(migration_schema, 'schema_migrations')} ORDER BY migration_id"
     )
     return _fetchall(cursor, statement)
@@ -587,9 +593,15 @@ def _verify_runtime_privileges(
         """
         SELECT COALESCE(bool_and(
                  has_table_privilege(%s, quote_ident(schemaname) || '.' || quote_ident(tablename), 'SELECT')
-                 AND has_table_privilege(%s, quote_ident(schemaname) || '.' || quote_ident(tablename), 'INSERT')
-                 AND has_table_privilege(%s, quote_ident(schemaname) || '.' || quote_ident(tablename), 'UPDATE')
-                 AND has_table_privilege(%s, quote_ident(schemaname) || '.' || quote_ident(tablename), 'DELETE')
+                 AND has_table_privilege(
+                   %s, quote_ident(schemaname) || '.' || quote_ident(tablename), 'INSERT'
+                 )
+                 AND has_table_privilege(
+                   %s, quote_ident(schemaname) || '.' || quote_ident(tablename), 'UPDATE'
+                 )
+                 AND has_table_privilege(
+                   %s, quote_ident(schemaname) || '.' || quote_ident(tablename), 'DELETE'
+                 )
                ), false)
           FROM pg_tables
          WHERE schemaname = %s
@@ -948,7 +960,7 @@ def apply_migrations(
             for statement in migration.statements:
                 cursor.execute(statement)
             statement = (
-                f"INSERT INTO {_qualified(migration_schema, 'schema_migrations')} "  # nosec B608
+                f"INSERT INTO {_qualified(migration_schema, 'schema_migrations')} "  # noqa: S608  # nosec B608
                 "(migration_id, migration_name, checksum, source_revision, "
                 "runner_version, execution_id) VALUES (%s, %s, %s, %s, %s, %s)"
             )

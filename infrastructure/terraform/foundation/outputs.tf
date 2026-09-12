@@ -18,6 +18,11 @@ output "database_connection_name" {
   value       = google_sql_database_instance.postgres.connection_name
 }
 
+output "database_migration_job" {
+  description = "Dormant migration job name when explicitly enabled; Terraform does not execute it."
+  value       = try(google_cloud_run_v2_job.database_migration[0].name, null)
+}
+
 output "github_deployer_service_account" {
   description = "Service account identifier to configure as a GitHub environment variable."
   value       = google_service_account.github_deployer.email
