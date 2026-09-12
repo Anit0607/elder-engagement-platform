@@ -12,6 +12,7 @@ if ($errors.Count -ne 0) { throw 'The migration runner does not parse.' }
 $requiredFunctions = @(
     'Get-EnvironmentMap',
     'Get-PlanEnvironmentMap',
+    'Get-ExpectedMigrationImage',
     'Assert-ExactEnvironmentMap',
     'Assert-ExactPropertyNames',
     'Assert-LiveJobMatchesPlan',
@@ -26,6 +27,29 @@ foreach ($name in $requiredFunctions) {
     if ($definition.Count -ne 1) { throw "Expected exactly one $name function." }
     . ([scriptblock]::Create($definition[0].Extent.Text))
 }
+
+$script:expectedMigrationImageDigest = 'b' * 64
+$derivedImage = Get-ExpectedMigrationImage `
+    -ProjectId 'sample-project' `
+    -Region 'test-region1' `
+    -Environment 'development' `
+    -ArtifactRepository 'ee-development-containers'
+$expectedDerivedImage = 'test-region1-docker.pkg.dev/sample-project/ee-development-containers/' +
+    'engagement-migration@sha256:' + ('b' * 64)
+if ($derivedImage -cne $expectedDerivedImage) {
+    throw 'The short protected artifact repository name was not expanded correctly.'
+}
+$longRepositoryRejected = $false
+try {
+    Get-ExpectedMigrationImage `
+        -ProjectId 'sample-project' `
+        -Region 'test-region1' `
+        -Environment 'development' `
+        -ArtifactRepository 'projects/sample-project/locations/test-region1/repositories/ee-development-containers' |
+        Out-Null
+}
+catch { $longRepositoryRejected = $true }
+if (-not $longRepositoryRejected) { throw 'An unexpected long artifact repository value was accepted.' }
 
 $environment = @{
     MIGRATION_MODE = 'production'
