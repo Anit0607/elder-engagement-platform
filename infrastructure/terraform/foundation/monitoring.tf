@@ -40,10 +40,13 @@ resource "google_monitoring_uptime_check_config" "api_health" {
   }
 
   monitored_resource {
-    type = "uptime_url"
+    type = "cloud_run_revision"
     labels = {
-      host       = local.cloud_run_hostname
-      project_id = var.project_id
+      project_id         = var.project_id
+      service_name       = local.cloud_run_service_name
+      revision_name      = basename(google_cloud_run_v2_service.api[0].latest_ready_revision)
+      location           = var.region
+      configuration_name = local.cloud_run_service_name
     }
   }
 
@@ -83,7 +86,7 @@ resource "google_monitoring_alert_policy" "api_unavailable" {
     display_name = "Health check fails from multiple regions"
 
     condition_threshold {
-      filter          = "metric.type=\"monitoring.googleapis.com/uptime_check/check_passed\" AND metric.label.check_id=\"${google_monitoring_uptime_check_config.api_health[0].uptime_check_id}\" AND resource.type=\"uptime_url\""
+      filter          = "metric.type=\"monitoring.googleapis.com/uptime_check/check_passed\" AND metric.label.check_id=\"${google_monitoring_uptime_check_config.api_health[0].uptime_check_id}\" AND resource.type=\"cloud_run_revision\""
       comparison      = "COMPARISON_GT"
       threshold_value = 1
       duration        = "120s"
@@ -92,7 +95,7 @@ resource "google_monitoring_alert_policy" "api_unavailable" {
         alignment_period     = "60s"
         per_series_aligner   = "ALIGN_NEXT_OLDER"
         cross_series_reducer = "REDUCE_COUNT_FALSE"
-        group_by_fields      = ["resource.label.host"]
+        group_by_fields      = ["resource.label.service_name"]
       }
 
       trigger {
