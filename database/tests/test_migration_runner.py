@@ -116,7 +116,7 @@ def database_fixture() -> Iterator[DatabaseFixture]:
                     "SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = %s)", (role,)
                 ).fetchone()[0]:
                     admin.execute(
-                        sql.SQL("DROP OWNED BY {}").format(sql.Identifier(role))
+                        sql.SQL("DROP OWNED BY {} CASCADE").format(sql.Identifier(role))
                     )
                     admin.execute(sql.SQL("DROP ROLE {}").format(sql.Identifier(role)))
 
