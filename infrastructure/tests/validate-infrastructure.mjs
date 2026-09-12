@@ -76,6 +76,12 @@ assert.match(operationalAlertTester, /notificationChannels/, 'the notification t
 assert.match(operationalAlertTester, /resource\.type=.*cloud_run_revision/, 'the synthetic event must match the protected Cloud Run error policy');
 assert.match(operationalAlertTester, /Ask the approved recipient to confirm/, 'human receipt remains an explicit acceptance gate');
 assert.doesNotMatch(operationalAlertTester, /@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/, 'the public notification test must not contain a real email address');
+assert.match(source, /identitytoolkit\.googleapis\.com/, 'Google Identity Platform must be enabled through the reviewed cloud configuration');
+assert.match(source, /google_identity_platform_config" "member_phone"/, 'Member phone sign-in must be managed as a repeatable cloud resource');
+assert.match(source, /phone_number\s*\{[\s\S]*?enabled\s*=\s*true/m, 'the approved Member phone provider must be enabled');
+assert.match(source, /allowlist_only\s*\{[\s\S]*?allowed_regions\s*=\s*var\.identity_sms_allowed_regions/m, 'real sign-in messages must be restricted to approved regions');
+assert.match(source, /identity_test_phone_numbers/, 'fictional phone identities must be supplied only as an environment input');
+assert.doesNotMatch(source, /test_phone_numbers\s*=\s*\{[\s\S]*?"\+[0-9]/m, 'fictional phone identities must not be committed to the public repository');
 assert.match(source, /billing_project\s*=\s*var\.project_id/, 'user credential API quota must be charged to the selected project');
 assert.match(source, /user_project_override\s*=\s*true/, 'Google provider must override the default user quota project');
 assert.match(source, /projects\/\$\{data\.google_project\.current\.number\}/, 'budget must filter by immutable project number');
@@ -256,6 +262,9 @@ for (const environment of ['development', 'staging', 'production']) {
   assert.match(example, new RegExp(`environment\\s*=\\s*"${environment}"`));
   assert.match(example, /public_api_origin\s*=\s*null/, `${environment} example must not guess a service origin`);
   assert.match(example, /alert_notification_email\s*=\s*null/, `${environment} example must not contain an alert recipient`);
+  assert.match(example, /enable_identity_platform\s*=\s*false/, `${environment} must make phone identity an explicit deployment decision`);
+  assert.match(example, /identity_test_phone_numbers\s*=\s*\{\}/, `${environment} example must not contain fictional phone credentials`);
+  assert.match(example, /identity_sms_allowed_regions\s*=\s*\["IN"\]/, `${environment} must default real sign-in messages to India only`);
   assert.match(example, /deploy_database_migration_job\s*=\s*false/, `${environment} example must keep the migration job disabled`);
   assert.match(example, /database_migration_image\s*=\s*null/, `${environment} example must not guess a migration image`);
   assert.match(example, /database_migration_source_revision\s*=\s*null/, `${environment} example must not guess a source revision`);

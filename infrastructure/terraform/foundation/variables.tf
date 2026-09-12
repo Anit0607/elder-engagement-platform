@@ -262,3 +262,37 @@ variable "alert_notification_email" {
     error_message = "alert_notification_email must be null or a valid email address."
   }
 }
+
+variable "enable_identity_platform" {
+  description = "Enable client-owned phone identity for Member sign-in in this environment."
+  type        = bool
+  default     = false
+}
+
+variable "identity_test_phone_numbers" {
+  description = "Fictional E.164 phone numbers mapped to six-digit test codes. Keep values only in an ignored environment file and rotate them regularly."
+  type        = map(string)
+  default     = {}
+  sensitive   = true
+
+  validation {
+    condition = length(var.identity_test_phone_numbers) <= 10 && alltrue([
+      for phone, code in var.identity_test_phone_numbers :
+      can(regex("^[+][1-9][0-9]{7,14}$", phone)) && can(regex("^[0-9]{6}$", code))
+    ])
+    error_message = "Use at most ten fictional E.164 phone numbers, each with a six-digit test code."
+  }
+}
+
+variable "identity_sms_allowed_regions" {
+  description = "ISO 3166-1 alpha-2 regions allowed to receive real phone sign-in messages."
+  type        = set(string)
+  default     = ["IN"]
+
+  validation {
+    condition = length(var.identity_sms_allowed_regions) > 0 && alltrue([
+      for region in var.identity_sms_allowed_regions : can(regex("^[A-Z]{2}$", region))
+    ])
+    error_message = "At least one two-letter uppercase region must be allowed for phone sign-in messages."
+  }
+}
