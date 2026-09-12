@@ -104,6 +104,22 @@ function Read-StateOutput {
     return [string]$property.Value.value
 }
 
+function Get-ExpectedMigrationImage {
+    param(
+        [Parameter(Mandatory)] [string]$ProjectId,
+        [Parameter(Mandatory)] [string]$Region,
+        [Parameter(Mandatory)] [string]$Environment,
+        [Parameter(Mandatory)] [string]$ArtifactRepository
+    )
+    $expectedRepository = "ee-$Environment-containers"
+    if ($ProjectId -notmatch '^[a-z][a-z0-9-]{4,28}[a-z0-9]$' -or
+        $Region -notmatch '^[a-z]+-[a-z]+[0-9]$' -or
+        $ArtifactRepository -cne $expectedRepository) {
+        throw 'Protected state contains an unexpected artifact repository.'
+    }
+    return "$Region-docker.pkg.dev/$ProjectId/$ArtifactRepository/engagement-migration@sha256:$script:expectedMigrationImageDigest"
+}
+
 function Get-EnvironmentMap {
     param([object[]]$Entries)
     $map = @{}
@@ -518,19 +534,17 @@ try {
             $migrationIamUser -cne "$expectedNamePrefix-migration@$projectId.iam" -or
             $runtimeIamUser -cne "$expectedNamePrefix-runtime@$projectId.iam" -or
             $serverlessNetwork -cne "$expectedNamePrefix-network" -or
-            $serverlessSubnetwork -cne "$expectedNamePrefix-serverless" -or
-            $artifactRepository -notmatch '^projects/[^/]+/locations/[^/]+/repositories/([^/]+)$') {
+            $serverlessSubnetwork -cne "$expectedNamePrefix-serverless") {
             throw 'Protected state does not identify the approved migration dependencies.'
         }
-        $artifactParts = @($artifactRepository -split '/')
-        if ($artifactParts.Count -ne 6 -or $artifactParts[0] -cne 'projects' -or
-            $artifactParts[1] -cne $projectId -or $artifactParts[2] -cne 'locations' -or
-            $artifactParts[3] -cne $region -or $artifactParts[4] -cne 'repositories' -or
-            $repositorySlug -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') {
+        if ($repositorySlug -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') {
             throw 'Protected state contains an unexpected repository target.'
         }
-        $artifactRepositoryId = $artifactParts[-1]
-        $expectedImage = "$region-docker.pkg.dev/$projectId/$artifactRepositoryId/engagement-migration@sha256:$expectedMigrationImageDigest"
+        $expectedImage = Get-ExpectedMigrationImage `
+            -ProjectId $projectId `
+            -Region $region `
+            -Environment $environment `
+            -ArtifactRepository $artifactRepository
         $plan = Invoke-TerraformJson -Arguments @(
             $terraformDirectoryArgument, 'show', '-json', $resolvedPlan
         ) -FailureMessage 'The reviewed migration plan could not be read.'
