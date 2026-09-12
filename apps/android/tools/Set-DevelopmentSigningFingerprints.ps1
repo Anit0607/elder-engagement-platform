@@ -15,10 +15,10 @@ try {
         $_.packageName -eq 'com.eldercaresaathi.amiko' -and $_.state -eq 'ACTIVE'
     })
     if ($taskApp.Count -ne 1) { throw 'Exactly one active approved Android registration is required.' }
-    $taskKeys = @(
+    $taskKeys = @(@(
         (Join-Path $taskRoot 'secure-runtime\android-user\debug.keystore'),
         (Join-Path $taskRoot 'secure-runtime\java-user\.android\debug.keystore')
-    ) | Where-Object { Test-Path -LiteralPath $_ }
+    ) | Where-Object { Test-Path -LiteralPath $_ })
     if (@($taskKeys).Count -ne 1) { throw 'Build the D-drive debug app first; exactly one debug keystore is required.' }
     $taskJdk = @(Get-ChildItem (Join-Path $taskRoot 'tools-runtime\android-java') -Directory)
     if ($taskJdk.Count -ne 1) { throw 'Exactly one approved D-drive JDK is required.' }
