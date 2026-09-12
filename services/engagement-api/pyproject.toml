@@ -8,8 +8,12 @@ version = "0.1.0"
 description = "Process foundation for the Elder Engagement Platform REST API."
 requires-python = ">=3.12,<3.13"
 dependencies = [
+  "asyncpg==0.31.0",
+  "CacheControl==0.14.4",
   "fastapi==0.141.1",
+  "google-auth==2.58.0",
   "pydantic==2.13.4",
+  "requests==2.34.2",
   "uvicorn==0.52.0",
 ]
 
