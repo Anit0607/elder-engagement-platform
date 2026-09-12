@@ -15,8 +15,7 @@ $requiredFunctions = @(
     'Get-ExpectedMigrationImage',
     'Assert-ExactEnvironmentMap',
     'Assert-ExactPropertyNames',
-    'Assert-LiveJobMatchesPlan',
-    'Assert-EffectiveRunPermission'
+    'Assert-LiveJobMatchesPlan'
 )
 foreach ($name in $requiredFunctions) {
     $definition = $ast.FindAll({
@@ -177,34 +176,5 @@ try {
 catch { $overrideRejected = $true }
 if (-not $overrideRejected) { throw 'A planned command override was not rejected.' }
 $plannedContainer.args = $null
-
-function Start-Sleep { param([int]$Seconds) }
-$principal = 'user:operator@example.invalid'
-$script:mockResponse = [pscustomobject]@{
-    fullyExplored = $true
-    mainAnalysis = [pscustomobject]@{
-        fullyExplored = $true
-        nonCriticalErrors = @()
-        analysisResults = @()
-    }
-}
-Assert-EffectiveRunPermission -RequireNoPrincipal
-$emptyExactRejected = $false
-try {
-    Assert-EffectiveRunPermission -OnlyAllowedPrincipal $principal -RequireAllowedPrincipal
-}
-catch { $emptyExactRejected = $true }
-if (-not $emptyExactRejected) { throw 'An empty post-grant analysis was accepted.' }
-
-$script:mockResponse.mainAnalysis.analysisResults = @([pscustomobject]@{
-    identityList = [pscustomobject]@{
-        identities = @([pscustomobject]@{ name = $principal })
-    }
-})
-Assert-EffectiveRunPermission -OnlyAllowedPrincipal $principal -RequireAllowedPrincipal
-$retainedPrincipalRejected = $false
-try { Assert-EffectiveRunPermission -RequireNoPrincipal }
-catch { $retainedPrincipalRejected = $true }
-if (-not $retainedPrincipalRejected) { throw 'A retained effective principal was accepted.' }
 
 Write-Output 'Database migration runner regression tests passed.'

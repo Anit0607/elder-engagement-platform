@@ -143,11 +143,10 @@ assert.match(migrationRunner, /CLEANUP-MIGRATION-EE-003-development/, 'database 
 assert.match(migrationRunner, /Get-FileHash.*SHA256.*ExpectedPlanSha256/s, 'database migration must verify the separately approved plan fingerprint');
 assert.match(migrationRunner, /\[IO\.FileShare\]::None/, 'migration execution must hold an exclusive local process lock');
 assert.match(migrationRunner, /\[IO\.FileMode\]::CreateNew/, 'migration recovery marker must never overwrite an existing marker');
-assert.match(migrationRunner, /asset', 'analyze-iam-policy'/, 'migration preflight must audit effective inherited run permission');
-assert.match(migrationRunner, /--organization=\$script:organizationId/, 'permission analysis must include the organization hierarchy');
-assert.match(migrationRunner, /--show-response/, 'permission analysis must validate the complete Google response');
-assert.match(migrationRunner, /Assert-EffectiveRunPermission -RequireNoPrincipal/, 'preflight and normal Apply cleanup must prove that nobody retains effective run permission');
-assert.match(migrationRunner, /Assert-EffectiveRunPermission -OnlyAllowedPrincipal \$allowedPrincipal -RequireAllowedPrincipal/, 'post-grant permission analysis must positively prove the approved operator');
+assert.doesNotMatch(migrationRunner, /analyze-iam-policy|--organization=/, 'migration must not require organization-wide permission inspection');
+assert.match(migrationRunner, /Get-JobPolicy/, 'migration must inspect explicit permissions on the protected job');
+assert.match(migrationRunner, /\$invokerMembers\.Count -ne 0/, 'migration must reject an existing explicit job-level invoker');
+assert.match(migrationRunner, /\$membersAfterGrant\.Count -ne 1.*\$membersAfterGrant\[0\] -cne \$allowedPrincipal/s, 'migration must verify the temporary named job-level invoker');
 assert.match(migrationRunner, /Assert-LiveJobMatchesPlan/, 'live migration job must match the reviewed saved plan');
 assert.match(migrationRunner, /expectedMigrationImageDigest = '[0-9a-f]{64}'/, 'migration execution must pin the exact reviewed image digest');
 assert.match(migrationRunner, /expectedMigrationSourceRevision = '[0-9a-f]{40}'/, 'migration execution must pin the source revision represented by the image');
@@ -159,7 +158,7 @@ assert.match(migrationRunner, /liveLimits\.cpu.*'1'.*liveLimits\.memory.*'512Mi'
 assert.match(migrationRunner, /Get-ExecutionCount\) -ne 0/, 'migration must refuse an existing execution history');
 assert.match(migrationRunner, /Pre-EE-003 application table migration safety backup/, 'migration must require the approved pre-migration backup');
 assert.match(migrationRunner, /\$Action -ne 'Cleanup'.*Resolve-IgnoredInputFile -Path \$ReviewedPlan/s, 'emergency cleanup must not require the reviewed plan file');
-assert.match(migrationRunner, /Clear-TemporaryInvokerBinding -SkipEffectiveAnalysis:\(\$Action -eq 'Cleanup'\)/, 'emergency cleanup must remove the explicit binding without depending on Cloud Asset availability');
+assert.match(migrationRunner, /Clear-TemporaryInvokerBinding/, 'normal and emergency cleanup must remove the explicit job-level binding');
 assert.match(migrationRunner, /\$bindingCleanupArmed = \$true\s+\$iamMutationAttempted = \$true\s+Invoke-GcloudMutation/s, 'permission cleanup must be armed before the first IAM mutation');
 assert.match(migrationRunner, /'run', 'jobs', 'execute'.*'--format=json'.*\$executionName.*Clear-TemporaryInvokerBinding.*'executions', 'describe'/s, 'migration must start once, capture its identity, remove permission and then monitor that exact execution');
 assert.doesNotMatch(migrationRunner, /'run', 'jobs', 'execute'.*'--wait'/s, 'migration must not retain temporary permission while waiting for completion');

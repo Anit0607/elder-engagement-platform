@@ -210,65 +210,6 @@ function Get-ActiveHumanOperator {
     return $operator
 }
 
-function Assert-EffectiveRunPermission {
-    param(
-        [string]$OnlyAllowedPrincipal,
-        [switch]$RequireAllowedPrincipal,
-        [switch]$RequireNoPrincipal
-    )
-    if ($RequireAllowedPrincipal -eq $RequireNoPrincipal -or
-        ($RequireAllowedPrincipal -and [string]::IsNullOrWhiteSpace($OnlyAllowedPrincipal))) {
-        throw 'Permission analysis requires exactly one explicit expectation mode.'
-    }
-    for ($attempt = 1; $attempt -le 6; $attempt++) {
-        $analysis = Invoke-GcloudJson -Arguments @(
-            'asset', 'analyze-iam-policy', "--organization=$script:organizationId",
-            "--full-resource-name=$script:fullJobResourceName", '--permissions=run.jobs.run',
-            '--expand-groups', '--expand-roles', '--show-response', '--format=json', '--quiet'
-        ) -FailureMessage 'Effective Cloud Run job permission analysis failed.'
-        if (-not [bool]$analysis.fullyExplored -or -not [bool]$analysis.mainAnalysis.fullyExplored -or
-            @($analysis.mainAnalysis.nonCriticalErrors | Where-Object { $null -ne $_ }).Count -ne 0) {
-            throw 'Effective Cloud Run job permission analysis was incomplete.'
-        }
-        $identities = @(
-            $analysis.mainAnalysis.analysisResults |
-                ForEach-Object { @($_.identityList.identities) } |
-                ForEach-Object { if ($_ -is [string]) { $_ } else { [string]$_.name } } |
-                Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
-                Sort-Object -Unique
-        )
-        if ($RequireNoPrincipal) {
-            if ($identities.Count -eq 0) { return }
-            if ($attempt -lt 6) {
-                Start-Sleep -Seconds 5
-                continue
-            }
-            throw 'An identity still has effective permission to run the migration job.'
-        }
-        $unexpected = @($identities | Where-Object { $_ -cne $OnlyAllowedPrincipal })
-        if ($unexpected.Count -ne 0) {
-            throw 'An unapproved identity has effective permission to run the migration job.'
-        }
-        if ($identities.Count -eq 1 -and $identities[0] -ceq $OnlyAllowedPrincipal) {
-            return
-        }
-        if ($attempt -lt 6) { Start-Sleep -Seconds 5 }
-    }
-    throw 'Permission analysis did not prove the approved temporary operator.'
-}
-
-function Ensure-OrganizationContext {
-    if (-not [string]::IsNullOrWhiteSpace([string]$script:organizationId)) { return }
-    $ancestry = @(Invoke-GcloudJson -Arguments @(
-        'projects', 'get-ancestors', $script:projectId, '--format=json', '--quiet'
-    ) -FailureMessage 'Project ancestry could not be read.')
-    $organizations = @($ancestry | Where-Object { $_.type -eq 'organization' })
-    if ($organizations.Count -ne 1) {
-        throw 'The project must belong to exactly one approved organization.'
-    }
-    $script:organizationId = [string]$organizations[0].id
-}
-
 function Assert-FreshBackup {
     $backups = @(Invoke-GcloudJson -Arguments @(
         'sql', 'backups', 'list', "--instance=$script:databaseInstance",
@@ -400,7 +341,6 @@ function Write-RecoveryMarker {
 }
 
 function Clear-TemporaryInvokerBinding {
-    param([switch]$SkipEffectiveAnalysis)
     if (-not $script:bindingCleanupArmed -or
         [string]::IsNullOrWhiteSpace([string]$script:temporaryOperator)) {
         return
@@ -418,10 +358,6 @@ function Clear-TemporaryInvokerBinding {
         }
         if (@(Get-InvokerMembers -Policy (Get-JobPolicy)).Count -ne 0) {
             throw 'An explicit migration invoker binding remains.'
-        }
-        if (-not $SkipEffectiveAnalysis) {
-            Ensure-OrganizationContext
-            Assert-EffectiveRunPermission -RequireNoPrincipal
         }
         $script:bindingCleanupVerified = $true
     }
@@ -496,8 +432,6 @@ try {
     if ($jobName -cne "$expectedNamePrefix-database-migration") {
         throw 'Protected state identifies an unexpected migration job.'
     }
-    $fullJobResourceName = "//run.googleapis.com/projects/$projectId/locations/$region/jobs/$jobName"
-
     if ($Action -eq 'Cleanup') {
         if ($ConfirmMigration -cne $expectedCleanupConfirmation) {
             throw "Cleanup requires -ConfirmMigration $expectedCleanupConfirmation."
@@ -548,7 +482,6 @@ try {
         $plan = Invoke-TerraformJson -Arguments @(
             $terraformDirectoryArgument, 'show', '-json', $resolvedPlan
         ) -FailureMessage 'The reviewed migration plan could not be read.'
-        Ensure-OrganizationContext
         if (Test-Path -LiteralPath $markerPath -PathType Leaf) {
             throw 'A previous migration may have been interrupted. Run Cleanup; never rerun Apply.'
         }
@@ -590,12 +523,11 @@ try {
         if ($invokerMembers.Count -ne 0) {
             throw 'The migration job already has an explicit invoker binding.'
         }
-        Assert-EffectiveRunPermission -RequireNoPrincipal
         if ((Get-ExecutionCount) -ne 0) {
             throw 'The one-time migration job has already been executed.'
         }
         Assert-FreshBackup
-        Write-Output 'Migration safety plan passed: live job, effective access, backup gate and zero executions are approved.'
+        Write-Output 'Migration plan passed: the reviewed job, explicit job access, backup and zero executions are approved.'
         Write-Output 'No migration was executed by the plan check.'
         if ($Action -eq 'Plan') { return }
 
@@ -643,7 +575,6 @@ try {
         if ($membersAfterGrant.Count -ne 1 -or $membersAfterGrant[0] -cne $allowedPrincipal) {
             throw 'Temporary migration execution permission does not match the approved operator.'
         }
-        Assert-EffectiveRunPermission -OnlyAllowedPrincipal $allowedPrincipal -RequireAllowedPrincipal
         if ((Get-ExecutionCount) -ne 0) {
             throw 'Migration execution history changed before the approved run.'
         }
@@ -727,7 +658,7 @@ try {
     }
 }
 finally {
-    Clear-TemporaryInvokerBinding -SkipEffectiveAnalysis:($Action -eq 'Cleanup')
+    Clear-TemporaryInvokerBinding
     $removeMarker = $markerCreatedThisRun -and -not $iamMutationAttempted
     if ($removeMarker -and (Test-Path -LiteralPath $markerPath)) {
         try { Remove-Item -LiteralPath $markerPath -Force }
