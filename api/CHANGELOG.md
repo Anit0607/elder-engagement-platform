@@ -2,6 +2,11 @@
 
 The contract remains a Pre-Sprint draft and no listed operation is claimed callable.
 
+## 0.1.3-draft — 12 September 2026
+
+- Added the documented retryable dependency-unavailable response to Member session creation.
+- Began the callable Member-session foundation while keeping external phone verification, persistent member lookup and secure token storage fail-closed until their production adapters are connected.
+
 ## 0.1.2-draft — 9 September 2026
 
 - Added distinct safe problem codes for unexpected internal errors, oversized request bodies and unsupported methods.
