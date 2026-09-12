@@ -18,6 +18,16 @@ output "database_connection_name" {
   value       = google_sql_database_instance.postgres.connection_name
 }
 
+output "serverless_network_name" {
+  description = "Private network name recorded in protected Terraform state."
+  value       = google_compute_network.application.name
+}
+
+output "serverless_subnetwork_name" {
+  description = "Private serverless subnetwork name recorded in protected Terraform state."
+  value       = google_compute_subnetwork.serverless.name
+}
+
 output "deployment_environment" {
   description = "Environment recorded in the protected Terraform state."
   value       = var.environment
