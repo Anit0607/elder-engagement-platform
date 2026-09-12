@@ -12,7 +12,7 @@ This is a dependency-free Pre-Sprint foundation, not a production release. The h
 
 - `services/engagement-api/` — FastAPI process, configuration, health/readiness and safety foundation.
 - `api/` — OpenAPI contract, examples, contract tests and Postman companion.
-- `database/` — current PostgreSQL schema draft.
+- `database/` — checksum-locked PostgreSQL migration candidate, runner, and safety tests.
 - `architecture/` — current architecture, permission mapping and deployment runbook.
 - `config/engagement/` — non-secret local configuration example and validation.
 - `infrastructure/` — parameterised Google Cloud foundation, keyless GitHub identity and plan-first deployment controls.

@@ -1,0 +1,12 @@
+{
+  "manifest_version": 1,
+  "migrations": [
+    {
+      "id": "V0001",
+      "name": "engagement_baseline",
+      "file": "V0001__engagement_baseline.sql",
+      "sha256": "efc9542d6ed35c4cb780385c705e3ba5353866f4e3590e39024b10c8b4997c68",
+      "requires_empty": true
+    }
+  ]
+}

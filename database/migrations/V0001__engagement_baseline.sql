@@ -1,10 +1,9 @@
 -- Elder Engagement Platform database baseline
--- Status: Pre-Sprint controlled draft; not approved for production deployment.
+-- Migration: V0001 engagement baseline.
+-- Status: Sprint 1 immutable candidate; verified in CI but not applied to the client database.
 -- Target: PostgreSQL 16 on client-owned Google Cloud SQL.
 -- Scope: approved engagement platform only. No booking, wallet, payment,
 -- caregiver-operation, voice-health, translation, or custom-call tables.
-
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TYPE user_role AS ENUM ('member', 'contributor', 'administrator');
 CREATE TYPE user_status AS ENUM ('invited', 'active', 'suspended', 'deleted');
@@ -51,6 +50,7 @@ CREATE TABLE staff_credentials (
 CREATE FUNCTION enforce_staff_credentials_user_role()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path FROM CURRENT
 AS $$
 DECLARE
   target_role user_role;
@@ -76,6 +76,7 @@ FOR EACH ROW EXECUTE FUNCTION enforce_staff_credentials_user_role();
 CREATE FUNCTION prevent_staff_role_demotion()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path FROM CURRENT
 AS $$
 BEGIN
   IF NEW.role = 'member'
