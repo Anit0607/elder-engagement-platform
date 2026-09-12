@@ -153,6 +153,12 @@ class MemberSessionService:
             member = await self._repository.get_or_create_verified_member(
                 identity.phone_e164, identity.provider_subject
             )
+        except IdentityTokenRejected as exc:
+            raise MemberSessionFailure(
+                status=401,
+                code="AUTHENTICATION_FAILED",
+                title="Authentication failed",
+            ) from exc
         except AuthenticationDependencyUnavailable as exc:
             raise MemberSessionFailure(
                 status=503,

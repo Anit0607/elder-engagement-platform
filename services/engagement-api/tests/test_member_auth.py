@@ -50,6 +50,12 @@ class FakeRepository:
         return self.member
 
 
+class ConflictingRepository:
+    async def get_or_create_verified_member(self, phone_e164, provider_subject):
+        del phone_e164, provider_subject
+        raise IdentityTokenRejected
+
+
 class FakeIssuer:
     def __init__(self, *, unavailable: bool = False):
         self.unavailable = unavailable
@@ -125,6 +131,7 @@ def test_invalid_or_unverified_provider_identity_is_rejected(settings, ready_pro
     cases = [
         (FakeVerifier(failure=IdentityTokenRejected()), FakeRepository(member())),
         (FakeVerifier(phone="invalid"), FakeRepository(member())),
+        (FakeVerifier(), ConflictingRepository()),
     ]
     for verifier, repository in cases:
         with make_client(settings, ready_probes, verifier, repository) as client:
