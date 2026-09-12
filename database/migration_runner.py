@@ -185,14 +185,14 @@ def _fetchone(
     row = cursor.fetchone()
     if row is None:
         raise MigrationError("A required PostgreSQL catalogue record is missing.")
-    return row
+    return tuple(row)
 
 
 def _fetchall(
     cursor: Any, statement: str, parameters: tuple[Any, ...] = ()
 ) -> list[tuple[Any, ...]]:
     cursor.execute(statement, parameters)
-    return list(cursor.fetchall())
+    return [tuple(row) for row in cursor.fetchall()]
 
 
 def _schema_exists(cursor: Any, schema_name: str) -> bool:
@@ -493,8 +493,7 @@ def _read_ledger(cursor: Any, migration_schema: str) -> list[tuple[str, str, str
         f"SELECT migration_id, migration_name, checksum "  # nosec B608
         f"FROM {_qualified(migration_schema, 'schema_migrations')} ORDER BY migration_id"
     )
-    cursor.execute(statement)
-    return list(cursor.fetchall())
+    return _fetchall(cursor, statement)
 
 
 def _validate_ledger(
