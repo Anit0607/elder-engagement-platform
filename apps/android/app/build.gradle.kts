@@ -25,12 +25,12 @@ android {
     }
     buildFeatures { buildConfig = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
-    kotlinOptions { jvmTarget = "17" }
     buildTypes {
         release { isMinifyEnabled = false }
     }
     lint { abortOnError = true; checkReleaseBuilds = true }
 }
+kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 tasks.matching { it.name == "preReleaseBuild" }.configureEach {
     doFirst {
         check(setting("AMIKO_API_ORIGIN").startsWith("https://")) { "Release requires approved HTTPS API" }
