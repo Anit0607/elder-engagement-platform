@@ -20,6 +20,13 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app import __version__
 from app.config import Settings, load_settings
 from app.logging_config import configure_logging, request_id_context, trace_id_context
+from app.member_auth import (
+    MemberSessionFailure,
+    MemberSessionHandler,
+    MemberSessionRequest,
+    SessionResponse,
+    UnconfiguredMemberSessionService,
+)
 from app.problems import problem_response
 from app.readiness import REQUIRED_DEPENDENCIES, DependencyProbe, NotConfiguredProbe
 from app.request_limits import RequestBodyLimitMiddleware
@@ -66,6 +73,7 @@ def create_app(
     settings: Settings | None = None,
     probes: Mapping[str, DependencyProbe] | None = None,
     *,
+    member_session_handler: MemberSessionHandler | None = None,
     probe_timeout_seconds: float = 2.0,
     max_request_body_bytes: int = 1_048_576,
 ) -> FastAPI:
@@ -93,6 +101,7 @@ def create_app(
     )
     app.state.settings = config
     app.state.readiness_probes = readiness_probes
+    app.state.member_session_handler = member_session_handler or UnconfiguredMemberSessionService()
 
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=config.trusted_host_list)
     if config.cors_origin_list:
@@ -100,7 +109,7 @@ def create_app(
             CORSMiddleware,
             allow_origins=config.cors_origin_list,
             allow_credentials=False,
-            allow_methods=["GET"],
+            allow_methods=["GET", "POST"],
             allow_headers=["Content-Type", "X-Request-Id", "traceparent"],
             expose_headers=["X-Request-Id", "traceparent"],
         )
@@ -166,6 +175,25 @@ def create_app(
     @app.get("/health", tags=["Operations"], response_model=HealthResponse)
     async def health() -> HealthResponse:
         return HealthResponse(status="ok")
+
+    @app.post(
+        "/v1/auth/member/session",
+        tags=["Authentication"],
+        response_model=SessionResponse,
+    )
+    async def create_member_session(
+        request: Request, payload: MemberSessionRequest
+    ) -> SessionResponse | JSONResponse:
+        try:
+            return await app.state.member_session_handler.create(payload)
+        except MemberSessionFailure as exc:
+            return _problem(
+                request,
+                exc.status,
+                exc.code,
+                exc.title,
+                retryable=exc.retryable,
+            )
 
     @app.get("/ready", tags=["Operations"], response_model=HealthResponse)
     async def ready(request: Request) -> JSONResponse:

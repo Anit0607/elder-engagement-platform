@@ -2,7 +2,7 @@
   "openapi": "3.1.1",
   "info": {
     "title": "Elder Engagement REST API",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "summary": "Controlled Week 1 contract draft for Android, iOS, Contributor and Administrator clients",
     "description": "This draft covers the Week 2 identity, session, profile and account-control foundation. It contains no production hostname, credential or personal data. Circles, content, moderation, feed and events will be added to the same v1 contract before the Week 4 interface freeze."
   },
@@ -137,7 +137,8 @@
           "400": { "$ref": "#/components/responses/InvalidRequest" },
           "401": { "$ref": "#/components/responses/Unauthorised" },
           "403": { "$ref": "#/components/responses/Forbidden" },
-          "429": { "$ref": "#/components/responses/RateLimited" }
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
         }
       }
     },
