@@ -152,6 +152,22 @@ Roll back if a release-blocking functional, security, data-integrity or availabi
 
 No evidence record may contain tokens, personal data, secret values, signed storage addresses or provider credentials.
 
+### Service-wide availability check
+
+Google's authenticated Cloud Run uptime check targets the service across app
+revisions. Keep its `revision_name` and `configuration_name` labels empty, as
+normalised by the Google API; retain project, service and region labels. Do not
+tie the check to `latest_ready_revision`: that caused inconsistent deployment
+plans and unnecessary check replacement in the development trials. Keep
+create-before-destroy protection for genuine target/configuration changes.
+
+After a deployment, verify the ready app image separately, then confirm the
+current uptime-check identifier receives successful samples and remains linked
+to the enabled availability alert. A blank revision label is not a failed check.
+See [Google Cloud uptime-check guidance](https://docs.cloud.google.com/monitoring/uptime-checks).
+Diagnostic output must whitelist non-secret results; never print complete cloud
+state or identity configuration, including password-hashing settings.
+
 ## Current verification status
 
 | Part | Status |

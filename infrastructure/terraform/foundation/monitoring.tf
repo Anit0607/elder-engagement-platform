@@ -41,11 +41,14 @@ resource "google_monitoring_uptime_check_config" "api_health" {
   monitored_resource {
     type = "cloud_run_revision"
     labels = {
-      project_id         = var.project_id
-      service_name       = local.cloud_run_service_name
-      revision_name      = basename(google_cloud_run_v2_service.api[0].latest_ready_revision)
+      project_id   = var.project_id
+      service_name = local.cloud_run_service_name
+      # Google monitors the service across revisions and normalises these two
+      # labels to empty strings. Pinning a serving revision causes perpetual
+      # replacement and inconsistent plans when an application image changes.
+      revision_name      = ""
       location           = var.region
-      configuration_name = local.cloud_run_service_name
+      configuration_name = ""
     }
   }
 
@@ -55,9 +58,8 @@ resource "google_monitoring_uptime_check_config" "api_health" {
   }
 
   lifecycle {
-    # A private Cloud Run check is tied to a serving revision. Create its
-    # successor before retiring the old check so the referencing availability
-    # policy can move safely without a monitoring gap or Google API rejection.
+    # Retain the old check until its successor exists if the target service or
+    # other check settings change. Ordinary app-image updates keep this check.
     create_before_destroy = true
   }
 
