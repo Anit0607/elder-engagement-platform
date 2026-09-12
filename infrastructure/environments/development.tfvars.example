@@ -20,3 +20,4 @@ database_application_schema = null
 database_migration_schema = null
 public_api_origin     = null
 allow_unauthenticated = false
+alert_notification_email = null
