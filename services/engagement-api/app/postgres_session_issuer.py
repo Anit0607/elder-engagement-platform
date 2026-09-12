@@ -3,6 +3,7 @@ from __future__ import annotations
 import hmac
 import secrets
 from collections.abc import Callable
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 from urllib.parse import urlsplit
@@ -15,7 +16,13 @@ from app.member_auth import (
     AuthenticationDependencyUnavailable,
     IssuedSession,
     MemberRecord,
+    MemberSessionFailure,
 )
+
+
+@asynccontextmanager
+async def _no_transaction():
+    yield
 
 
 class PostgresSessionIssuer:
@@ -33,6 +40,7 @@ class PostgresSessionIssuer:
         refresh_token_days: int = 30,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
         retry_attempts: int = 3,
+        member_session_limit: int = 0,
     ) -> None:
         parsed_issuer = urlsplit(issuer)
         if (
@@ -71,6 +79,29 @@ class PostgresSessionIssuer:
         self._refresh_delta = timedelta(days=refresh_token_days)
         self._now = now
         self._retry_attempts = retry_attempts
+        if not 0 <= member_session_limit <= 20:
+            raise ValueError("Member session limit must be between zero and twenty")
+        self._member_session_limit = member_session_limit
+
+    async def _check_limit(self, connection, member: MemberRecord, issued_at: datetime):
+        if not self._member_session_limit:
+            return
+        row = await connection.fetchrow(
+            "SELECT role::text, status::text FROM engagement_app.app_users WHERE id=$1 FOR UPDATE", member.id,
+        )
+        if not row or row["role"] != "member" or row["status"] != "active":
+            raise MemberSessionFailure(
+                status=401, code="AUTHENTICATION_FAILED", title="Authentication failed",
+            )
+        recent = await connection.fetchval(
+            "SELECT count(*) FROM engagement_app.auth_sessions WHERE user_id=$1 AND created_at >= $2",
+            member.id, issued_at - timedelta(minutes=10),
+        )
+        if recent >= self._member_session_limit:
+            raise MemberSessionFailure(
+                status=429, code="RATE_LIMITED", title="Too many sign-in attempts; wait before trying again",
+                retryable=True,
+            )
 
     async def issue(
         self,
@@ -112,7 +143,12 @@ class PostgresSessionIssuer:
             )
             try:
                 async with self._pool.acquire() as connection:
-                    await connection.execute(
+                    transaction = (
+                        connection.transaction() if self._member_session_limit else _no_transaction()
+                    )
+                    async with transaction:
+                        await self._check_limit(connection, member, issued_at)
+                        await connection.execute(
                         """
                         INSERT INTO engagement_app.auth_sessions (
                           id, user_id, token_family_id, refresh_token_hash,
@@ -131,7 +167,7 @@ class PostgresSessionIssuer:
                         device_name,
                         issued_at,
                         refresh_expires_at,
-                    )
+                        )
             except asyncpg.UniqueViolationError as exc:
                 if attempt + 1 == self._retry_attempts:
                     raise AuthenticationDependencyUnavailable from exc

@@ -19,6 +19,8 @@ Implemented now:
   phone identities during concurrent sign-in;
 - a secure session issuer that stores only a one-way refresh-token fingerprint
   and puts no phone or profile details in short-lived access tokens;
+- an enabled-runtime, database-backed limit of five new Member sessions per ten
+  minutes, serialized under a user-row lock across instances and device changes;
 - a versioned Week 2 REST contract for identity, profiles and account controls.
 
 The development container is deployed to private Cloud Run, and database migration `V0001` is applied to private Cloud SQL. The Member-session service follows the approved immediate-access boundary: the repository atomically finds or creates an active Member for a verified phone identity, and `profileComplete=false` routes a new Member to self-service profile setup. `EE_MEMBER_SESSION_ENABLED=true` connects the verifier, repository and session issuer through the application lifespan. Cloud SQL uses private IP, automatic IAM authentication and a four-connection pool; it never loads the password-style database URL secret. Cloud Run injects the two pinned Secret Manager values as base64 into `AMIKO_SESSION_SIGNING_KEY_BASE64` and `AMIKO_REFRESH_PEPPER_BASE64`. Missing, weak or equal keys prevent startup. Disabling the flag preserves the unavailable login boundary. Database commands and certificate requests are time-bounded, and pool, connector and certificate session resources close at shutdown. Refresh, logout and session-management operations remain EE-011 work. Contributors remain Administrator-created. Profiles, staff sign-in, circles, content, moderation, feeds, events, notifications and media providers are not yet implemented.
@@ -93,6 +95,19 @@ and the platform token in `Authorization`; otherwise the two authentication laye
 would compete for one header. No cloud permissions or schema changes are required.
 JWT verification follows the [PyJWT verification documentation](https://pyjwt.readthedocs.io/en/stable/api.html)
 with a fixed allowed signing algorithm, never a token-selected algorithm.
+
+## EE-009 Android development trial
+
+The first native Android phone-login app lives in `apps/android`. Google verifies
+codes in the official SDK; the app exchanges the resulting identity proof through
+the shared REST endpoint. A local, loopback-only development relay may be started
+with `python -m tools.development_login_relay --project approved-development-project
+--region approved-region --confirm TEST-EE-009-development` (one line).
+It proxies only Android Member login and acquires the operator's existing cloud
+identity internally; it never gives that cloud identity to the phone. Developer
+access stays out of the APK. Device testing uses Android Debug Bridge port reversal
+for port 8787. This is not a public production gateway. See the app acceptance
+checklist before declaring EE-009 complete.
 
 The first live development trial passed all eight checks against the deployed
 Google identity service and private Cloud SQL. Both Android and iOS request shapes

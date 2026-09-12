@@ -1,0 +1,26 @@
+<resources>
+    <string name="sign_in">Sign in with your phone</string>
+    <string name="phone_hint">India phone number (+91)</string>
+    <string name="code_hint">Six-digit verification code</string>
+    <string name="consent">I agree to use this number for sign-in. Google processes it to verify my identity and prevent misuse.</string>
+    <string name="send_code">Send code</string>
+    <string name="resend_code">Send a new code</string>
+    <string name="verify">Verify and sign in</string>
+    <string name="change_phone">Change phone number</string>
+    <string name="retry_connection">Retry app connection</string>
+    <string name="wait_seconds">Send again in %1$d seconds</string>
+    <string name="enter_phone">Enter your phone number to begin.</string>
+    <string name="invalid_phone">Enter a valid ten-digit India phone number.</string>
+    <string name="invalid_code">The code is incorrect or expired. Please try again.</string>
+    <string name="consent_required">Please agree to phone verification before continuing.</string>
+    <string name="sending">Requesting your code…</string>
+    <string name="verifying">Checking your code…</string>
+    <string name="code_sent">Enter the code. You can request another code after the countdown.</string>
+    <string name="request_new_code">Too many incorrect codes. Wait, then request a new code.</string>
+    <string name="rate_limited">Too many requests. Please wait before trying again.</string>
+    <string name="connection_failed">Unable to connect. Check your internet and try again.</string>
+    <string name="verification_failed">Phone verification could not start. Wait and try again.</string>
+    <string name="connecting">Signing you in to Amiko…</string>
+    <string name="signed_in">Signed in successfully. Your profile screen will be available in the next planned task.</string>
+    <string name="configuration_missing">This test build is not connected yet. Please ask the project team for the configured build.</string>
+</resources>
