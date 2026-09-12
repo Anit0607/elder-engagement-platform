@@ -1,6 +1,6 @@
 # Schema, REST and permission mapping
 
-Status: Pre-Sprint controlled draft under EE-008
+Status: Sprint 1 controlled baseline under EE-008
 Sources: `database/engagement_platform_v1_schema.sql` and `api/openapi/elder-engage-v1.openapi.json`
 
 This mapping prevents the inherited booking product from being mistaken for the current engagement platform. “Draft now” means the operation exists in the Week 2 OpenAPI draft. “Planned” means it is an approved tracker item but is deliberately unavailable in the current contract.
@@ -38,7 +38,7 @@ This mapping prevents the inherited booking product from being mistaken for the 
 
 ## Gaps that block final EE-008 acceptance
 
-- Current schema must become an immutable migration and execute successfully against the approved PostgreSQL environment.
+- Current schema passes static checks and both staff-role race directions on PostgreSQL 16, but must still become an immutable migration and execute successfully through the private migration identity.
 - Each planned operation must be added to the OpenAPI only in its approved sprint and linked to automated permission tests.
 - Final profile fields, circle rules, Administrator authentication, retention/deletion and broadcast consent decisions must be recorded.
-- The deployment runbook must be executed from the client repository against the client-owned Google Cloud environments and independently reviewed.
+- The development infrastructure and private health portions of the runbook are executed and independently reviewed; database migration, monitoring delivery, rollback rehearsal, staging and production evidence remain outstanding.

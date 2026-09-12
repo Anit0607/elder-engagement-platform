@@ -1,6 +1,6 @@
 # Elder Engagement Platform deployment runbook
 
-Status: Pre-Sprint controlled draft under EE-008
+Status: Sprint 1 controlled runbook under EE-008
 Target: client-owned Google Cloud development, staging, and production environments
 Production readiness: not yet verified
 
@@ -140,11 +140,11 @@ No evidence record may contain tokens, personal data, secret values, signed stor
 
 | Part | Status |
 |---|---|
-| Architecture and release sequence | Drafted locally |
-| Current engagement schema | Drafted; static scope check passed |
+| Architecture and release sequence | Versioned in the protected public repository; Cloud Run build and deployment steps executed using an immutable digest |
+| Current engagement schema | Corrected logical draft; static checks and both staff-role race directions pass on PostgreSQL 16; not migrated |
 | Week 2 REST contract | Local draft package independently reviewed; runtime implementation remains pending |
-| GitHub repository | Public repository created under the Project Manager account; audited baseline pushed to `main` |
-| GitHub verification pipeline | Public-boundary, contract and backend jobs passed; Google Cloud deployment stage remains pending |
-| Google Cloud resources | Not created; client project/region/access not provided |
+| GitHub repository | Public repository under the Project Manager account; protected `main`, required checks and pull-request merges are active |
+| GitHub verification pipeline | Boundary, contract, backend, security, dependency, container-build and private deployment-health checks have passed |
+| Google Cloud resources | Development foundation active: private Cloud Run, private PostgreSQL, private storage, service identities, secret containers, remote state and budget alerts. Staging and production are not created |
 | PostgreSQL migration execution | Not run for current schema; no approved runtime available |
-| Cloud smoke test, monitoring and rollback | Not run; dependent on deployed client environment |
+| Cloud smoke test, monitoring and rollback | Authenticated private `/health` passed and Terraform reports no drift; dependency readiness, error/uptime notification delivery and rollback rehearsal remain pending |
