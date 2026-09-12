@@ -37,6 +37,7 @@ const examples = {
   SyntheticStaffSessionRequest: "StaffSessionRequest",
   SyntheticRefreshRequest: "RefreshRequest",
   SyntheticSessionResponse: "SessionResponse",
+  SyntheticNewMemberSessionResponse: "SessionResponse",
   SyntheticProfileUpdate: "ProfileUpdate",
   SyntheticAdminCreateMember: "AdminCreateUserRequest",
   SyntheticAdminCreateContributor: "AdminCreateUserRequest",
@@ -105,7 +106,6 @@ for (const code of contract.components.schemas.ErrorCode.enum) {
       "SESSION_REVOKED",
       "REFRESH_TOKEN_REUSED",
       "ACCOUNT_SUSPENDED",
-      "PROFILE_NOT_PROVISIONED",
       "MFA_REQUIRED",
       "RATE_LIMITED",
     ].includes(code) &&
