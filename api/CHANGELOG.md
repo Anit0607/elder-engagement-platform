@@ -2,6 +2,12 @@
 
 The contract remains a controlled Sprint 2 draft and no listed operation is claimed callable until its matching backend deployment is verified.
 
+## Member session-control implementation note — 12 September 2026
+
+- Added explicit suspension and dependency-outage responses for Member device listing, logout and device removal, plus invalid-path validation for device removal.
+- Clarified owner isolation, token-family revocation and rejection of a removed session.
+- No path or success-payload changes. Backend candidate remains undeployed; staff sessions and refresh rotation are not included in this implementation step.
+
 ## 0.2.0-draft — 12 September 2026
 
 - Replaced Administrator-pre-provisioned Member sign-in with the approved immediate-access self-registration journey.
