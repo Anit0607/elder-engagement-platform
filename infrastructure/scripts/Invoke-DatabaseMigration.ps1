@@ -183,6 +183,24 @@ function Get-ExecutionCount {
     return $executions.Count
 }
 
+function Get-ExecutionLogFilter {
+    param([Parameter(Mandatory)] [string]$JobName)
+    if ($JobName -notmatch '^[a-z][a-z0-9-]{0,61}[a-z0-9]$') {
+        throw 'The execution log job target is invalid.'
+    }
+    return 'resource.type="cloud_run_job" AND resource.labels.job_name="' + $JobName + '"'
+}
+
+function Test-ExecutionLogEntry {
+    param(
+        [Parameter(Mandatory)] [object]$Entry,
+        [Parameter(Mandatory)] [string]$ExecutionName
+    )
+    if ($ExecutionName -notmatch '^[a-z][a-z0-9-]{0,61}[a-z0-9]$') { return $false }
+    $label = $Entry.labels.PSObject.Properties['run.googleapis.com/execution_name']
+    return $null -ne $label -and [string]$label.Value -ceq $ExecutionName
+}
+
 function Get-JobPolicy {
     return Invoke-GcloudJson -Arguments @(
         'run', 'jobs', 'get-iam-policy', $script:jobName,
@@ -623,12 +641,12 @@ try {
 
         $successRecords = @()
         for ($attempt = 1; $attempt -le 6 -and $successRecords.Count -eq 0; $attempt++) {
-            $filter = 'resource.type="cloud_run_job" AND resource.labels.job_name="' + $jobName +
-                '" AND labels.execution_name="' + $executionName + '"'
+            $filter = Get-ExecutionLogFilter -JobName $jobName
             $logs = @(Invoke-GcloudJson -Arguments @(
                 'logging', 'read', $filter, "--project=$projectId", '--limit=100', '--format=json', '--quiet'
             ) -FailureMessage 'Migration execution logs could not be read.')
             foreach ($entry in $logs) {
+                if (-not (Test-ExecutionLogEntry -Entry $entry -ExecutionName $executionName)) { continue }
                 $record = $null
                 if ($entry.jsonPayload.status) {
                     $record = $entry.jsonPayload

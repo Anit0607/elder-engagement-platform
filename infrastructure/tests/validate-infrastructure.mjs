@@ -167,6 +167,7 @@ assert.match(migrationRunner, /remove-iam-policy-binding/, 'temporary job-level 
 assert.match(migrationRunner, /\$removeMarker = \$markerCreatedThisRun -and -not \$iamMutationAttempted/, 'any attempted IAM mutation must leave a permanent no-retry marker');
 assert.match(migrationRunner, /Clear-TemporaryInvokerBinding\s+if \(-not \$bindingCleanupVerified/s, 'temporary permission must be removed immediately after job execution');
 assert.match(migrationRunner, /succeededCount -ne 1.*failedCount -ne 0/s, 'migration must require exactly one successful task and no failures');
+assert.match(migrationRunner, /Test-ExecutionLogEntry.*run\.googleapis\.com\/execution_name/s, 'migration must isolate the exact Cloud Run execution log label locally');
 assert.match(migrationRunner, /\$record\.status -eq 'ok'.*\$record\.applied\[0\] -eq \$expectedAppliedMigration/s, 'migration must require the exact execution-scoped V0001 success record');
 assert.doesNotMatch(bootstrapRunner, /--password(?:=|')|password-secret-version/i, 'bootstrap must not create or pass a password');
 
