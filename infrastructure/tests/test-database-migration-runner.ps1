@@ -13,6 +13,8 @@ $requiredFunctions = @(
     'Get-EnvironmentMap',
     'Get-PlanEnvironmentMap',
     'Get-ExpectedMigrationImage',
+    'Get-ExecutionLogFilter',
+    'Test-ExecutionLogEntry',
     'Assert-ExactEnvironmentMap',
     'Assert-ExactPropertyNames',
     'Assert-LiveJobMatchesPlan'
@@ -25,6 +27,21 @@ foreach ($name in $requiredFunctions) {
     }, $true)
     if ($definition.Count -ne 1) { throw "Expected exactly one $name function." }
     . ([scriptblock]::Create($definition[0].Extent.Text))
+}
+
+$expectedLogFilter = 'resource.type="cloud_run_job" AND resource.labels.job_name="migration-job"'
+if ((Get-ExecutionLogFilter -JobName 'migration-job') -cne $expectedLogFilter) {
+    throw 'The execution log filter is not limited to the protected Cloud Run job.'
+}
+$matchingEntry = [pscustomobject]@{ labels = [pscustomobject]@{
+    'run.googleapis.com/execution_name' = 'migration-job-run1'
+} }
+$differentEntry = [pscustomobject]@{ labels = [pscustomobject]@{
+    'run.googleapis.com/execution_name' = 'migration-job-run2'
+} }
+if (-not (Test-ExecutionLogEntry -Entry $matchingEntry -ExecutionName 'migration-job-run1') -or
+    (Test-ExecutionLogEntry -Entry $differentEntry -ExecutionName 'migration-job-run1')) {
+    throw 'Execution log entries are not isolated to the exact Cloud Run execution.'
 }
 
 $script:expectedMigrationImageDigest = 'b' * 64
