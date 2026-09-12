@@ -23,6 +23,10 @@ const migrationDockerfile = readFileSync(
   resolve(root, '..', 'database', 'Dockerfile'),
   'utf8'
 );
+const bootstrapTemplate = readFileSync(
+  resolve(root, '..', 'database', 'bootstrap', 'V0001__establish_schema_ownership.sql.template'),
+  'utf8'
+);
 
 assert.ok(files.length >= 8, 'foundation must be split into reviewable concerns');
 assert.match(source, /backend\s+"gcs"/, 'remote Google Cloud Storage state is required');
@@ -48,6 +52,7 @@ assert.match(source, /network_interfaces\s*\{/, 'Cloud Run must use Direct Virtu
 assert.doesNotMatch(source, /google_vpc_access_connector/, 'a chargeable serverless connector is not required');
 assert.match(source, /deletion_protection\s*=\s*var\.environment\s*==\s*"production"/);
 assert.match(source, /point_in_time_recovery_enabled\s*=\s*true/);
+assert.match(source, /data_api_access\s*=\s*"DISALLOW_DATA_API"/, 'Cloud SQL Data API must be closed during normal operation');
 assert.match(source, /edition\s*=\s*"ENTERPRISE"/, 'shared-core development SQL must explicitly use Enterprise edition');
 assert.match(source, /google_billing_budget/, 'a project budget is mandatory');
 assert.match(source, /billing_project\s*=\s*var\.project_id/, 'user credential API quota must be charged to the selected project');
@@ -83,6 +88,7 @@ assert.doesNotMatch(source, /google_cloud_run_v2_job_iam/, 'no job invoker may b
 
 const runner = read('scripts/Invoke-Infrastructure.ps1');
 const healthVerifier = read('scripts/Test-CloudRunHealth.ps1');
+const bootstrapRunner = read('scripts/Invoke-DatabaseBootstrap.ps1');
 assert.match(runner, /\[string\]\$Action\s*=\s*'Plan'/, 'runner must default to plan');
 assert.match(runner, /APPLY-\$Environment/, 'apply must require an environment-specific confirmation');
 assert.match(runner, /Apply requires a reviewed saved plan/, 'apply must consume a saved reviewed plan');
@@ -92,6 +98,53 @@ assert.match(runner, /auth print-access-token --quiet/, 'the local runner must a
 assert.match(runner, /Remove-Item Env:GOOGLE_OAUTH_ACCESS_TOKEN/, 'the local runner must clear its injected access token');
 assert.match(runner, /secure-runtime\\gcloud-config/, 'the local runner must prefer the ignored workspace Google Cloud configuration');
 assert.match(runner, /Remove-Item Env:CLOUDSDK_CONFIG/, 'the local runner must restore its Google Cloud configuration environment');
+
+assert.match(bootstrapRunner, /\[string\]\$Action\s*=\s*'Plan'/, 'database bootstrap must default to a read-only plan');
+assert.match(bootstrapRunner, /BOOTSTRAP-EE-003-development/, 'database bootstrap apply must require an exact confirmation');
+assert.match(bootstrapRunner, /CLEANUP-EE-003-development/, 'database bootstrap must provide an explicit emergency cleanup action');
+assert.match(bootstrapRunner, /#requires -Version 7\.0/, 'database bootstrap must require PowerShell 7');
+assert.match(bootstrapRunner, /deployment_project_id/, 'database bootstrap must bind its target to protected Terraform state');
+assert.match(bootstrapRunner, /github_repository_slug/, 'database bootstrap must bind its repository to protected Terraform state');
+assert.match(bootstrapRunner, /\^\(\?i:/, 'database bootstrap must anchor the approved repository address');
+assert.ok(bootstrapRunner.indexOf('remote get-url origin') < bootstrapRunner.indexOf('fetch --quiet origin main'), 'repository identity must be checked before contacting origin');
+assert.match(bootstrapRunner, /originRevision\s*-ne\s*\$ExpectedRevision/, 'database bootstrap must use the exact reviewed origin/main revision');
+assert.match(bootstrapRunner, /secure-runtime/, 'temporary database material must stay in the protected runtime area');
+assert.match(bootstrapRunner, /bootstrap-recovery/, 'database bootstrap must keep a protected recovery marker');
+assert.match(bootstrapRunner, /\[IO\.FileShare\]::None/, 'bootstrap and cleanup must hold an exclusive process lock');
+assert.ok(bootstrapRunner.indexOf('[IO.FileShare]::None') < bootstrapRunner.indexOf("'sql', 'instances', 'describe'"), 'the exclusive lock must be acquired before cloud preflight');
+assert.match(bootstrapRunner, /\[IO\.FileMode\]::CreateNew/, 'the recovery marker must never overwrite an existing marker');
+assert.doesNotMatch(bootstrapRunner, /Set-Content[^\n]+\$recoveryMarkerPath/, 'the recovery marker must not use an overwriting write operation');
+assert.match(bootstrapRunner, /\$temporaryOperator\s*=\s*\[string\]\$marker\.operator/, 'cleanup must remove the exact operator recorded before interruption');
+assert.match(bootstrapRunner, /\$recoveryMarkerCreatedThisRun\s*-and\s*-not\s*\$cloudMutationAttempted/, 'a newly created marker may be removed before any cloud mutation');
+assert.match(bootstrapRunner, /\$dataApiClosureAttempted\s*-and\s*\$operatorClosureAttempted\s*-and\s*\$finalCleanupVerified/, 'an existing recovery marker must survive until both closures are attempted and verified');
+assert.doesNotMatch(bootstrapRunner, /\$cleanupErrors\.Count\s*-eq\s*0\s*-and\s*\(Test-Path[^\n]+\$recoveryMarkerPath/, 'a Plan refusal must not delete an existing recovery marker merely because no cleanup error was recorded');
+assert.match(bootstrapRunner, /status\s*-eq\s*'SUCCESSFUL'/, 'database bootstrap requires a successful backup');
+assert.match(bootstrapRunner, /type\s*-eq\s*'ON_DEMAND'/, 'database bootstrap requires an on-demand backup');
+assert.match(bootstrapRunner, /--type=CLOUD_IAM_USER/, 'bootstrap must use the named IAM operator without a password');
+assert.match(bootstrapRunner, /--database-roles=cloudsqlsuperuser,\$MigrationRole/, 'the one-time operator roles must be explicit');
+assert.match(bootstrapRunner, /--data-api-access=ALLOW_DATA_API/, 'bootstrap may open the authenticated Data API temporarily');
+assert.match(bootstrapRunner, /--data-api-access=DISALLOW_DATA_API/, 'bootstrap must close the temporary Data API path');
+assert.match(bootstrapRunner, /'sql', 'users', 'delete'/, 'bootstrap must remove the one-time database operator');
+assert.match(bootstrapRunner, /--sql=@/, 'bootstrap must execute a reviewed SQL file instead of inline SQL');
+assert.match(bootstrapRunner, /--partial-result-mode=FAIL_PARTIAL_RESULT/, 'bootstrap must reject incomplete results');
+assert.match(bootstrapRunner, /Get-DatabaseStatusCode -Status \$Response\.status\) -ne 0/, 'bootstrap must reject a top-level database error returned inside successful JSON');
+assert.match(bootstrapRunner, /Get-DatabaseStatusCode -Status \$result\.status\) -ne 0/, 'bootstrap must reject a per-statement database error');
+assert.match(bootstrapRunner, /\[bool\]\$result\.partialResult/, 'bootstrap must reject a truncated per-statement result');
+assert.match(bootstrapRunner, /\$rows\.Count -ne 1/, 'bootstrap must require exactly one final verification row');
+assert.match(bootstrapRunner, /correct_database.*application_schema_ready.*migration_schema_ready/s, 'bootstrap must require all three named final verification columns');
+assert.match(bootstrapRunner, /Assert-ExecuteSqlResponse -Response \$executeResponse\s+\$bootstrapCommitted = \$true/, 'bootstrap must validate the database response before recording success');
+assert.match(bootstrapRunner, /finally\s*\{/, 'temporary access cleanup must run after success or failure');
+assert.doesNotMatch(bootstrapRunner, /--password(?:=|')|password-secret-version/i, 'bootstrap must not create or pass a password');
+
+assert.match(bootstrapTemplate, /^BEGIN;/m, 'bootstrap changes must use one transaction');
+assert.match(bootstrapTemplate, /^COMMIT;/m, 'bootstrap changes must commit only after postchecks');
+assert.match(bootstrapTemplate, /SET LOCAL search_path = pg_catalog/, 'administrator search path must be locked');
+assert.match(bootstrapTemplate, /pg_advisory_xact_lock/, 'bootstrap and migration must serialize on a database lock');
+assert.match(bootstrapTemplate, /CREATE SCHEMA __APPLICATION_SCHEMA_IDENTIFIER__/, 'bootstrap must create the approved application schema');
+assert.match(bootstrapTemplate, /CREATE SCHEMA __MIGRATION_SCHEMA_IDENTIFIER__/, 'bootstrap must create the approved control schema');
+assert.match(bootstrapTemplate, /temporary_membership_count\s*<>\s*1/, 'bootstrap must verify the one-time operator can assign the approved owner');
+assert.match(bootstrapTemplate, /REVOKE ALL ON SCHEMA __APPLICATION_SCHEMA_IDENTIFIER__ FROM PUBLIC/, 'public application-schema access must be removed');
+assert.match(bootstrapTemplate, /REVOKE ALL ON SCHEMA __MIGRATION_SCHEMA_IDENTIFIER__ FROM PUBLIC/, 'public control-schema access must be removed');
 
 assert.match(candidateWorkflow, /workflow_dispatch:/, 'candidate publication must be manually started');
 assert.match(candidateWorkflow, /environment:\s*development/, 'candidate publication must use the protected development environment');
@@ -171,7 +224,7 @@ const forbidden = [
 ];
 
 for (const pattern of forbidden) {
-  assert.doesNotMatch(source + runner, pattern, `forbidden tracked value matched ${pattern}`);
+  assert.doesNotMatch(source + runner + bootstrapRunner + bootstrapTemplate, pattern, `forbidden tracked value matched ${pattern}`);
 }
 
 console.log(`Infrastructure safety validation passed for ${files.length} Terraform files and 3 environment examples.`);

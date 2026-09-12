@@ -1,6 +1,6 @@
 # Engagement database baseline
 
-Status: Sprint 1 checksum-locked migration candidate under EE-003. PostgreSQL 16, rollback, rerun, concurrency, driver-compatibility and least-privilege checks pass in protected continuous integration. It has not been applied to the client database.
+Status: Sprint 1 checksum-locked migration candidate under EE-003. PostgreSQL 16, bootstrap rollback, rerun, concurrency, driver-compatibility and least-privilege checks are required in protected continuous integration. It has not been applied to the client database.
 
 `migrations/V0001__engagement_baseline.sql` is the canonical PostgreSQL 16 baseline for the approved engagement product. Its approved repository bytes are locked by `migrations/manifest.json`. `amiko_v1_schema.sql` belongs to the inherited booking/caregiver scope and is retained only as history.
 
@@ -24,7 +24,7 @@ These values must become explicit configuration or approved immutable migrations
 
 ## Migration safety boundary
 
-`migration_runner.py` applies the manifest in one bounded transaction. It verifies the exact database and non-administrative migration/runtime roles, schema ownership, PUBLIC access, an empty first-install database, the immutable ledger and runtime permissions. Concurrent runners serialize on a PostgreSQL advisory lock. Production mode accepts no database connection string: it uses Application Default Credentials, the Cloud SQL Python Connector, private Internet Protocol addressing and automatic Identity and Access Management database authentication. Live execution still requires the separately approved one-time database bootstrap, backup gate and migration-job review.
+`migration_runner.py` applies the manifest in one bounded transaction. It verifies the exact database and non-administrative migration/runtime roles, schema ownership, PUBLIC access, an empty first-install database, the immutable ledger and runtime permissions. Concurrent runners serialize on a PostgreSQL advisory lock. Production mode accepts no database connection string: it uses Application Default Credentials, the Cloud SQL Python Connector, private Internet Protocol addressing and automatic Identity and Access Management database authentication. The separately reviewed bootstrap uses the short-lived Cloud SQL Data API path with one named human Identity and Access Management database user, creates no password, and removes that access immediately. Live migration execution still requires the bootstrap tests, reviewed main-branch control, successful cleanup and final migration-job review.
 
 ## Before migration approval
 

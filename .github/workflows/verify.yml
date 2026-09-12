@@ -69,6 +69,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
         run: |
+          python database/tests/test_bootstrap_sql.py
           python database/tests/test_migration_runner.py
           python database/tests/test_staff_role_concurrency.py
       - name: Validate infrastructure safety controls
@@ -97,7 +98,12 @@ jobs:
         run: python -m pip install -r requirements.lock -r requirements-dev.lock
       - name: Lint
         working-directory: services/engagement-api
-        run: python -m ruff check app tests tools ../../database/migration_runner.py ../../tools/validate_database_migrations.py
+        run: >-
+          python -m ruff check app tests tools
+          ../../database/migration_runner.py
+          ../../database/tests/test_bootstrap_sql.py
+          ../../database/tests/test_migration_runner.py
+          ../../tools/validate_database_migrations.py
       - name: Test with coverage gate
         working-directory: services/engagement-api
         run: python -m pytest --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=90

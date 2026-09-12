@@ -253,6 +253,32 @@ def _verify_role_safety(cursor: Any, role_name: str) -> None:
         )
 
 
+def _role_inherits(cursor: Any, member_role: str, target_role: str) -> bool:
+    return bool(
+        _fetchone(
+            cursor,
+            """
+            WITH RECURSIVE inherited(role_oid) AS (
+              SELECT membership.roleid
+                FROM pg_auth_members AS membership
+               WHERE membership.member = (SELECT oid FROM pg_roles WHERE rolname = %s)
+              UNION
+              SELECT membership.roleid
+                FROM pg_auth_members AS membership
+                JOIN inherited ON inherited.role_oid = membership.member
+            )
+            SELECT EXISTS (
+              SELECT 1
+                FROM inherited
+                JOIN pg_roles AS role ON role.oid = inherited.role_oid
+               WHERE role.rolname = %s
+            )
+            """,
+            (member_role, target_role),
+        )[0]
+    )
+
+
 def _verify_schema_contract(
     cursor: Any,
     schema_name: str,
@@ -887,6 +913,12 @@ def apply_migrations(
             )
         _verify_role_safety(cursor, migration_role)
         _verify_role_safety(cursor, runtime_role)
+        if _role_inherits(cursor, runtime_role, migration_role) or _role_inherits(
+            cursor, migration_role, runtime_role
+        ):
+            raise MigrationError(
+                "Migration and runtime roles must not inherit from each other."
+            )
         cursor.execute(
             "SELECT set_config('lock_timeout', %s, true)",
             (f"{lock_timeout_seconds}s",),

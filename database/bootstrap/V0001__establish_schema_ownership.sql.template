@@ -1,0 +1,251 @@
+-- One-time PostgreSQL 16 bootstrap for the Elder Engagement development database.
+--
+-- This template contains no environment-specific value. The guarded PowerShell
+-- runner validates and substitutes every placeholder in an ignored temporary
+-- file before submitting it through the Cloud SQL Data API.
+
+BEGIN;
+
+SET LOCAL search_path = pg_catalog;
+SET LOCAL lock_timeout = '30s';
+SET LOCAL statement_timeout = '120s';
+SET LOCAL idle_in_transaction_session_timeout = '120s';
+
+SELECT pg_advisory_xact_lock(
+  hashtextextended('__ADVISORY_LOCK_LITERAL__', 0)
+);
+
+DO $bootstrap_preflight$
+DECLARE
+  unsafe_role_count integer;
+  unexpected_object_count integer;
+  application_roles_overlap boolean;
+BEGIN
+  IF current_database() <> '__DATABASE_LITERAL__' THEN
+    RAISE EXCEPTION 'Bootstrap connected to the wrong database.';
+  END IF;
+
+  IF current_setting('server_version_num')::integer / 10000 <> 16 THEN
+    RAISE EXCEPTION 'Bootstrap requires PostgreSQL major version 16.';
+  END IF;
+
+  IF session_user <> '__OPERATOR_LITERAL__' THEN
+    RAISE EXCEPTION 'Bootstrap is not running as the approved one-time operator.';
+  END IF;
+
+  IF '__MIGRATION_ROLE_LITERAL__' = '__RUNTIME_ROLE_LITERAL__' THEN
+    RAISE EXCEPTION 'Migration and runtime roles must be different.';
+  END IF;
+
+  IF to_regnamespace('__APPLICATION_SCHEMA_LITERAL__') IS NOT NULL
+     OR to_regnamespace('__MIGRATION_SCHEMA_LITERAL__') IS NOT NULL THEN
+    RAISE EXCEPTION 'An approved schema already exists; manual review is required.';
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '__MIGRATION_ROLE_LITERAL__')
+     OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '__RUNTIME_ROLE_LITERAL__') THEN
+    RAISE EXCEPTION 'An approved database role is missing.';
+  END IF;
+
+  WITH RECURSIVE approved_roles(role_name) AS (
+    VALUES ('__MIGRATION_ROLE_LITERAL__'::text), ('__RUNTIME_ROLE_LITERAL__'::text)
+  ), inherited(start_role, role_oid) AS (
+    SELECT approved.role_name, membership.roleid
+      FROM approved_roles AS approved
+      JOIN pg_roles AS role ON role.rolname = approved.role_name
+      JOIN pg_auth_members AS membership ON membership.member = role.oid
+    UNION
+    SELECT inherited.start_role, membership.roleid
+      FROM inherited
+      JOIN pg_auth_members AS membership ON membership.member = inherited.role_oid
+  ), unsafe_roles AS (
+    SELECT role.rolname
+      FROM pg_roles AS role
+     WHERE role.rolname IN ('__MIGRATION_ROLE_LITERAL__', '__RUNTIME_ROLE_LITERAL__')
+       AND (
+         role.rolsuper OR role.rolcreatedb OR role.rolcreaterole
+         OR role.rolreplication OR role.rolbypassrls
+       )
+    UNION
+    SELECT inherited.start_role
+      FROM inherited
+      JOIN pg_roles AS parent ON parent.oid = inherited.role_oid
+     WHERE parent.rolsuper OR parent.rolcreatedb OR parent.rolcreaterole
+        OR parent.rolreplication OR parent.rolbypassrls
+        OR parent.rolname = 'cloudsqlsuperuser'
+  )
+  SELECT count(*) INTO unsafe_role_count FROM unsafe_roles;
+
+  IF unsafe_role_count <> 0 THEN
+    RAISE EXCEPTION 'An approved application role has administrative privileges.';
+  END IF;
+
+  WITH RECURSIVE inherited(start_role, role_oid) AS (
+    SELECT role.rolname, membership.roleid
+      FROM pg_roles AS role
+      JOIN pg_auth_members AS membership ON membership.member = role.oid
+     WHERE role.rolname IN ('__MIGRATION_ROLE_LITERAL__', '__RUNTIME_ROLE_LITERAL__')
+    UNION
+    SELECT inherited.start_role, membership.roleid
+      FROM inherited
+      JOIN pg_auth_members AS membership ON membership.member = inherited.role_oid
+  )
+  SELECT EXISTS (
+    SELECT 1
+      FROM inherited
+      JOIN pg_roles AS inherited_role ON inherited_role.oid = inherited.role_oid
+     WHERE (
+       inherited.start_role = '__RUNTIME_ROLE_LITERAL__'
+       AND inherited_role.rolname = '__MIGRATION_ROLE_LITERAL__'
+     ) OR (
+       inherited.start_role = '__MIGRATION_ROLE_LITERAL__'
+       AND inherited_role.rolname = '__RUNTIME_ROLE_LITERAL__'
+     )
+  ) INTO application_roles_overlap;
+
+  IF application_roles_overlap THEN
+    RAISE EXCEPTION 'Migration and runtime roles must not inherit from each other.';
+  END IF;
+
+  SELECT count(*)
+    INTO unexpected_object_count
+    FROM (
+      SELECT 1
+        FROM pg_class AS object
+        JOIN pg_namespace AS namespace ON namespace.oid = object.relnamespace
+       WHERE namespace.nspname !~ '^pg_'
+         AND namespace.nspname <> 'information_schema'
+         AND object.relkind IN ('r', 'p', 'v', 'm', 'S', 'f')
+      UNION ALL
+      SELECT 1
+        FROM pg_proc AS object
+        JOIN pg_namespace AS namespace ON namespace.oid = object.pronamespace
+       WHERE namespace.nspname !~ '^pg_'
+         AND namespace.nspname <> 'information_schema'
+      UNION ALL
+      SELECT 1
+        FROM pg_type AS object
+        JOIN pg_namespace AS namespace ON namespace.oid = object.typnamespace
+       WHERE namespace.nspname !~ '^pg_'
+         AND namespace.nspname <> 'information_schema'
+         AND object.typtype IN ('e', 'd')
+    ) AS unexpected_objects;
+
+  IF unexpected_object_count <> 0 THEN
+    RAISE EXCEPTION 'The target database contains unexpected objects.';
+  END IF;
+END
+$bootstrap_preflight$;
+
+CREATE SCHEMA __APPLICATION_SCHEMA_IDENTIFIER__
+  AUTHORIZATION __MIGRATION_ROLE_IDENTIFIER__;
+CREATE SCHEMA __MIGRATION_SCHEMA_IDENTIFIER__
+  AUTHORIZATION __MIGRATION_ROLE_IDENTIFIER__;
+
+REVOKE ALL ON SCHEMA __APPLICATION_SCHEMA_IDENTIFIER__ FROM PUBLIC;
+REVOKE ALL ON SCHEMA __MIGRATION_SCHEMA_IDENTIFIER__ FROM PUBLIC;
+GRANT USAGE ON SCHEMA __APPLICATION_SCHEMA_IDENTIFIER__
+  TO __RUNTIME_ROLE_IDENTIFIER__;
+REVOKE CREATE ON SCHEMA __APPLICATION_SCHEMA_IDENTIFIER__
+  FROM __RUNTIME_ROLE_IDENTIFIER__;
+
+DO $bootstrap_postcheck$
+DECLARE
+  unsafe_schema_count integer;
+  schema_object_count integer;
+  temporary_membership_count integer;
+BEGIN
+  SELECT count(*)
+    INTO unsafe_schema_count
+    FROM pg_namespace AS namespace
+    JOIN pg_roles AS owner ON owner.oid = namespace.nspowner
+   WHERE namespace.nspname IN (
+           '__APPLICATION_SCHEMA_LITERAL__', '__MIGRATION_SCHEMA_LITERAL__'
+         )
+     AND (
+       owner.rolname <> '__MIGRATION_ROLE_LITERAL__'
+       OR EXISTS (
+         SELECT 1
+           FROM aclexplode(
+             COALESCE(namespace.nspacl, acldefault('n', namespace.nspowner))
+           ) AS access
+          WHERE access.grantee <> namespace.nspowner
+            AND NOT (
+              namespace.nspname = '__APPLICATION_SCHEMA_LITERAL__'
+              AND access.grantee = (
+                SELECT oid FROM pg_roles WHERE rolname = '__RUNTIME_ROLE_LITERAL__'
+              )
+              AND access.privilege_type = 'USAGE'
+            )
+       )
+       OR (
+         namespace.nspname = '__APPLICATION_SCHEMA_LITERAL__'
+         AND (
+           NOT has_schema_privilege(
+             '__RUNTIME_ROLE_LITERAL__', namespace.nspname, 'USAGE'
+           )
+           OR has_schema_privilege(
+             '__RUNTIME_ROLE_LITERAL__', namespace.nspname, 'CREATE'
+           )
+         )
+       )
+       OR (
+         namespace.nspname = '__MIGRATION_SCHEMA_LITERAL__'
+         AND has_schema_privilege(
+           '__RUNTIME_ROLE_LITERAL__', namespace.nspname, 'USAGE'
+         )
+       )
+     );
+
+  IF unsafe_schema_count <> 0 THEN
+    RAISE EXCEPTION 'Bootstrap schema ownership or access control is unsafe.';
+  END IF;
+
+  SELECT count(*)
+    INTO schema_object_count
+    FROM (
+      SELECT 1 FROM pg_class
+       WHERE relnamespace IN (
+         to_regnamespace('__APPLICATION_SCHEMA_LITERAL__'),
+         to_regnamespace('__MIGRATION_SCHEMA_LITERAL__')
+       )
+         AND relkind IN ('r', 'p', 'v', 'm', 'S', 'f')
+      UNION ALL
+      SELECT 1 FROM pg_proc
+       WHERE pronamespace IN (
+         to_regnamespace('__APPLICATION_SCHEMA_LITERAL__'),
+         to_regnamespace('__MIGRATION_SCHEMA_LITERAL__')
+       )
+      UNION ALL
+      SELECT 1 FROM pg_type
+       WHERE typnamespace IN (
+         to_regnamespace('__APPLICATION_SCHEMA_LITERAL__'),
+         to_regnamespace('__MIGRATION_SCHEMA_LITERAL__')
+       )
+         AND typtype IN ('e', 'd')
+    ) AS schema_objects;
+
+  IF schema_object_count <> 0 THEN
+    RAISE EXCEPTION 'Bootstrap schemas are not empty.';
+  END IF;
+
+  SELECT count(*)
+    INTO temporary_membership_count
+    FROM pg_auth_members AS membership
+    JOIN pg_roles AS granted_role ON granted_role.oid = membership.roleid
+    JOIN pg_roles AS member_role ON member_role.oid = membership.member
+   WHERE granted_role.rolname = '__MIGRATION_ROLE_LITERAL__'
+     AND member_role.rolname = '__OPERATOR_LITERAL__';
+
+  IF temporary_membership_count <> 1 THEN
+    RAISE EXCEPTION 'The one-time operator is not linked to the migration role.';
+  END IF;
+END
+$bootstrap_postcheck$;
+
+COMMIT;
+
+SELECT
+  current_database() = '__DATABASE_LITERAL__' AS correct_database,
+  to_regnamespace('__APPLICATION_SCHEMA_LITERAL__') IS NOT NULL AS application_schema_ready,
+  to_regnamespace('__MIGRATION_SCHEMA_LITERAL__') IS NOT NULL AS migration_schema_ready;

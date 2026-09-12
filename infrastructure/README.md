@@ -61,6 +61,25 @@ The Cloud Run migration job is also disabled by default. Creating the dormant jo
 
 The migration identity uses automatic Identity and Access Management database authentication. It is not permitted to read the application's password-style database connection secret.
 
+### One-time development database bootstrap
+
+The steady-state Cloud SQL configuration explicitly disables the Data API. After client approval and a fresh successful on-demand backup, `scripts/Invoke-DatabaseBootstrap.ps1` can open that authenticated administrative path for only the duration of the initial empty-schema setup. It uses the active named human Google identity, not a stored administrator password. The script creates a temporary Cloud SQL IAM user, executes the reviewed SQL template, disables the Data API first, removes the temporary user and verifies that public Internet Protocol access is still off. Cleanup runs after success or failure. The runner requires PowerShell 7.
+
+The default action is a read-only safety plan. It accepts only an ignored Terraform backend file; project, region, instance, database, account names and repository identity are read from the protected Terraform state rather than entered by the operator:
+
+```powershell
+pwsh ./infrastructure/scripts/Invoke-DatabaseBootstrap.ps1 `
+  -BackendConfig ./infrastructure/environments/development.backend.hcl
+```
+
+Live use is restricted to a clean, reviewed `main` branch that exactly matches the approved `origin/main` revision. Record the full reviewed revision without placing it in source, then run with `-Action Apply`, `-ExpectedRevision`, and the exact `BOOTSTRAP-EE-003-development` confirmation. The repository address is verified before Git is allowed to contact it. Never copy the operator identity, rendered SQL or cloud output into Git.
+
+The rendered one-time SQL, recovery marker and process lock are written only beneath ignored `secure-runtime` paths. The exclusive lock permits only one Plan, Apply or Cleanup process at a time on this workstation, and an existing marker can never be overwritten. Operations must also prohibit a second workstation from running bootstrap or cleanup concurrently because the local lock cannot coordinate across computers. If the PowerShell process or computer stops before normal cleanup finishes, do not repeat Apply. Another authorised named human can run `-Action Cleanup` with the same backend file and the exact `CLEANUP-EE-003-development` confirmation. Cleanup uses the protected marker to disable the temporary Data API path first, remove only the recorded temporary operator and delete the residual SQL. After cleanup, create and verify a new on-demand backup before retrying the normal plan.
+
+The SQL template refuses the wrong database or PostgreSQL version, unsafe roles, existing approved schemas and unexpected relations, routines, enum types or domain types outside the approved empty target. It creates only `engagement_app` and `engagement_migrations`, makes the migration identity their owner, grants the application identity usage of only the application schema, removes public access and proves that the named operator has the temporary owner-assignment link before committing. The runner parses Google Cloud's database response, rejects top-level or individual-statement errors and incomplete results, and requires one final row confirming the database and both schemas before it records success. Deleting the temporary operator removes that link immediately afterward. The full application tables are still created later by the separate immutable migration job.
+
+This password-free route is safer than the originally approved temporary-password fallback. While enabled, the Data API is an additional Google-authenticated administrative route even though the database has no public address. The guarded script therefore keeps that window short and closes it before removing the temporary database user. Production must also include an isolated restore drill; a successful backup alone proves that the recovery copy exists, not that a restore has been rehearsed.
+
 The federated GitHub identity has read-only Cloud Run discovery access plus invoke access on the health service only. It has no project-level Cloud Run developer role, because that broader role would also allow migration-job execution.
 
 For an initial private development bootstrap without an assigned URL, Terraform uses an invalid placeholder origin that cannot receive external traffic. After the service is created, copy its exact reported HTTPS origin into the ignored `public_api_origin` value and the protected GitHub `GCP_CLOUD_RUN_ORIGIN` environment variable, review a second plan, and apply it before acceptance. Non-development and unauthenticated deployments cannot use the placeholder.
