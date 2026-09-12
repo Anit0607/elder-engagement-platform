@@ -213,9 +213,12 @@
         "tags": ["Authentication"],
         "operationId": "logoutSession",
         "summary": "Revoke the current session",
+        "description": "Member session controls verify the platform access token and current account/session state. Successful logout revokes the token family. Later use of the removed session is rejected; a repeated logout is unauthorised. Staff support remains pending implementation.",
         "responses": {
           "204": { "description": "Session revoked; response has no body" },
-          "401": { "$ref": "#/components/responses/Unauthorised" }
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
         }
       }
     },
@@ -331,6 +334,7 @@
         "tags": ["Authentication"],
         "operationId": "listMySessions",
         "summary": "List active sessions for the authenticated account",
+        "description": "Return only the authenticated Member's unexpired, unrevoked, unreplaced sessions, without token values or hashes. Current account state is checked on every request. Staff support remains pending implementation.",
         "responses": {
           "200": {
             "description": "Sessions returned",
@@ -343,7 +347,9 @@
               }
             }
           },
-          "401": { "$ref": "#/components/responses/Unauthorised" }
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
         }
       }
     },
@@ -352,6 +358,7 @@
         "tags": ["Authentication"],
         "operationId": "revokeMySession",
         "summary": "Revoke one session",
+        "description": "An authenticated Member can revoke only their own active target session and its token family. Missing, inactive and other users' targets have the same not-found response. Staff support remains pending implementation.",
         "parameters": [
           {
             "name": "sessionId",
@@ -362,8 +369,11 @@
         ],
         "responses": {
           "204": { "description": "Session revoked; response has no body" },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
           "401": { "$ref": "#/components/responses/Unauthorised" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
         }
       }
     },

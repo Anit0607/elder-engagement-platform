@@ -73,6 +73,27 @@ Run. It does not impersonate the GitHub service account, grant roles or make the
 service public. Do not paste tokens or codes into the terminal, chat or repository.
 A phone/login screen for client acceptance comes later.
 
+## Member session controls (EE-011 candidate)
+
+The enabled Member runtime also supplies `GET /v1/me/sessions`,
+`POST /v1/auth/logout` and `DELETE /v1/me/sessions/{sessionId}`. These operations
+accept the platform access token in `Authorization: Bearer ...`, not the Google
+phone identity token. They verify the configured signature, issuer, audience,
+expiry, Member role and required identifier/time claims, then check current
+account and session state in the database. Account and session locks serialize
+same-user changes; removed, expired, replaced and suspended sessions cannot act.
+Device removal is scoped to the authenticated owner and revokes the target token
+family. Missing and foreign targets return the same not-found response. Logout
+returns an empty 204 response; a subsequent use of the removed session is refused.
+
+This candidate is not yet deployed and does not implement refresh rotation, staff sessions or the client
+device-list screen. Existing routes for login remain unchanged. A future private
+Cloud Run trial must send the cloud-invocation token in `X-Serverless-Authorization`
+and the platform token in `Authorization`; otherwise the two authentication layers
+would compete for one header. No cloud permissions or schema changes are required.
+JWT verification follows the [PyJWT verification documentation](https://pyjwt.readthedocs.io/en/stable/api.html)
+with a fixed allowed signing algorithm, never a token-selected algorithm.
+
 The first live development trial passed all eight checks against the deployed
 Google identity service and private Cloud SQL. Both Android and iOS request shapes
 returned one Member account. This is backend evidence, not an Android device test

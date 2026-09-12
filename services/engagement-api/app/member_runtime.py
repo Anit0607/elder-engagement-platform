@@ -14,7 +14,7 @@ from app.config import ConfigurationError, Settings
 from app.google_phone_identity import GooglePhoneIdentityVerifier
 from app.member_auth import MemberSessionService
 from app.postgres_member_repository import PostgresMemberRepository
-from app.postgres_session_issuer import PostgresSessionIssuer
+from app.session_controls import PostgresSessionControls
 
 
 def _session_secret(environ: Mapping[str, str], name: str) -> bytes:
@@ -73,17 +73,19 @@ async def member_runtime(
                     "lock_timeout": "3000",
                 },
             ) as pool:
+                sessions = PostgresSessionControls(
+                    pool,
+                    signing_key=signing_key,
+                    refresh_pepper=refresh_pepper,
+                    issuer=settings.public_api_origin,
+                    access_token_minutes=settings.access_token_minutes,
+                    refresh_token_days=settings.refresh_token_days,
+                )
                 yield MemberSessionService(
                     verifier,
                     PostgresMemberRepository(pool),
-                    PostgresSessionIssuer(
-                        pool,
-                        signing_key=signing_key,
-                        refresh_pepper=refresh_pepper,
-                        issuer=settings.public_api_origin,
-                        access_token_minutes=settings.access_token_minutes,
-                        refresh_token_days=settings.refresh_token_days,
-                    ),
+                    sessions,
+                    session_controls=sessions,
                 )
     finally:
         verifier.close()
