@@ -50,7 +50,7 @@ class PostgresMemberRepository:
                     raise AuthenticationDependencyUnavailable from exc
             except IdentityTokenRejected:
                 raise
-            except asyncpg.PostgresError as exc:
+            except (asyncpg.PostgresError, OSError, TimeoutError) as exc:
                 raise AuthenticationDependencyUnavailable from exc
         raise AuthenticationDependencyUnavailable
 
