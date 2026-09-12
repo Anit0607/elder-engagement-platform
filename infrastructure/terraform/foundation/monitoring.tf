@@ -41,8 +41,8 @@ resource "google_monitoring_uptime_check_config" "api_health" {
   monitored_resource {
     type = "cloud_run_revision"
     labels = {
-      project_id         = var.project_id
-      service_name       = local.cloud_run_service_name
+      project_id   = var.project_id
+      service_name = local.cloud_run_service_name
       # Google monitors the service across revisions and normalises these two
       # labels to empty strings. Pinning a serving revision causes perpetual
       # replacement and inconsistent plans when an application image changes.
