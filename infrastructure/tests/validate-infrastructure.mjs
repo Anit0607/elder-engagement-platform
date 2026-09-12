@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
@@ -89,6 +90,7 @@ assert.doesNotMatch(source, /google_cloud_run_v2_job_iam/, 'no job invoker may b
 const runner = read('scripts/Invoke-Infrastructure.ps1');
 const healthVerifier = read('scripts/Test-CloudRunHealth.ps1');
 const bootstrapRunner = read('scripts/Invoke-DatabaseBootstrap.ps1');
+const migrationRunner = read('scripts/Invoke-DatabaseMigration.ps1');
 assert.match(runner, /\[string\]\$Action\s*=\s*'Plan'/, 'runner must default to plan');
 assert.match(runner, /APPLY-\$Environment/, 'apply must require an environment-specific confirmation');
 assert.match(runner, /Apply requires a reviewed saved plan/, 'apply must consume a saved reviewed plan');
@@ -134,6 +136,39 @@ assert.match(bootstrapRunner, /\$rows\.Count -ne 1/, 'bootstrap must require exa
 assert.match(bootstrapRunner, /correct_database.*application_schema_ready.*migration_schema_ready/s, 'bootstrap must require all three named final verification columns');
 assert.match(bootstrapRunner, /Assert-ExecuteSqlResponse -Response \$executeResponse\s+\$bootstrapCommitted = \$true/, 'bootstrap must validate the database response before recording success');
 assert.match(bootstrapRunner, /finally\s*\{/, 'temporary access cleanup must run after success or failure');
+
+assert.match(migrationRunner, /\[string\]\$Action\s*=\s*'Plan'/, 'database migration must default to a read-only plan');
+assert.match(migrationRunner, /MIGRATE-EE-003-development/, 'database migration apply must require an exact confirmation');
+assert.match(migrationRunner, /CLEANUP-MIGRATION-EE-003-development/, 'database migration must provide explicit recovery cleanup');
+assert.match(migrationRunner, /Get-FileHash.*SHA256.*ExpectedPlanSha256/s, 'database migration must verify the separately approved plan fingerprint');
+assert.match(migrationRunner, /\[IO\.FileShare\]::None/, 'migration execution must hold an exclusive local process lock');
+assert.match(migrationRunner, /\[IO\.FileMode\]::CreateNew/, 'migration recovery marker must never overwrite an existing marker');
+assert.match(migrationRunner, /asset', 'analyze-iam-policy'/, 'migration preflight must audit effective inherited run permission');
+assert.match(migrationRunner, /--organization=\$script:organizationId/, 'permission analysis must include the organization hierarchy');
+assert.match(migrationRunner, /--show-response/, 'permission analysis must validate the complete Google response');
+assert.match(migrationRunner, /Assert-EffectiveRunPermission -RequireNoPrincipal/, 'preflight and normal Apply cleanup must prove that nobody retains effective run permission');
+assert.match(migrationRunner, /Assert-EffectiveRunPermission -OnlyAllowedPrincipal \$allowedPrincipal -RequireAllowedPrincipal/, 'post-grant permission analysis must positively prove the approved operator');
+assert.match(migrationRunner, /Assert-LiveJobMatchesPlan/, 'live migration job must match the reviewed saved plan');
+assert.match(migrationRunner, /expectedMigrationImageDigest = '[0-9a-f]{64}'/, 'migration execution must pin the exact reviewed image digest');
+assert.match(migrationRunner, /expectedMigrationSourceRevision = '[0-9a-f]{40}'/, 'migration execution must pin the source revision represented by the image');
+assert.match(migrationRunner, /APP_SCHEMA = \$expectedApplicationSchema.*MIGRATION_SCHEMA = \$expectedMigrationSchema/s, 'migration execution must pin both client-approved schemas');
+assert.match(migrationRunner, /expectedContainer\.command.*expectedContainer\.args.*expectedContainer\.working_dir.*expectedContainer\.ports/s, 'migration execution must reject reviewed-plan command overrides');
+assert.match(migrationRunner, /liveContainer\.command.*liveContainer\.args.*liveContainer\.workingDir.*liveContainer\.ports/s, 'migration execution must reject live command overrides');
+assert.match(migrationRunner, /execution_environment.*EXECUTION_ENVIRONMENT_GEN2.*execution-environment.*gen2/s, 'migration execution must require the approved second-generation runtime');
+assert.match(migrationRunner, /liveLimits\.cpu.*'1'.*liveLimits\.memory.*'512Mi'/s, 'migration execution must require exact live resource limits');
+assert.match(migrationRunner, /Get-ExecutionCount\) -ne 0/, 'migration must refuse an existing execution history');
+assert.match(migrationRunner, /Pre-EE-003 application table migration safety backup/, 'migration must require the approved pre-migration backup');
+assert.match(migrationRunner, /\$Action -ne 'Cleanup'.*Resolve-IgnoredInputFile -Path \$ReviewedPlan/s, 'emergency cleanup must not require the reviewed plan file');
+assert.match(migrationRunner, /Clear-TemporaryInvokerBinding -SkipEffectiveAnalysis:\(\$Action -eq 'Cleanup'\)/, 'emergency cleanup must remove the explicit binding without depending on Cloud Asset availability');
+assert.match(migrationRunner, /\$bindingCleanupArmed = \$true\s+\$iamMutationAttempted = \$true\s+Invoke-GcloudMutation/s, 'permission cleanup must be armed before the first IAM mutation');
+assert.match(migrationRunner, /'run', 'jobs', 'execute'.*'--format=json'.*\$executionName.*Clear-TemporaryInvokerBinding.*'executions', 'describe'/s, 'migration must start once, capture its identity, remove permission and then monitor that exact execution');
+assert.doesNotMatch(migrationRunner, /'run', 'jobs', 'execute'.*'--wait'/s, 'migration must not retain temporary permission while waiting for completion');
+assert.doesNotMatch(migrationRunner, /--args|--update-env-vars|--tasks|--task-timeout|--container/, 'migration execution must not override the reviewed job');
+assert.match(migrationRunner, /remove-iam-policy-binding/, 'temporary job-level execution permission must be removed');
+assert.match(migrationRunner, /\$removeMarker = \$markerCreatedThisRun -and -not \$iamMutationAttempted/, 'any attempted IAM mutation must leave a permanent no-retry marker');
+assert.match(migrationRunner, /Clear-TemporaryInvokerBinding\s+if \(-not \$bindingCleanupVerified/s, 'temporary permission must be removed immediately after job execution');
+assert.match(migrationRunner, /succeededCount -ne 1.*failedCount -ne 0/s, 'migration must require exactly one successful task and no failures');
+assert.match(migrationRunner, /\$record\.status -eq 'ok'.*\$record\.applied\[0\] -eq \$expectedAppliedMigration/s, 'migration must require the exact execution-scoped V0001 success record');
 assert.doesNotMatch(bootstrapRunner, /--password(?:=|')|password-secret-version/i, 'bootstrap must not create or pass a password');
 
 assert.match(bootstrapTemplate, /^BEGIN;/m, 'bootstrap changes must use one transaction');
@@ -224,7 +259,13 @@ const forbidden = [
 ];
 
 for (const pattern of forbidden) {
-  assert.doesNotMatch(source + runner + bootstrapRunner + bootstrapTemplate, pattern, `forbidden tracked value matched ${pattern}`);
+  assert.doesNotMatch(source + runner + bootstrapRunner + migrationRunner + bootstrapTemplate, pattern, `forbidden tracked value matched ${pattern}`);
 }
+
+execFileSync(
+  'pwsh',
+  ['-NoProfile', '-File', join(root, 'tests', 'test-database-migration-runner.ps1')],
+  { stdio: 'inherit' }
+);
 
 console.log(`Infrastructure safety validation passed for ${files.length} Terraform files and 3 environment examples.`);

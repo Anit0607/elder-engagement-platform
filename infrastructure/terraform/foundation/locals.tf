@@ -18,6 +18,7 @@ locals {
   required_services = toset([
     "artifactregistry.googleapis.com",
     "cloudbilling.googleapis.com",
+    "cloudasset.googleapis.com",
     "billingbudgets.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "compute.googleapis.com",
