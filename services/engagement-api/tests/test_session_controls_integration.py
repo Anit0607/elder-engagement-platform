@@ -40,8 +40,8 @@ async def test_real_postgres_owner_isolation_suspension_expiry_and_logout():
                 row = await connection.fetchrow(
                     """INSERT INTO engagement_app.app_users
                        (public_id, role, status, identity_provider_subject)
-                       VALUES ($1, 'member', 'active', $1) RETURNING id, created_at, updated_at""",
-                    f"AMI-SYNTHETIC-CONTROLS-{index}",
+                       VALUES ($1, 'member', 'active', $2) RETURNING id, created_at, updated_at""",
+                    f"AMI-SYNTHETIC-CONTROLS-{index}", f"synthetic-controls-subject-{index}",
                 )
                 members.append(MemberRecord(id=row["id"], role="member", status="active",
                                             display_name=None, preferred_language=None,
