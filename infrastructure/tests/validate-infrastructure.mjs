@@ -61,6 +61,7 @@ assert.match(source, /google_monitoring_uptime_check_config" "api_health"/, 'the
 assert.match(source, /service_agent_authentication\s*\{[\s\S]*?type\s*=\s*"OIDC_TOKEN"/m, 'the private API uptime check must authenticate');
 assert.match(source, /monitored_resource\s*\{[\s\S]*?type\s*=\s*"cloud_run_revision"/m, 'authenticated uptime monitoring must target Cloud Run rather than an arbitrary URL');
 assert.match(source, /revision_name\s*=\s*basename\(google_cloud_run_v2_service\.api\[0\]\.latest_ready_revision\)/, 'uptime monitoring must follow the deployed ready revision by its short resource label');
+assert.doesNotMatch(source, /google_monitoring_uptime_check_config" "api_health"\s*\{[\s\S]*?validate_ssl\s*=/m, 'Cloud Run managed-resource checks must not use the URL-only validate_ssl setting');
 assert.match(source, /gcp-sa-monitoring-notification\.iam\.gserviceaccount\.com/, 'only the Google Monitoring service agent may invoke the private uptime check');
 assert.match(source, /google_monitoring_alert_policy" "api_unavailable"/, 'API availability must have an alert policy');
 assert.match(source, /REDUCE_COUNT_FALSE/, 'availability alerts must require failed checks');
