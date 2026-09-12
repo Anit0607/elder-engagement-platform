@@ -76,14 +76,10 @@ try {
     }
 
     $testId = [guid]::NewGuid().ToString('N')
-    $payload = @{
-        event   = 'EE007_NOTIFICATION_TEST'
-        test_id = $testId
-        message = 'Controlled Week 1 alert-delivery test; this is not a production failure.'
-    } | ConvertTo-Json -Compress
+    $payload = "EE007_NOTIFICATION_TEST test_id=$testId Controlled Week 1 alert-delivery test; this is not a production failure."
 
     & $gcloud logging write 'ee-development-operations-test' $payload `
-        '--payload-type=json' '--severity=ERROR' `
+        '--payload-type=text' '--severity=ERROR' `
         '--monitored-resource-type=cloud_run_revision' `
         "--monitored-resource-labels=project_id=$ProjectId,service_name=$ServiceName,revision_name=$revisionName,location=$Region,configuration_name=$ServiceName" `
         "--project=$ProjectId" '--quiet' 2>$null
@@ -91,7 +87,7 @@ try {
         throw 'The controlled test log could not be written.'
     }
 
-    $filter = "resource.type=`"cloud_run_revision`" AND resource.labels.service_name=`"$ServiceName`" AND jsonPayload.event=`"EE007_NOTIFICATION_TEST`" AND jsonPayload.test_id=`"$testId`""
+    $filter = "resource.type=`"cloud_run_revision`" AND resource.labels.service_name=`"$ServiceName`" AND textPayload:`"EE007_NOTIFICATION_TEST`" AND textPayload:`"$testId`""
     $visible = $false
     for ($attempt = 1; $attempt -le 6; $attempt++) {
         $entries = @(Invoke-GcloudJson -Arguments @(
