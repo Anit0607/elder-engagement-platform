@@ -17,9 +17,11 @@ Implemented now:
   signature, intended project, issuer, phone provider and verified phone claim;
 - an atomic PostgreSQL Member resolver that prevents duplicate or crossed
   phone identities during concurrent sign-in;
+- a secure session issuer that stores only a one-way refresh-token fingerprint
+  and puts no phone or profile details in short-lived access tokens;
 - a versioned Week 2 REST contract for identity, profiles and account controls.
 
-The development container is deployed to private Cloud Run, and database migration `V0001` is applied to private Cloud SQL. The Member-session service now follows the approved immediate-access boundary: the repository atomically finds or creates an active Member for a verified phone identity, and `profileComplete=false` routes a new Member to self-service profile setup. The Google phone-token verifier and PostgreSQL Member resolver are implemented and tested, but they are not yet wired to the deployed endpoint because the secure session issuer and Cloud SQL application connection lifecycle are still pending. Contributors remain Administrator-created. Profiles, staff sign-in, circles, content, moderation, feeds, events, notifications and media providers are not yet implemented.
+The development container is deployed to private Cloud Run, and database migration `V0001` is applied to private Cloud SQL. The Member-session service now follows the approved immediate-access boundary: the repository atomically finds or creates an active Member for a verified phone identity, and `profileComplete=false` routes a new Member to self-service profile setup. The Google phone-token verifier, PostgreSQL Member resolver and initial secure-session issuer are implemented and tested, but they are not yet wired to the deployed endpoint because the Cloud SQL application connection and Google Secret Manager lifecycle are still pending. Refresh, logout and session-management operations remain EE-011 work. Contributors remain Administrator-created. Profiles, staff sign-in, circles, content, moderation, feeds, events, notifications and media providers are not yet implemented.
 
 ## Local verification
 
