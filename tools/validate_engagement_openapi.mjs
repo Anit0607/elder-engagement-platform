@@ -27,10 +27,10 @@ const visit = (value, location = "#") => {
 };
 
 if (contract.openapi !== "3.1.1") errors.push("The contract must use OpenAPI 3.1.1.");
-if (!String(contract.info?.version ?? "").match(/^0\.1\./))
-  errors.push("The Pre-Sprint contract version must remain in the 0.1.x draft line.");
-if (contract["x-contract-status"] !== "pre-sprint-draft")
-  errors.push("The contract must remain clearly marked as a Pre-Sprint draft.");
+if (!String(contract.info?.version ?? "").match(/^0\.2\./))
+  errors.push("The Sprint 2 contract version must remain in the 0.2.x draft line.");
+if (contract["x-contract-status"] !== "sprint-2-draft")
+  errors.push("The contract must remain clearly marked as a Sprint 2 draft.");
 for (const server of contract.servers ?? []) {
   try {
     const url = new URL(server.url);
@@ -117,7 +117,6 @@ for (const errorCode of [
   "SESSION_REVOKED",
   "REFRESH_TOKEN_REUSED",
   "ACCOUNT_SUSPENDED",
-  "PROFILE_NOT_PROVISIONED",
   "MFA_REQUIRED",
   "RATE_LIMITED",
 ]) {

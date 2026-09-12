@@ -26,8 +26,11 @@ class UserSummary(BaseModel):
     id: UUID
     role: Literal["member"]
     status: Literal["active"]
-    display_name: str = Field(alias="displayName", min_length=1, max_length=120)
-    preferred_language: Literal["bn", "hi"] = Field(alias="preferredLanguage")
+    display_name: str | None = Field(default=None, alias="displayName", min_length=1, max_length=120)
+    preferred_language: Literal["bn", "hi"] | None = Field(
+        default=None, alias="preferredLanguage"
+    )
+    profile_complete: bool = Field(alias="profileComplete")
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")
 
@@ -53,8 +56,9 @@ class MemberRecord:
     id: UUID
     role: str
     status: str
-    display_name: str
-    preferred_language: str
+    display_name: str | None
+    preferred_language: str | None
+    profile_complete: bool
     created_at: datetime
     updated_at: datetime
 
@@ -71,9 +75,9 @@ class PhoneIdentityVerifier(Protocol):
 
 
 class MemberRepository(Protocol):
-    async def claim_verified_member(
+    async def get_or_create_verified_member(
         self, phone_e164: str, provider_subject: str
-    ) -> MemberRecord | None: ...
+    ) -> MemberRecord: ...
 
 
 class SessionIssuer(Protocol):
@@ -146,7 +150,7 @@ class MemberSessionService:
             )
 
         try:
-            member = await self._repository.claim_verified_member(
+            member = await self._repository.get_or_create_verified_member(
                 identity.phone_e164, identity.provider_subject
             )
         except AuthenticationDependencyUnavailable as exc:
@@ -157,12 +161,6 @@ class MemberSessionService:
                 retryable=True,
             ) from exc
 
-        if member is None:
-            raise MemberSessionFailure(
-                status=403,
-                code="PROFILE_NOT_PROVISIONED",
-                title="Member profile is not provisioned",
-            )
         if member.role != "member" or member.status == "deleted":
             raise MemberSessionFailure(
                 status=401,
@@ -207,6 +205,7 @@ class MemberSessionService:
                 status="active",
                 displayName=member.display_name,
                 preferredLanguage=member.preferred_language,
+                profileComplete=member.profile_complete,
                 createdAt=member.created_at,
                 updatedAt=member.updated_at,
             ),

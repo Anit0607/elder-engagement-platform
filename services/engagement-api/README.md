@@ -15,7 +15,7 @@ Implemented now:
 - a tested Member identity-token exchange and session-service boundary;
 - a versioned Week 2 REST contract for identity, profiles and account controls.
 
-The development container is deployed to private Cloud Run, and database migration `V0001` is applied to private Cloud SQL. The Member-session foundation is not yet connected to live Identity Platform/Firebase or PostgreSQL, and it still reflects the earlier Administrator-pre-provisioned Member rule. Week 2 will change it to the approved flow: a phone-verified Member receives immediate access and creates their own profile. Contributors remain Administrator-created. Profiles, staff sign-in, circles, content, moderation, feeds, events, notifications and media providers are not yet implemented.
+The development container is deployed to private Cloud Run, and database migration `V0001` is applied to private Cloud SQL. The Member-session service now follows the approved immediate-access boundary: the repository atomically finds or creates an active Member for a verified phone identity, and `profileComplete=false` routes a new Member to self-service profile setup. It is not yet connected to live Identity Platform/Firebase or PostgreSQL. Contributors remain Administrator-created. Profiles, staff sign-in, circles, content, moderation, feeds, events, notifications and media providers are not yet implemented.
 
 ## Local verification
 

@@ -2,11 +2,11 @@
   "openapi": "3.1.1",
   "info": {
     "title": "Elder Engagement REST API",
-    "version": "0.1.3",
-    "summary": "Controlled Week 1 contract draft for Android, iOS, Contributor and Administrator clients",
+    "version": "0.2.0",
+    "summary": "Controlled Sprint 2 contract draft for Android, iOS, Contributor and Administrator clients",
     "description": "This draft covers the Week 2 identity, session, profile and account-control foundation. It contains no production hostname, credential or personal data. Circles, content, moderation, feed and events will be added to the same v1 contract before the Week 4 interface freeze."
   },
-  "x-contract-status": "pre-sprint-draft",
+  "x-contract-status": "sprint-2-draft",
   "x-implementation-status": "Contract-only draft. No listed operation is claimed callable until the matching backend commit is deployed and its smoke-test evidence is recorded.",
   "x-planned-expansions": [
     {
@@ -29,7 +29,6 @@
     "SESSION_REVOKED": "Delete local tokens and return to sign-in.",
     "REFRESH_TOKEN_REUSED": "Delete all local tokens and return to sign-in because the token family is revoked.",
     "ACCOUNT_SUSPENDED": "Delete local tokens, stop protected requests and show the client-approved support route.",
-    "PROFILE_NOT_PROVISIONED": "Stop sign-in and show the client-approved contact route because an Administrator must create the profile first.",
     "MFA_REQUIRED": "Prompt the authorised staff user for the configured second factor and retry once.",
     "RATE_LIMITED": "Wait for the Retry-After duration before retrying."
   },
@@ -43,7 +42,6 @@
     "REFRESH_TOKEN_REUSED": 409,
     "REFRESH_OUTCOME_UNKNOWN": 409,
     "ACCOUNT_SUSPENDED": 403,
-    "PROFILE_NOT_PROVISIONED": 403,
     "MFA_REQUIRED": 403,
     "FORBIDDEN": 403,
     "NOT_FOUND": 404,
@@ -113,7 +111,7 @@
         "tags": ["Authentication"],
         "operationId": "createMemberSession",
         "summary": "Exchange a verified phone-identity token for a platform session",
-        "description": "The Android or iOS client completes phone one-time-password verification with the client-approved Firebase Authentication or Identity Platform project, then submits the resulting provider token. The backend accepts only the configured issuer and audience, requires a provider-verified phone identity, and resolves the Member role itself. The backend does not accept or log the one-time password. Version one follows the client's manual-profile rule: an Administrator must pre-provision a Member with the same phone number; otherwise PROFILE_NOT_PROVISIONED is returned.",
+        "description": "The Android or iOS client completes phone one-time-password verification with the client-approved Firebase Authentication or Identity Platform project, then submits the resulting provider token. The backend accepts only the configured issuer and audience, requires a provider-verified phone identity, and resolves the Member role itself. The backend does not accept or log the one-time password. A verified new phone identity creates one active Member account atomically and receives a session immediately. The response uses profileComplete=false until the Member creates their profile. Contributors cannot be created through this operation.",
         "security": [],
         "requestBody": {
           "required": true,
@@ -130,7 +128,10 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/SessionResponse" },
-                "examples": { "syntheticSession": { "$ref": "#/components/examples/SyntheticSessionResponse" } }
+                "examples": {
+                  "returningMember": { "$ref": "#/components/examples/SyntheticSessionResponse" },
+                  "newMember": { "$ref": "#/components/examples/SyntheticNewMemberSessionResponse" }
+                }
               }
             }
           },
@@ -242,7 +243,8 @@
       "patch": {
         "tags": ["Profile"],
         "operationId": "updateMyProfile",
-        "summary": "Update permitted profile fields",
+        "summary": "Create or update the authenticated user's permitted profile fields",
+        "description": "For a newly verified Member with profileComplete=false, the first valid request creates the profile. Later requests update only fields the authenticated user is permitted to change.",
         "requestBody": {
           "required": true,
           "content": {
@@ -706,13 +708,14 @@
       "UserSummary": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "role", "status", "displayName", "preferredLanguage", "createdAt", "updatedAt"],
+        "required": ["id", "role", "status", "displayName", "preferredLanguage", "profileComplete", "createdAt", "updatedAt"],
         "properties": {
           "id": { "type": "string", "format": "uuid", "readOnly": true },
           "role": { "$ref": "#/components/schemas/UserRole" },
           "status": { "$ref": "#/components/schemas/UserStatus" },
-          "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
-          "preferredLanguage": { "type": "string", "enum": ["bn", "hi"] },
+          "displayName": { "type": ["string", "null"], "minLength": 1, "maxLength": 120 },
+          "preferredLanguage": { "type": ["string", "null"], "enum": ["bn", "hi", null] },
+          "profileComplete": { "type": "boolean", "description": "False directs the client to the self-service profile setup journey without blocking access." },
           "createdAt": { "type": "string", "format": "date-time", "readOnly": true },
           "updatedAt": { "type": "string", "format": "date-time", "readOnly": true }
         }
@@ -966,7 +969,6 @@
           "SESSION_REVOKED",
           "REFRESH_TOKEN_REUSED",
           "ACCOUNT_SUSPENDED",
-          "PROFILE_NOT_PROVISIONED",
           "MFA_REQUIRED",
           "FORBIDDEN",
           "NOT_FOUND",
@@ -1016,8 +1018,28 @@
             "status": "active",
             "displayName": "Test Member",
             "preferredLanguage": "bn",
+            "profileComplete": true,
             "createdAt": "2026-09-09T09:00:00Z",
             "updatedAt": "2026-09-09T09:00:00Z"
+          }
+        }
+      },
+      "SyntheticNewMemberSessionResponse": {
+        "summary": "A verified new Member receives immediate access before creating a profile",
+        "value": {
+          "accessToken": "synthetic-access-token-not-a-real-secret",
+          "refreshToken": "synthetic-refresh-token-not-a-real-secret-value",
+          "tokenType": "Bearer",
+          "expiresInSeconds": 900,
+          "user": {
+            "id": "44444444-4444-4444-8444-444444444444",
+            "role": "member",
+            "status": "active",
+            "displayName": null,
+            "preferredLanguage": null,
+            "profileComplete": false,
+            "createdAt": "2026-09-12T12:00:00Z",
+            "updatedAt": "2026-09-12T12:00:00Z"
           }
         }
       },

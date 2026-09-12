@@ -1,6 +1,12 @@
 # Elder Engage REST API change log
 
-The contract remains a Pre-Sprint draft and no listed operation is claimed callable.
+The contract remains a controlled Sprint 2 draft and no listed operation is claimed callable until its matching backend deployment is verified.
+
+## 0.2.0-draft — 12 September 2026
+
+- Replaced Administrator-pre-provisioned Member sign-in with the approved immediate-access self-registration journey.
+- Added `profileComplete` and a new-Member response example so Android and iOS can route incomplete profiles to self-service setup.
+- Kept Contributor creation under Administrator control.
 
 ## 0.1.3-draft — 12 September 2026
 

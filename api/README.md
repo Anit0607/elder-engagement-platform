@@ -1,6 +1,6 @@
 # Elder Engagement REST API v1
 
-Status: Pre-Sprint controlled draft
+Status: Sprint 2 controlled draft
 Tracker ownership: EE-051 for the initial contract and EE-023 for the Week 4 production-ready integration package.
 
 ## Current source of truth
@@ -37,7 +37,7 @@ The contract currently defines the Week 2 foundation: operations, Member identit
 
 The mobile client completes phone one-time-password verification through the client-approved Firebase Authentication or Identity Platform project. It sends the resulting identity-provider token to the REST backend to create the platform session. The REST backend never accepts or logs the one-time password itself.
 
-Version one follows the client's manual-profile requirement. An Administrator pre-provisions a Member using a valid phone number; the verified provider identity must match that account. Contributor and Administrator profiles use a username and remain invited until the separate credential-activation flow under EE-010 is implemented. The backend determines roles from stored account data and never accepts the mobile client's claim of a role.
+A verified phone identity receives immediate Member access. The backend atomically finds or creates the active Member account, and a `profileComplete=false` response sends a new Member to self-service profile setup without blocking the session. Contributor and Administrator profiles use a username and remain Administrator-created and invited until the separate credential-activation flow under EE-010 is implemented. The backend determines roles from stored account data and never accepts the mobile client's claim of a role.
 
 Contributor and Administrator credentials use the separate staff session operation. The final stronger Administrator second-factor rule remains a client decision and is explicitly described as conditional in the draft.
 

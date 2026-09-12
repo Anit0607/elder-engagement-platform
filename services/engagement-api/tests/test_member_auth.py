@@ -34,15 +34,17 @@ class FakeVerifier:
 
 
 class FakeRepository:
-    def __init__(self, member: MemberRecord | None, *, unavailable: bool = False):
+    def __init__(self, member: MemberRecord, *, unavailable: bool = False):
         self.member = member
         self.unavailable = unavailable
+        self.calls = 0
 
-    async def claim_verified_member(
+    async def get_or_create_verified_member(
         self, phone_e164: str, provider_subject: str
-    ) -> MemberRecord | None:
+    ) -> MemberRecord:
         assert phone_e164 == "+919999999901"
         assert provider_subject == "synthetic-provider-subject"
+        self.calls += 1
         if self.unavailable:
             raise AuthenticationDependencyUnavailable
         return self.member
@@ -62,13 +64,21 @@ class FakeIssuer:
         return IssuedSession("synthetic-access-token", "synthetic-refresh-token", 900)
 
 
-def member(*, role: str = "member", status: str = "active") -> MemberRecord:
+def member(
+    *,
+    role: str = "member",
+    status: str = "active",
+    display_name: str | None = "Synthetic Member",
+    preferred_language: str | None = "bn",
+    profile_complete: bool = True,
+) -> MemberRecord:
     return MemberRecord(
         id=MEMBER_ID,
         role=role,
         status=status,
-        display_name="Synthetic Member",
-        preferred_language="bn",
+        display_name=display_name,
+        preferred_language=preferred_language,
+        profile_complete=profile_complete,
         created_at=NOW,
         updated_at=NOW,
     )
@@ -88,7 +98,7 @@ def make_client(settings, ready_probes, verifier, repository, issuer=None) -> Te
     return TestClient(create_app(settings, ready_probes, member_session_handler=handler))
 
 
-def test_verified_preprovisioned_member_receives_contract_session(settings, ready_probes):
+def test_verified_returning_member_receives_contract_session(settings, ready_probes):
     with make_client(settings, ready_probes, FakeVerifier(), FakeRepository(member())) as client:
         response = client.post("/v1/auth/member/session", json=payload())
     assert response.status_code == 200
@@ -103,6 +113,7 @@ def test_verified_preprovisioned_member_receives_contract_session(settings, read
             "status": "active",
             "displayName": "Synthetic Member",
             "preferredLanguage": "bn",
+            "profileComplete": True,
             "createdAt": "2026-09-12T12:00:00Z",
             "updatedAt": "2026-09-12T12:00:00Z",
         },
@@ -122,11 +133,29 @@ def test_invalid_or_unverified_provider_identity_is_rejected(settings, ready_pro
         assert response.json()["code"] == "AUTHENTICATION_FAILED"
 
 
-def test_member_must_be_manually_preprovisioned(settings, ready_probes):
-    with make_client(settings, ready_probes, FakeVerifier(), FakeRepository(None)) as client:
+def test_verified_new_member_receives_immediate_access_before_profile_completion(
+    settings, ready_probes
+):
+    new_member = member(
+        display_name=None,
+        preferred_language=None,
+        profile_complete=False,
+    )
+    repository = FakeRepository(new_member)
+    with make_client(settings, ready_probes, FakeVerifier(), repository) as client:
         response = client.post("/v1/auth/member/session", json=payload())
-    assert response.status_code == 403
-    assert response.json()["code"] == "PROFILE_NOT_PROVISIONED"
+    assert response.status_code == 200
+    assert response.json()["user"] == {
+        "id": str(MEMBER_ID),
+        "role": "member",
+        "status": "active",
+        "displayName": None,
+        "preferredLanguage": None,
+        "profileComplete": False,
+        "createdAt": "2026-09-12T12:00:00Z",
+        "updatedAt": "2026-09-12T12:00:00Z",
+    }
+    assert repository.calls == 1
 
 
 def test_suspended_deleted_and_wrong_role_accounts_fail_closed(settings, ready_probes):
