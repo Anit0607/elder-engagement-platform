@@ -102,7 +102,7 @@ class PhoneLoginActivity : Activity() {
             val entered = code.text.toString()
             if (!policy.validCode(entered)) message(R.string.invalid_code)
             else if (policy.canVerify()) verificationId?.let {
-                signIn(PhoneAuthProvider.getCredential(it, entered), epoch)
+                signIn(PhoneAuthProvider.getCredential(it, policy.asciiDigits(entered)), epoch)
             }
         }
         change = button(root, R.string.change_phone) {
@@ -120,6 +120,7 @@ class PhoneLoginActivity : Activity() {
                 FirebaseOptions.Builder().setApiKey(BuildConfig.FIREBASE_API_KEY)
                     .setApplicationId(BuildConfig.FIREBASE_APP_ID).setProjectId(BuildConfig.FIREBASE_PROJECT).build())
             auth = FirebaseAuth.getInstance()
+            auth.signOut() // Amiko sessions, not the provider's cached sign-in, own persistence.
             ready = true
             message(R.string.enter_phone)
         } catch (_: Exception) { message(R.string.configuration_missing) }
@@ -206,6 +207,7 @@ class PhoneLoginActivity : Activity() {
                     if (validEpoch(requestEpoch)) {
                         busy = false
                         if (errorMessage == 0) {
+                            auth.signOut()
                             completed = true; phone.text.clear(); code.text.clear(); verificationId = null
                             resendToken = null; message(R.string.signed_in)
                         } else { retry.visibility = View.VISIBLE; message(errorMessage) }
