@@ -690,8 +690,8 @@ def _verify_runtime_privileges(
         )
 
 
-def _verify_app_object_contract(
-    cursor: Any, app_schema: str, migration_role: str, runtime_role: str
+def _verify_app_object_ownership(
+    cursor: Any, app_schema: str, migration_role: str
 ) -> None:
     ownership_violation = _fetchone(
         cursor,
@@ -730,6 +730,16 @@ def _verify_app_object_contract(
             migration_role,
         ),
     )[0]
+    if ownership_violation:
+        raise MigrationError(
+            "Application object ownership or access control has drifted."
+        )
+
+
+def _verify_app_object_contract(
+    cursor: Any, app_schema: str, migration_role: str, runtime_role: str
+) -> None:
+    _verify_app_object_ownership(cursor, app_schema, migration_role)
     excessive_acl = _fetchone(
         cursor,
         """
@@ -816,11 +826,7 @@ def _verify_app_object_contract(
         ]
         + [(migration_role, "T", runtime_role, "USAGE")]
     )
-    if (
-        ownership_violation
-        or excessive_acl
-        or sorted(default_acl_rows) != expected_default_acl
-    ):
+    if excessive_acl or sorted(default_acl_rows) != expected_default_acl:
         raise MigrationError(
             "Application object ownership or access control has drifted."
         )
@@ -965,6 +971,7 @@ def apply_migrations(
             raise MigrationError(
                 "The migration ledger did not record every applied migration."
             )
+        _verify_app_object_ownership(cursor, app_schema, migration_role)
         _apply_runtime_privileges(cursor, app_schema, migration_schema, runtime_role)
         _verify_runtime_privileges(cursor, app_schema, migration_schema, runtime_role)
         _verify_app_object_contract(cursor, app_schema, migration_role, runtime_role)
