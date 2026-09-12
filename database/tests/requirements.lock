@@ -1,2 +1,5 @@
-# Test-only PostgreSQL driver. Do not add application runtime dependencies here.
+# PostgreSQL migration runner and test dependencies.
+cloud-sql-python-connector[pg8000]==1.22.0
+pg8000==1.31.5
 psycopg[binary]==3.3.5
+sqlparse==0.6.0

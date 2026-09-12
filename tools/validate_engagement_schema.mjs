@@ -3,7 +3,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const workspace = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const schemaPath = path.join(workspace, "database", "engagement_platform_v1_schema.sql");
+const schemaPath = path.join(
+  workspace,
+  "database",
+  "migrations",
+  "V0001__engagement_baseline.sql",
+);
 const sql = await readFile(schemaPath, "utf8");
 const concurrencyTest = await readFile(
   path.join(workspace, "database", "tests", "test_staff_role_concurrency.py"),

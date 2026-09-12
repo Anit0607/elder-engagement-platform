@@ -1,7 +1,7 @@
 # Schema, REST and permission mapping
 
 Status: Sprint 1 controlled baseline under EE-008
-Sources: `database/engagement_platform_v1_schema.sql` and `api/openapi/elder-engage-v1.openapi.json`
+Sources: `database/migrations/V0001__engagement_baseline.sql` and `api/openapi/elder-engage-v1.openapi.json`
 
 This mapping prevents the inherited booking product from being mistaken for the current engagement platform. “Draft now” means the operation exists in the Week 2 OpenAPI draft. “Planned” means it is an approved tracker item but is deliberately unavailable in the current contract.
 
@@ -38,7 +38,7 @@ This mapping prevents the inherited booking product from being mistaken for the 
 
 ## Gaps that block final EE-008 acceptance
 
-- Current schema passes static checks and both staff-role race directions on PostgreSQL 16, but must still become an immutable migration and execute successfully through the private migration identity.
+- The current schema is a checksum-locked migration candidate with static and staff-role race coverage; its expanded safety suite, private migration identity, bootstrap, backup gate and development execution still require approval evidence.
 - Each planned operation must be added to the OpenAPI only in its approved sprint and linked to automated permission tests.
 - Final profile fields, circle rules, Administrator authentication, retention/deletion and broadcast consent decisions must be recorded.
 - The development infrastructure and private health portions of the runbook are executed and independently reviewed; database migration, monitoring delivery, rollback rehearsal, staging and production evidence remain outstanding.

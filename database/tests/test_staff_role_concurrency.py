@@ -5,19 +5,29 @@ from __future__ import annotations
 import os
 import threading
 import time
+import uuid
 from pathlib import Path
 
 import psycopg
-from psycopg import errors
+from psycopg import errors, sql
 
 DATABASE_URL = os.environ["DATABASE_URL"]
-SCHEMA = Path(__file__).resolve().parents[1] / "engagement_platform_v1_schema.sql"
+SCHEMA = (
+    Path(__file__).resolve().parents[1]
+    / "migrations"
+    / "V0001__engagement_baseline.sql"
+)
 USER_ID = "00000000-0000-4000-8000-000000000001"
 PASSWORD_HASH = "test-only-password-hash"
+SCHEMA_NAME = f"staff_guard_{uuid.uuid4().hex[:12]}"
 
 
 def connect(application_name: str = "staff-role-test") -> psycopg.Connection:
-    return psycopg.connect(DATABASE_URL, application_name=application_name)
+    return psycopg.connect(
+        DATABASE_URL,
+        application_name=application_name,
+        options=f"-csearch_path={SCHEMA_NAME},pg_catalog",
+    )
 
 
 def reset_user() -> None:
@@ -53,14 +63,18 @@ def wait_until_blocked(application_name: str) -> None:
     raise AssertionError(f"{application_name} did not block on the protected user row")
 
 
-def run_expected_check_violation(application_name: str, statement: str, result: list[object]) -> None:
+def run_expected_check_violation(
+    application_name: str, statement: str, result: list[object]
+) -> None:
     try:
         with connect(application_name) as connection:
             connection.execute("SET LOCAL lock_timeout = '5s'")
             connection.execute(statement, (USER_ID,))
     except errors.CheckViolation:
         result.append("check_violation")
-    except psycopg.Error as exc:  # pragma: no cover - failure detail is surfaced to the workflow
+    except (
+        psycopg.Error
+    ) as exc:  # pragma: no cover - failure detail is surfaced to the workflow
         result.append(exc)
     else:
         result.append("unexpected_success")
@@ -83,7 +97,9 @@ def test_insert_waits_for_concurrent_demotion() -> None:
     reset_user()
     demotion = connect("staff-role-demotion-owner")
     try:
-        demotion.execute("UPDATE app_users SET role = 'member' WHERE id = %s", (USER_ID,))
+        demotion.execute(
+            "UPDATE app_users SET role = 'member' WHERE id = %s", (USER_ID,)
+        )
         result: list[object] = []
         worker = threading.Thread(
             target=run_expected_check_violation,
@@ -133,11 +149,23 @@ def test_demotion_waits_for_concurrent_insert() -> None:
 
 
 def main() -> None:
-    with connect() as connection:
-        connection.execute(SCHEMA.read_text(encoding="utf-8"))
-    test_insert_waits_for_concurrent_demotion()
-    test_demotion_waits_for_concurrent_insert()
-    print("PostgreSQL 16 staff-role concurrency tests passed.")
+    try:
+        with psycopg.connect(DATABASE_URL) as connection:
+            connection.execute(
+                sql.SQL("CREATE SCHEMA {}").format(sql.Identifier(SCHEMA_NAME))
+            )
+        with connect() as connection:
+            connection.execute(SCHEMA.read_text(encoding="utf-8"))
+        test_insert_waits_for_concurrent_demotion()
+        test_demotion_waits_for_concurrent_insert()
+        print("PostgreSQL 16 staff-role concurrency tests passed.")
+    finally:
+        with psycopg.connect(DATABASE_URL) as connection:
+            connection.execute(
+                sql.SQL("DROP SCHEMA IF EXISTS {} CASCADE").format(
+                    sql.Identifier(SCHEMA_NAME)
+                )
+            )
 
 
 if __name__ == "__main__":

@@ -1,8 +1,8 @@
 # Engagement database baseline
 
-Status: Sprint 1 corrected schema candidate under EE-003. This is not yet an approved immutable migration and has not been applied to the client database.
+Status: Sprint 1 checksum-locked migration candidate under EE-003. Its expanded migration tests are awaiting protected continuous-integration evidence, and it has not been applied to the client database.
 
-`engagement_platform_v1_schema.sql` is the current logical/physical PostgreSQL draft for the approved engagement product. `amiko_v1_schema.sql` belongs to the inherited booking/caregiver scope and is retained only as history.
+`migrations/V0001__engagement_baseline.sql` is the canonical PostgreSQL 16 baseline for the approved engagement product. Its approved repository bytes are locked by `migrations/manifest.json`. `amiko_v1_schema.sql` belongs to the inherited booking/caregiver scope and is retained only as history.
 
 ## Included boundaries
 
@@ -22,10 +22,14 @@ YouTube rows store only the official video identifier and metadata; they never r
 
 These values must become explicit configuration or approved immutable migrations after the client responds. No real personal data, secret, host name, or provider credential appears in this draft.
 
+## Migration safety boundary
+
+`migration_runner.py` applies the manifest in one bounded transaction. It verifies the exact database and non-administrative migration/runtime roles, schema ownership, PUBLIC access, an empty first-install database, the immutable ledger and runtime permissions. Concurrent runners serialize on a PostgreSQL advisory lock. Production mode accepts no database connection string: it uses Application Default Credentials, the Cloud SQL Python Connector, private Internet Protocol addressing and automatic Identity and Access Management database authentication. Live execution still requires the separately approved one-time database bootstrap, backup gate and migration-job review.
+
 ## Before migration approval
 
 1. Map every table and constrained state to the accepted OpenAPI operations and permission matrix.
-2. Replace the inherited metadata-driven Alembic baseline with immutable operations for this current schema.
+2. Pass the checksum, empty-schema, rerun, rollback, concurrency and least-privilege migration gates.
 3. Keep the PostgreSQL 16 concurrency regression in `database/tests/test_staff_role_concurrency.py` passing; it proves that credential insertion and role demotion cannot race past each other.
 4. Test empty-database upgrade, upgrade from every released version, downgrade policy, remaining PostgreSQL concurrency, indexes, backup, and restore.
 5. Obtain independent review and record the exact Git revision and database image used for the test.

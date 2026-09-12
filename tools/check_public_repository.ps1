@@ -25,7 +25,7 @@ if ($staged.Count -eq 0) {
 }
 
 $allowed = @(
-    '^(\.gitignore|README\.md|SECURITY\.md)$',
+    '^(\.gitattributes|\.gitignore|README\.md|SECURITY\.md)$',
     '^\.github/workflows/[^/]+\.ya?ml$',
     '^api/(CHANGELOG\.md|IOS_CONTRACT_NOTIFICATION_LOG\.md|IOS_REST_API_INTEGRATION_CHECKLIST\.md|README\.md)$',
     '^api/contract-tests/',
@@ -33,11 +33,12 @@ $allowed = @(
     '^api/postman/(Elder_Engage_Week2_Draft\.postman_collection\.json|README\.md)$',
     '^architecture/(Engagement_Deployment_Runbook_Draft|Engagement_Platform_Architecture_v1|Schema_REST_Permission_Mapping)\.md$',
     '^config/engagement/',
-    '^database/(ENGAGEMENT_SCHEMA_NOTES\.md|engagement_platform_v1_schema\.sql)$',
-    '^database/tests/(requirements\.lock|test_staff_role_concurrency\.py)$',
+    '^database/(ENGAGEMENT_SCHEMA_NOTES\.md|migration_runner\.py)$',
+    '^database/migrations/(manifest\.json|V[0-9]{4}__[a-z0-9_]+\.sql)$',
+    '^database/tests/(requirements\.lock|test_migration_runner\.py|test_staff_role_concurrency\.py)$',
     '^infrastructure/',
     '^services/engagement-api/',
-    '^tools/(check_public_repository\.ps1|generate_engagement_postman\.mjs|validate_engagement_config\.mjs|validate_engagement_openapi\.mjs|validate_engagement_schema\.mjs)$'
+    '^tools/(check_public_repository\.ps1|generate_engagement_postman\.mjs|validate_database_migrations\.py|validate_engagement_config\.mjs|validate_engagement_openapi\.mjs|validate_engagement_schema\.mjs)$'
 )
 
 $forbiddenExtension = '(?i)\.(docx?|pdf|xlsx?|pptx?|apk|aab|jks|keystore|p12|pfx|pem|key|db|sqlite|sqlite3)$'
