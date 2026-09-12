@@ -1,7 +1,9 @@
 locals {
   name_prefix            = "ee-${var.environment}"
   cloud_run_service_name = "ee-${var.environment}-api"
-  cloud_run_hostname     = "ee-${var.environment}-api-${data.google_project.current.number}.${var.region}.run.app"
+  bootstrap_api_origin   = "https://${local.cloud_run_service_name}.bootstrap.invalid"
+  cloud_run_origin       = coalesce(var.public_api_origin, local.bootstrap_api_origin)
+  cloud_run_hostname     = trimprefix(local.cloud_run_origin, "https://")
   approved_image_prefix  = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.containers.repository_id}/engagement-api@sha256:"
 
   common_labels = {
@@ -51,9 +53,9 @@ locals {
     EE_LOG_LEVEL                        = "INFO"
     EE_GCP_PROJECT_ID                   = var.project_id
     EE_GCP_REGION                       = var.region
-    EE_PUBLIC_API_ORIGIN                = "https://${local.cloud_run_hostname}"
+    EE_PUBLIC_API_ORIGIN                = local.cloud_run_origin
     EE_TRUSTED_HOSTS                    = local.cloud_run_hostname
-    EE_CORS_ORIGINS                     = "https://${local.cloud_run_hostname}"
+    EE_CORS_ORIGINS                     = local.cloud_run_origin
     EE_CLOUD_SQL_INSTANCE               = google_sql_database_instance.postgres.connection_name
     EE_DATABASE_URL_SECRET_REF          = "projects/${var.project_id}/secrets/${local.name_prefix}-database-url/versions/latest"
     EE_RATE_LIMIT_STORE                 = "memory"

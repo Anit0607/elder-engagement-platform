@@ -169,6 +169,21 @@ variable "container_image" {
   nullable    = true
 }
 
+variable "public_api_origin" {
+  description = "Exact externally assigned HTTPS origin for this Cloud Run service or approved custom domain."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = var.public_api_origin == null ? true : can(regex(
+      "^https://[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?$",
+      var.public_api_origin
+    ))
+    error_message = "public_api_origin must be an HTTPS origin containing only a hostname, without a port, path, credentials, query or fragment."
+  }
+}
+
 variable "allow_unauthenticated" {
   description = "Whether the Cloud Run API can receive unauthenticated requests."
   type        = bool

@@ -11,6 +11,10 @@ const candidateWorkflow = readFileSync(
   resolve(root, '..', '.github', 'workflows', 'build-development-candidate.yml'),
   'utf8'
 );
+const deploymentWorkflow = readFileSync(
+  resolve(root, '..', '.github', 'workflows', 'verify-development-deployment.yml'),
+  'utf8'
+);
 
 assert.ok(files.length >= 8, 'foundation must be split into reviewable concerns');
 assert.match(source, /backend\s+"gcs"/, 'remote Google Cloud Storage state is required');
@@ -45,6 +49,10 @@ assert.match(source, /@sha256:/, 'Cloud Run must require an immutable image dige
 assert.match(source, /startswith\(var\.container_image,\s*local\.approved_image_prefix\)/, 'Cloud Run must accept images only from the environment repository');
 assert.match(source, /immutable_tags\s*=\s*true/, 'Artifact Registry tags must be immutable');
 assert.match(source, /var\.environment\s*==\s*"development"/, 'the current health-service candidate must be development-only');
+assert.match(source, /var\.public_api_origin/, 'Cloud Run must use an explicit assigned public origin');
+assert.match(source, /bootstrap\.invalid/, 'private development bootstrap must use a non-routable placeholder origin');
+assert.match(source, /google_cloud_run_v2_service_iam_member" "github_verifier"/, 'the keyless verifier requires explicit Cloud Run invoke permission');
+assert.match(source, /member\s*=\s*"serviceAccount:\$\{google_service_account\.github_deployer\.email\}"/, 'Cloud Run verification must use the existing federated service account');
 assert.match(source, /startup_probe\s*\{[\s\S]*?tcp_socket\s*\{/m, 'Cloud Run must have a startup probe');
 assert.match(source, /liveness_probe\s*\{[\s\S]*?http_get\s*\{[\s\S]*?path\s*=\s*"\/health"/m, 'Cloud Run liveness must call the HTTP health endpoint');
 assert.match(source, /http_headers\s*\{[\s\S]*?name\s*=\s*"Host"[\s\S]*?value\s*=\s*local\.cloud_run_hostname/m, 'Cloud Run liveness must use the configured trusted host');
@@ -85,14 +93,26 @@ assert.doesNotMatch(candidateWorkflow, /gcloud\s+run\s+deploy|terraform\s+apply/
 assert.match(healthVerifier, /auth print-identity-token/, 'private Cloud Run verification must use a short-lived identity token');
 assert.match(healthVerifier, /run services describe/, 'health verification must resolve the service URL from Google Cloud');
 assert.match(healthVerifier, /--audiences=\$origin/, 'the identity token must be scoped to the resolved service origin');
+assert.match(healthVerifier, /--impersonate-service-account=\$VerifierServiceAccount/, 'local verification must use an approved service account identity');
 assert.match(healthVerifier, /MaximumRedirection\s+0/, 'health verification must reject redirects');
 assert.match(healthVerifier, /\/health/, 'post-deployment verification must call the health endpoint');
 assert.match(healthVerifier, /Cache-Control/, 'post-deployment verification must check safe response headers');
 assert.doesNotMatch(healthVerifier, /Write-Host.*identityToken/i, 'identity tokens must never be printed');
 
+assert.match(deploymentWorkflow, /workflow_dispatch:/, 'deployment verification must be manually started');
+assert.match(deploymentWorkflow, /environment:\s*development/, 'deployment verification must use the protected development environment');
+assert.match(deploymentWorkflow, /id-token:\s*write/, 'deployment verification requires keyless federation');
+assert.match(deploymentWorkflow, /token_format:\s*id_token/, 'deployment verification must mint an identity token');
+assert.match(deploymentWorkflow, /id_token_audience:\s*\$\{\{ env\.SERVICE_ORIGIN \}\}/, 'identity token audience must be the exact service origin');
+assert.match(deploymentWorkflow, /id_token_include_email:\s*true/, 'Cloud Run identity tokens must include the bound service-account identity');
+assert.match(deploymentWorkflow, /--max-redirs 0/, 'deployment verification must reject redirects');
+assert.match(deploymentWorkflow, /\$SERVICE_ORIGIN\/health/, 'deployment verification must call the private health endpoint');
+assert.doesNotMatch(deploymentWorkflow, /echo[^\n]*ID_TOKEN/i, 'deployment verification must never print the identity token');
+
 for (const environment of ['development', 'staging', 'production']) {
   const example = read(`environments/${environment}.tfvars.example`);
   assert.match(example, new RegExp(`environment\\s*=\\s*"${environment}"`));
+  assert.match(example, /public_api_origin\s*=\s*null/, `${environment} example must not guess a service origin`);
   assert.doesNotMatch(example, /@[^\s"]+\.[^\s"]+/, `${environment} example must not contain an email`);
   assert.doesNotMatch(example, /[a-f0-9]{32,}/i, `${environment} example must not contain token-like data`);
 }
