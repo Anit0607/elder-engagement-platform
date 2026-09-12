@@ -120,10 +120,13 @@ class MemberSessionService:
         verifier: PhoneIdentityVerifier,
         repository: MemberRepository,
         session_issuer: SessionIssuer,
+        *,
+        session_controls=None,
     ) -> None:
         self._verifier = verifier
         self._repository = repository
         self._session_issuer = session_issuer
+        self.session_controls = session_controls
 
     async def create(self, request: MemberSessionRequest) -> SessionResponse:
         try:

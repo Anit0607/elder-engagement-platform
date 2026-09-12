@@ -14,7 +14,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -32,6 +32,7 @@ from app.member_runtime import member_runtime
 from app.problems import problem_response
 from app.readiness import REQUIRED_DEPENDENCIES, DependencyProbe, NotConfiguredProbe
 from app.request_limits import RequestBodyLimitMiddleware
+from app.session_controls import SessionControls, SessionSummary, UnconfiguredSessionControls, denied
 
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 TRACEPARENT_PATTERN = re.compile(
@@ -76,6 +77,7 @@ def create_app(
     probes: Mapping[str, DependencyProbe] | None = None,
     *,
     member_session_handler: MemberSessionHandler | None = None,
+    session_controls_handler: SessionControls | None = None,
     member_runtime_factory=member_runtime,
     probe_timeout_seconds: float = 2.0,
     max_request_body_bytes: int = 1_048_576,
@@ -100,8 +102,13 @@ def create_app(
         if config.member_session_enabled and member_session_handler is None:
             async with member_runtime_factory(config) as handler:
                 application.state.member_session_handler = handler
+                if session_controls_handler is None:
+                    application.state.session_controls = (
+                        getattr(handler, "session_controls", None) or UnconfiguredSessionControls()
+                    )
                 yield
                 application.state.member_session_handler = UnconfiguredMemberSessionService()
+                application.state.session_controls = UnconfiguredSessionControls()
         else:
             yield
 
@@ -116,6 +123,7 @@ def create_app(
     app.state.settings = config
     app.state.readiness_probes = readiness_probes
     app.state.member_session_handler = member_session_handler or UnconfiguredMemberSessionService()
+    app.state.session_controls = session_controls_handler or UnconfiguredSessionControls()
 
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=config.trusted_host_list)
     if config.cors_origin_list:
@@ -123,8 +131,8 @@ def create_app(
             CORSMiddleware,
             allow_origins=config.cors_origin_list,
             allow_credentials=False,
-            allow_methods=["GET", "POST"],
-            allow_headers=["Content-Type", "X-Request-Id", "traceparent"],
+            allow_methods=["GET", "POST", "DELETE"],
+            allow_headers=["Authorization", "Content-Type", "X-Request-Id", "traceparent"],
             expose_headers=["X-Request-Id", "traceparent"],
         )
     app.add_middleware(RequestBodyLimitMiddleware, max_bytes=max_request_body_bytes)
@@ -208,6 +216,41 @@ def create_app(
                 exc.title,
                 retryable=exc.retryable,
             )
+
+    def bearer_token(request: Request) -> str:
+        header = request.headers.get("Authorization", "")
+        scheme, separator, token = header.partition(" ")
+        if not separator or scheme.lower() != "bearer" or not token or any(char.isspace() for char in token):
+            raise denied()
+        return token
+
+    async def session_operation(request: Request, action: str, target: uuid.UUID | None = None):
+        try:
+            token = bearer_token(request)
+            controls = app.state.session_controls
+            if action == "list":
+                return await controls.list_sessions(token)
+            if action == "logout":
+                await controls.logout(token)
+            else:
+                await controls.revoke(token, target)
+            return Response(status_code=204)
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.get("/v1/me/sessions", tags=["Authentication"], response_model=list[SessionSummary])
+    async def list_my_sessions(request: Request):
+        return await session_operation(request, "list")
+
+    @app.post("/v1/auth/logout", tags=["Authentication"], status_code=204, response_class=Response)
+    async def logout_session(request: Request):
+        return await session_operation(request, "logout")
+
+    @app.delete(
+        "/v1/me/sessions/{sessionId}", tags=["Authentication"], status_code=204, response_class=Response,
+    )
+    async def revoke_my_session(request: Request, sessionId: uuid.UUID):
+        return await session_operation(request, "revoke", sessionId)
 
     @app.get("/ready", tags=["Operations"], response_model=HealthResponse)
     async def ready(request: Request) -> JSONResponse:
