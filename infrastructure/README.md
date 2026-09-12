@@ -104,6 +104,17 @@ The verifier resolves the service origin directly from Google Cloud, requests a 
 
 ## Secret-value procedure
 
+The reviewed Member-login runtime is enabled separately with `enable_member_session`.
+It requires Google phone identity, the approved application schema and numeric
+versions for the two session keys. Cloud Run injects those values directly from
+Secret Manager at startup; Terraform stores references, never values. Both
+values must be base64-encoded independent random keys of at least 32 bytes.
+The application connects with the runtime IAM database user through the Python
+connector's private-IP, automatic IAM mode; no password URL is loaded.
+Disable the Member-session flag to return to the deliberately unavailable
+login boundary. Refresh/logout and public mobile release remain later sprint
+acceptance items. A deployment must use the separately built reviewed digest.
+
 Terraform creates these empty secret containers: database URL, session signing key, refresh-token pepper and field-encryption key. An authorised operator adds values without printing them, then records only the secret version identifier in private deployment evidence. Secret values must never enter Terraform variables, state, console output, GitHub variables or repository files.
 
 ## Validation

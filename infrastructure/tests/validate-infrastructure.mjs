@@ -81,6 +81,10 @@ assert.match(source, /google_identity_platform_config" "member_phone"/, 'Member 
 assert.match(source, /phone_number\s*\{[\s\S]*?enabled\s*=\s*true/m, 'the approved Member phone provider must be enabled');
 assert.match(source, /allowlist_only\s*\{[\s\S]*?allowed_regions\s*=\s*var\.identity_sms_allowed_regions/m, 'real sign-in messages must be restricted to approved regions');
 assert.match(source, /identity_test_phone_numbers/, 'fictional phone identities must be supplied only as an environment input');
+assert.match(source, /enable_member_session/, 'live Member session wiring must be opt-in');
+assert.match(source, /secret_key_ref\s*\{/, 'session keys must be injected from Secret Manager');
+assert.match(source, /AMIKO_SESSION_SIGNING_KEY_BASE64/, 'session signing material must use secure injection');
+assert.match(source, /EE_DATABASE_IAM_USER/, 'Member login must use the dedicated runtime IAM database user');
 assert.doesNotMatch(source, /test_phone_numbers\s*=\s*\{[\s\S]*?"\+[0-9]/m, 'fictional phone identities must not be committed to the public repository');
 assert.match(source, /billing_project\s*=\s*var\.project_id/, 'user credential API quota must be charged to the selected project');
 assert.match(source, /user_project_override\s*=\s*true/, 'Google provider must override the default user quota project');

@@ -47,6 +47,8 @@ class Settings(BaseModel):
     member_identity_provider: Literal["mock", "firebase", "identity_platform"]
     firebase_project_id: str = ""
     member_token_audience: str = ""
+    member_session_enabled: bool = False
+    database_iam_user: str = ""
 
     uploads_bucket: str = Field(min_length=1)
     approved_media_bucket: str = Field(min_length=1)
@@ -118,6 +120,18 @@ class Settings(BaseModel):
             self.firebase_project_id and self.member_token_audience
         ):
             raise ValueError("selected member identity provider requires project and token audience")
+        if self.member_session_enabled:
+            if self.member_identity_provider == "mock":
+                raise ValueError("live Member sessions require Google phone identity")
+            if (
+                self.firebase_project_id != self.gcp_project_id
+                or self.member_token_audience != self.gcp_project_id
+            ):
+                raise ValueError("Member identity project and audience must match the environment")
+            if not self.database_iam_user or any(character.isspace() for character in self.database_iam_user):
+                raise ValueError("live Member sessions require the application IAM database user")
+            if not self.cloud_sql_instance.startswith(f"{self.gcp_project_id}:{self.gcp_region}:"):
+                raise ValueError("Cloud SQL must match the environment project and region")
         if self.fcm_enabled and not self.fcm_project_id:
             raise ValueError("enabled FCM requires FCM_PROJECT_ID")
         if self.youtube_enabled and not self.youtube_api_key_secret_ref:
