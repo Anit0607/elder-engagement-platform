@@ -13,4 +13,5 @@ database_tier        = "db-custom-1-3840"
 database_disk_gb     = 20
 environment_isolation_acknowledged = true
 deploy_application   = false
+public_api_origin     = null
 allow_unauthenticated = false

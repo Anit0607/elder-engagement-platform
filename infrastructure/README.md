@@ -17,6 +17,7 @@ This package defines an idempotent Google Cloud foundation without storing a rea
 - Development Cloud SQL explicitly uses Enterprise edition so its shared-core tier cannot silently default to Enterprise Plus.
 - Storage uses uniform access, public-access prevention, versioning and environment-aware lifecycle controls.
 - Cloud Run creation is off by default until an immutable reviewed image digest is provided.
+- A generated Cloud Run hostname is never guessed. The exact assigned origin is recorded in ignored environment values and in the protected GitHub development environment before acceptance.
 - A project-scoped monthly budget and threshold notifications are mandatory.
 - Infrastructure creates an empty application database only. It never executes the application schema or a data migration.
 
@@ -52,13 +53,18 @@ Use the guarded runner from the repository root:
 
 That command only creates a plan. Applying requires both `-Action Apply` and `-ConfirmApply APPLY-development`. A reviewed saved plan must be supplied for production.
 
-The separate development-candidate workflow tests the backend, publishes a provenance- and software-bill-of-materials-bearing candidate and smoke-tests the exact Artifact Registry digest. It does not deploy. Set `deploy_application=true` and copy only the reported digest into the ignored development values file, then review a new Terraform plan. After an authorised apply, verify the private service without exposing the identity token:
+The separate development-candidate workflow tests the backend, publishes a provenance- and software-bill-of-materials-bearing candidate and smoke-tests the exact Artifact Registry digest. It does not deploy. Set `deploy_application=true` and copy only the reported digest into the ignored development values file, then review a new Terraform plan.
+
+For an initial private development bootstrap without an assigned URL, Terraform uses an invalid placeholder origin that cannot receive external traffic. After the service is created, copy its exact reported HTTPS origin into the ignored `public_api_origin` value and the protected GitHub `GCP_CLOUD_RUN_ORIGIN` environment variable, review a second plan, and apply it before acceptance. Non-development and unauthenticated deployments cannot use the placeholder.
+
+The primary post-deployment check is the manually triggered `verify-development-deployment.yml` workflow. It uses keyless GitHub federation, mints an identity token for only the exact configured origin and invokes the private health endpoint. An authorised operator with explicit service-account token-creator permission may run the equivalent local verifier without exposing the token:
 
 ```powershell
 .\infrastructure\scripts\Test-CloudRunHealth.ps1 `
   -ProjectId replace-with-approved-project `
   -Region replace-with-approved-region `
-  -ServiceName ee-development-api
+  -ServiceName ee-development-api `
+  -VerifierServiceAccount replace-with-approved-verifier@replace-with-approved-project.iam.gserviceaccount.com
 ```
 
 The verifier resolves the service origin directly from Google Cloud, requests a short-lived token scoped to that exact origin, checks its audience and refuses redirects before validating the health response.

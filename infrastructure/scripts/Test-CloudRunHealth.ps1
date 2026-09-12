@@ -10,7 +10,11 @@ param(
 
     [Parameter(Mandatory)]
     [ValidatePattern('^[a-z][a-z0-9-]{0,61}[a-z0-9]$')]
-    [string]$ServiceName
+    [string]$ServiceName,
+
+    [Parameter(Mandatory)]
+    [ValidatePattern('^[a-z][a-z0-9-]{4,28}[a-z0-9]@[a-z][a-z0-9-]{4,28}[a-z0-9]\.iam\.gserviceaccount\.com$')]
+    [string]$VerifierServiceAccount
 )
 
 $ErrorActionPreference = 'Stop'
@@ -71,8 +75,11 @@ try {
         throw 'Google Cloud returned a Cloud Run URL containing an unexpected path.'
     }
     $origin = $parsedUrl.GetLeftPart([UriPartial]::Authority)
+    if (-not $VerifierServiceAccount.EndsWith("@$ProjectId.iam.gserviceaccount.com", [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'VerifierServiceAccount must belong to the selected project.'
+    }
 
-    $identityToken = (& $gcloud auth print-identity-token "--audiences=$origin" --quiet)
+    $identityToken = (& $gcloud auth print-identity-token "--impersonate-service-account=$VerifierServiceAccount" "--audiences=$origin" --quiet)
     if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($identityToken)) {
         throw 'Unable to acquire a short-lived identity token for the Cloud Run service.'
     }

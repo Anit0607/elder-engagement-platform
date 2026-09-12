@@ -105,9 +105,25 @@ resource "google_cloud_run_v2_service" "api" {
       condition     = !var.deploy_application || var.environment == "development"
       error_message = "The current health-service deployment candidate is development-only."
     }
+    precondition {
+      condition = !var.deploy_application || var.public_api_origin != null || (
+        var.environment == "development" && !var.allow_unauthenticated
+      )
+      error_message = "A public API origin is required before any non-development or unauthenticated deployment."
+    }
   }
 
   depends_on = [google_project_service.required]
+}
+
+resource "google_cloud_run_v2_service_iam_member" "github_verifier" {
+  count = var.deploy_application ? 1 : 0
+
+  project  = var.project_id
+  location = var.region
+  name     = google_cloud_run_v2_service.api[0].name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_service_account.github_deployer.email}"
 }
 
 resource "google_cloud_run_v2_service_iam_member" "public_api" {
