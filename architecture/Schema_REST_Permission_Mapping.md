@@ -3,7 +3,7 @@
 Status: Sprint 1 controlled baseline under EE-008
 Sources: `database/migrations/V0001__engagement_baseline.sql` and `api/openapi/elder-engage-v1.openapi.json`
 
-This mapping prevents the inherited booking product from being mistaken for the current engagement platform. “Draft now” means the operation exists in the Week 2 OpenAPI draft. “Planned” means it is an approved tracker item but is deliberately unavailable in the current contract.
+This mapping prevents the inherited booking product from being mistaken for Amiko. “Draft now” means the operation exists in the Week 2 OpenAPI draft but is not necessarily connected to live providers and data. “Planned” means it is an approved tracker item but is deliberately unavailable in the current contract.
 
 | Data owner/table | API coverage | Member | Contributor | Administrator | Tracker evidence |
 |---|---|---|---|---|---|
@@ -36,9 +36,10 @@ This mapping prevents the inherited booking product from being mistaken for the 
 6. Administrator changes to users, moderation, audiences and retention produce an audit event with a trace identifier and reason where required.
 7. Planned operations stay unavailable until their tracker sprint, contract review, runtime tests and acceptance evidence are complete.
 
-## Gaps that block final EE-008 acceptance
+## Remaining delivery gaps
 
-- The current schema is a checksum-locked migration candidate with static and staff-role race coverage; its expanded safety suite, private migration identity, bootstrap, backup gate and development execution still require approval evidence.
+- The checksum-locked baseline is applied and verified in development; future schema changes must repeat the recorded migration, review and backup controls.
 - Each planned operation must be added to the OpenAPI only in its approved sprint and linked to automated permission tests.
-- Final profile fields, circle rules, Administrator authentication, retention/deletion and broadcast consent decisions must be recorded.
-- The development infrastructure and private health portions of the runbook are executed and independently reviewed; database migration, monitoring delivery, rollback rehearsal, staging and production evidence remain outstanding.
+- The Member flow must be updated to the approved immediate-access self-registration journey. Contributors remain Administrator-created.
+- Final profile fields, circle rules, Administrator authentication, retention/deletion and broadcast consent decisions must be recorded when their sprint requires them.
+- Development health, database migration, uptime and alert-policy evidence exist. Alert-email delivery, rollback rehearsal, staging and production evidence remain outstanding.

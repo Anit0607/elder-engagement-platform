@@ -1,6 +1,6 @@
 # Elder Engagement API process foundation
 
-Status: EE-002 dependency-free Pre-Sprint foundation. This is the current engagement-platform service. The top-level `backend/` directory is an inherited booking implementation and is not imported, renamed or extended here.
+Status: Sprint 1 development foundation deployed; Week 2 identity work started but not production-ready. This is the current Amiko service. The top-level `backend/` directory is an inherited booking implementation and is not imported, renamed or extended here.
 
 Implemented now:
 
@@ -12,8 +12,10 @@ Implemented now:
 - safe response headers, explicit trusted hosts and CORS;
 - a non-root, immutable-source container foundation for a later Cloud Run deployment;
 - exact runtime/development dependency locks and automated checks.
+- a tested Member identity-token exchange and session-service boundary;
+- a versioned Week 2 REST contract for identity, profiles and account controls.
 
-Not implemented: authentication, profiles, circles, content, moderation, feeds, events, notifications, provider adapters, database models/migrations or cloud deployment.
+The development container is deployed to private Cloud Run, and database migration `V0001` is applied to private Cloud SQL. The Member-session foundation is not yet connected to live Identity Platform/Firebase or PostgreSQL, and it still reflects the earlier Administrator-pre-provisioned Member rule. Week 2 will change it to the approved flow: a phone-verified Member receives immediate access and creates their own profile. Contributors remain Administrator-created. Profiles, staff sign-in, circles, content, moderation, feeds, events, notifications and media providers are not yet implemented.
 
 ## Local verification
 

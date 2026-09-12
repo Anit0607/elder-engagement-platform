@@ -1,9 +1,10 @@
 # Elder Engagement Platform Architecture Baseline
 
 Status: Sprint 1 controlled baseline; development foundation implemented
-Version: 0.2
+Version: 0.3
 Date: 12 September 2026
-Working product name: Elder Engage; the final public product name is pending.
+Product name: Amiko
+Android package identifier: `com.eldercaresaathi.amiko`
 
 ## 1. Scope protected by this baseline
 
@@ -49,7 +50,7 @@ The client-owned target uses separate development, staging, and production envir
 - Cloud Logging and Monitoring for structured logs, uptime, errors, latency, and budget alerts.
 - A repeatable GitHub-based build and deployment pipeline with separate development and production configuration.
 
-The approved development project is active in the selected India region. Its private Cloud Run service runs an immutable, security-checked image; authenticated health verification passes through keyless GitHub federation. Cloud SQL, storage, state and Secret Manager containers are private. Staging and production remain blocked until the client supplies separately approved projects, billing controls, domains, retention decisions and release evidence.
+The approved development project is active in the selected India region. Its private Cloud Run service runs an immutable, security-checked image; authenticated health verification passes through keyless GitHub federation and Google Monitoring. Cloud SQL, storage, state and Secret Manager containers are private. Database baseline `V0001` has been applied once and verified. Error, uptime and budget alert rules are active; email delivery waits for the client-approved recipient. Staging and production are not yet created.
 
 ## 4. Backend modules and ownership
 
@@ -131,10 +132,10 @@ The physical schema must use immutable identifiers, timestamps, constrained stat
 
 ## 10. Decisions still required from the client
 
-- Final product name, Android package identifier, public domains, and separate staging/production projects.
+- Public domains and the timing/identifiers for separate staging and production projects.
 - Complete profile fields, circle rules, and account-control policy.
 - Privacy notice, consent, age, retention, deletion/export, and broad-location decisions.
-- Identity Platform or Firebase phone authentication configuration and test numbers.
+- Identity Platform/Firebase configuration and fictional test numbers. The approved Member journey is verified-phone sign-in followed by immediate access and self-created profile; Contributors are Administrator-created.
 - YouTube, Meet, Firebase Cloud Messaging, and Agora client-owned accounts and quotas.
 - Broadcast duration, viewer launch cap, consent, replay approval, and retention.
 - iOS developer contact, GitHub identity, expected integration scenarios, and response availability.
