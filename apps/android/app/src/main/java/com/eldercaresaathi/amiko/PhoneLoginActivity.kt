@@ -1,6 +1,7 @@
 package com.eldercaresaathi.amiko
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Context
 import android.content.res.Configuration
 import android.os.Bundle
@@ -36,6 +37,10 @@ class PhoneLoginActivity : Activity() {
     private lateinit var verify: Button
     private lateinit var change: Button
     private lateinit var retry: Button
+    private lateinit var sessionRetry: Button
+    private lateinit var logout: Button
+    private lateinit var deviceList: LinearLayout
+    private lateinit var sessions: SessionController
     private var verificationId: String? = null
     private var resendToken: PhoneAuthProvider.ForceResendingToken? = null
     private var busy = false
@@ -113,6 +118,16 @@ class PhoneLoginActivity : Activity() {
         retry = button(root, R.string.retry_connection) { exchange(epoch) }.apply { visibility = View.GONE }
         status = TextView(this).apply { textSize = 20f; accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE }
         root.addView(status)
+        sessions = SessionController(SessionStore(applicationContext), MemberApi())
+        sessionRetry = button(root, R.string.check_session) { sessionAction { sessions.restore() } }
+            .apply { visibility = View.GONE }
+        logout = button(root, R.string.sign_out) {
+            AlertDialog.Builder(this).setMessage(R.string.sign_out_confirm)
+                .setPositiveButton(R.string.sign_out) { _, _ -> sessionAction { sessions.logout(); null } }
+                .setNegativeButton(android.R.string.cancel, null).show()
+        }.apply { visibility = View.GONE }
+        deviceList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        root.addView(deviceList)
         try {
             check(listOf(BuildConfig.FIREBASE_API_KEY, BuildConfig.FIREBASE_APP_ID,
                 BuildConfig.FIREBASE_PROJECT).all { it.isNotBlank() })
@@ -123,6 +138,7 @@ class PhoneLoginActivity : Activity() {
             auth.signOut() // Amiko sessions, not the provider's cached sign-in, own persistence.
             ready = true
             message(R.string.enter_phone)
+            sessionAction { sessions.restore() }
         } catch (_: Exception) { message(R.string.configuration_missing) }
         main.post(ticker)
     }
@@ -201,11 +217,9 @@ class PhoneLoginActivity : Activity() {
             }
             executor.execute {
                 var errorMessage = 0
-                var stage = "backend"
+                val stage = "backend"
                 try {
-                    val response = MemberApi().exchange(proof, installation)
-                    stage = "secure_storage"
-                    SessionStore(this).save(response)
+                    sessions.signIn(proof, installation)
                 }
                 catch (_: LoginRateLimited) { errorMessage = R.string.rate_limited }
                 catch (error: Exception) {
@@ -221,6 +235,9 @@ class PhoneLoginActivity : Activity() {
                             auth.signOut()
                             completed = true; phone.text.clear(); code.text.clear(); verificationId = null
                             resendToken = null; message(R.string.signed_in)
+                            sessionRetry.visibility = View.VISIBLE
+                            logout.visibility = View.VISIBLE
+                            sessionAction { sessions.restore() }
                         } else { retry.visibility = View.VISIBLE; message(errorMessage) }
                         render()
                     }
@@ -230,8 +247,64 @@ class PhoneLoginActivity : Activity() {
     }
 
     private fun validEpoch(value: Int) = value == epoch && !isFinishing && !isDestroyed && !completed
+    private fun sessionAction(action: () -> SessionView?) {
+        if (busy || isFinishing || isDestroyed) return
+        busy = true; val actionEpoch = ++epoch
+        deviceList.removeAllViews(); message(R.string.checking_session); render()
+        executor.execute {
+            var view: SessionView? = null
+            var error = 0
+            try { view = action() }
+            catch (_: SessionEnded) { error = R.string.session_ended }
+            catch (_: Exception) { error = R.string.session_connection_failed }
+            main.post {
+                if (actionEpoch != epoch || isFinishing || isDestroyed) return@post
+                busy = false
+                if (error == R.string.session_connection_failed) {
+                    // No offline success claim; preserve credentials if renewal never began.
+                    completed = true; sessionRetry.visibility = View.VISIBLE; logout.visibility = View.VISIBLE
+                    message(error)
+                } else if (view != null && error == 0) {
+                    completed = true; phone.text.clear(); code.text.clear(); verificationId = null; resendToken = null
+                    sessionRetry.visibility = View.VISIBLE; logout.visibility = View.VISIBLE
+                    message(R.string.signed_in)
+                    for (device in view!!.devices) {
+                        val label = getString(if (device.current) R.string.current_device else R.string.other_device,
+                            device.platform)
+                        device.lastSeenAt?.let {
+                            val seen = java.time.OffsetDateTime.parse(it).atZoneSameInstant(java.time.ZoneId.systemDefault())
+                                .format(java.time.format.DateTimeFormatter.ofLocalizedDateTime(
+                                    java.time.format.FormatStyle.SHORT).withLocale(resources.configuration.locales[0]))
+                            deviceList.addView(TextView(this).apply {
+                                text = label + "\n" + getString(R.string.device_last_seen, seen); textSize = 18f
+                            })
+                        }
+                        button(deviceList, R.string.remove_device) {
+                            AlertDialog.Builder(this).setMessage(R.string.remove_device_confirm)
+                                .setPositiveButton(R.string.remove_device) { _, _ ->
+                                    sessionAction { sessions.removeDevice(device.id) }
+                                }.setNegativeButton(android.R.string.cancel, null).show()
+                        }.text = label + " — " + getString(R.string.remove_device)
+                    }
+                } else {
+                    completed = false; providerAccepted = false
+                    verificationId = null; resendToken = null; phone.text.clear(); code.text.clear()
+                    consent.isChecked = false; retry.visibility = View.GONE
+                    sessionRetry.visibility = View.GONE; logout.visibility = View.GONE
+                    if (::auth.isInitialized) auth.signOut()
+                    message(if (error == 0) R.string.enter_phone else error)
+                }
+                render()
+            }
+        }
+    }
     private fun render() {
         if (!::send.isInitialized) return
+        phone.visibility = if (completed) View.GONE else View.VISIBLE
+        consent.visibility = phone.visibility
+        send.visibility = phone.visibility
+        change.visibility = phone.visibility
+        if (completed) retry.visibility = View.GONE
         phone.isEnabled = ready && !busy && verificationId == null && !completed
         consent.isEnabled = phone.isEnabled
         send.isEnabled = ready && !busy && policy.canRequest() && !completed
@@ -242,6 +315,9 @@ class PhoneLoginActivity : Activity() {
         verify.isEnabled = ready && !busy && verificationId != null && policy.canVerify() && !completed
         change.isEnabled = ready && !busy && !completed
         retry.isEnabled = !busy && !completed
+        sessionRetry.isEnabled = !busy
+        logout.isEnabled = !busy
+        for (i in 0 until deviceList.childCount) deviceList.getChildAt(i).isEnabled = !busy
     }
     private fun message(resource: Int) { status.setText(resource) }
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
@@ -251,5 +327,9 @@ class PhoneLoginActivity : Activity() {
     }
     override fun onDestroy() {
         epoch++; main.removeCallbacks(ticker); executor.shutdownNow(); super.onDestroy()
+    }
+    override fun onResume() {
+        super.onResume()
+        if (ready && completed && !busy) sessionAction { sessions.restore() }
     }
 }

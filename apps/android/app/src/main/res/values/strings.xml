@@ -23,4 +23,15 @@
     <string name="connecting">Signing you in to Amiko…</string>
     <string name="signed_in">Signed in successfully. Your profile screen will be available in the next planned task.</string>
     <string name="configuration_missing">This test build is not connected yet. Please ask the project team for the configured build.</string>
+    <string name="check_session">Check sign-in and devices</string>
+    <string name="checking_session">Checking your saved sign-in…</string>
+    <string name="sign_out">Sign out</string>
+    <string name="sign_out_confirm">Sign out of Amiko on this device?</string>
+    <string name="session_ended">Please sign in again. Your saved sign-in could not be renewed safely.</string>
+    <string name="session_connection_failed">Could not complete the sign-in check or change. Check your connection and try again.</string>
+    <string name="current_device">This device (%1$s)</string>
+    <string name="other_device">Another device (%1$s)</string>
+    <string name="device_last_seen">Last used: %1$s</string>
+    <string name="remove_device">Sign out device</string>
+    <string name="remove_device_confirm">Sign out this device? It will need to sign in again.</string>
 </resources>
