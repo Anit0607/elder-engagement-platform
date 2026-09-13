@@ -180,7 +180,7 @@
         "tags": ["Authentication"],
         "operationId": "refreshSession",
         "summary": "Rotate a refresh token and issue a new access token",
-        "description": "Mobile clients must serialize refresh so only one request uses a token at a time. A successful response replaces both stored tokens atomically. After an uncertain network outcome, do not retry the same refresh token: clear local tokens and return to sign-in because this draft defines no safe recovery/status operation.",
+        "description": "Mobile clients must serialize refresh so only one request uses a token at a time. A successful response replaces both stored tokens atomically and retains the same user identifier. Member renewal preserves the original session-family expiry (configured as 30 days by default), rather than extending it on each renewal. Reuse of a replaced refresh token revokes its whole family. Suspended, deleted, revoked or expired sessions cannot renew. After an uncertain network outcome or a 503 response, do not retry the same refresh token: clear local tokens and return to sign-in because this draft defines no safe recovery/status operation. This implementation step supports Members only; staff support remains dependent on EE-010, and deployment verification is required before treating it as callable.",
         "security": [],
         "requestBody": {
           "required": true,
@@ -193,7 +193,7 @@
         },
         "responses": {
           "200": {
-            "description": "Token family rotated",
+            "description": "Credentials replaced within the existing token family",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/SessionResponse" }
@@ -204,7 +204,8 @@
           "401": { "$ref": "#/components/responses/Unauthorised" },
           "403": { "$ref": "#/components/responses/Forbidden" },
           "409": { "$ref": "#/components/responses/Conflict" },
-          "429": { "$ref": "#/components/responses/RateLimited" }
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
         }
       }
     },

@@ -2,6 +2,13 @@
 
 The contract remains a controlled Sprint 2 draft and no listed operation is claimed callable until its matching backend deployment is verified.
 
+## Member refresh implementation note — 13 September 2026
+
+- Implemented single-use Member refresh at the existing `/v1/auth/refresh` path: stable user identifier, new credentials, unchanged session-family expiry, and committed family revocation on token reuse.
+- Added the dependency-outage response. Clients must not replay a refresh token after an uncertain outcome or an outage response; sign in again instead. This operation does not advertise automatic outage retries.
+- Renewals do not consume the fresh phone-sign-in allowance. Logout, removed-device, suspended-account and expired-session protections apply to renewal.
+- No success-payload or path changes. Candidate is not yet deployed. Android persistence/renewal and EE-010 staff-session acceptance remain outstanding; EE-011 is not complete.
+
 ## Member session-control implementation note — 12 September 2026
 
 - Added explicit suspension and dependency-outage responses for Member device listing, logout and device removal, plus invalid-path validation for device removal.
