@@ -24,8 +24,10 @@ class MemberApi {
             val body = JSONObject().put("providerIdToken", providerToken)
                 .put("installationId", installation).put("platform", "android").toString()
             connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
-            if (connection.responseCode == 429) throw LoginRateLimited()
-            if (connection.responseCode != 200) throw LoginConnectionFailed()
+            val status = connection.responseCode
+            if (BuildConfig.DEBUG) android.util.Log.w("AmikoLoginCheck", "stage=backend_http status=$status")
+            if (status == 429) throw LoginRateLimited()
+            if (status != 200) throw LoginConnectionFailed()
             val response = connection.inputStream.bufferedReader().use { reader ->
                 val buffer = CharArray(32_769)
                 var count = 0
