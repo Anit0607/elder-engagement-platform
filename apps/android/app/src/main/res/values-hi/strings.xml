@@ -19,4 +19,15 @@
     <string name="connecting">Amiko में प्रवेश हो रहा है…</string>
     <string name="signed_in">सफलतापूर्वक प्रवेश किया। अगले नियोजित कार्य में आपकी प्रोफ़ाइल स्क्रीन उपलब्ध होगी।</string>
     <string name="configuration_missing">यह परीक्षण ऐप अभी जुड़ा नहीं है। जुड़े हुए संस्करण के लिए परियोजना की टीम से संपर्क करें।</string>
+    <string name="check_session">प्रवेश और डिवाइस जाँचें</string>
+    <string name="checking_session">आपके पिछले प्रवेश की जाँच हो रही है…</string>
+    <string name="sign_out">बाहर निकलें</string>
+    <string name="sign_out_confirm">इस डिवाइस पर Amiko से बाहर निकलें?</string>
+    <string name="session_ended">फिर प्रवेश करें। पिछला प्रवेश सुरक्षित रूप से जारी नहीं रखा जा सका।</string>
+    <string name="session_connection_failed">प्रवेश की जाँच या बदलाव पूरा नहीं हुआ। कनेक्शन जाँचकर फिर कोशिश करें।</string>
+    <string name="current_device">यह डिवाइस (%1$s)</string>
+    <string name="other_device">दूसरा डिवाइस (%1$s)</string>
+    <string name="device_last_seen">आखिरी उपयोग: %1$s</string>
+    <string name="remove_device">डिवाइस से बाहर करें</string>
+    <string name="remove_device_confirm">इस डिवाइस से बाहर करें? फिर प्रवेश करना होगा।</string>
 </resources>

@@ -20,4 +20,15 @@
     <string name="connecting">Amiko-তে প্রবেশ করা হচ্ছে…</string>
     <string name="signed_in">সফলভাবে প্রবেশ করেছেন। পরের নির্ধারিত কাজে আপনার প্রোফাইলের পর্দা আসবে।</string>
     <string name="configuration_missing">এই পরীক্ষার অ্যাপ এখনও সংযুক্ত নয়। সংযুক্ত সংস্করণের জন্য প্রকল্পের দলকে বলুন।</string>
+    <string name="check_session">প্রবেশ ও ডিভাইস যাচাই করুন</string>
+    <string name="checking_session">আপনার আগের প্রবেশ যাচাই করা হচ্ছে…</string>
+    <string name="sign_out">বেরিয়ে যান</string>
+    <string name="sign_out_confirm">এই ডিভাইসে Amiko থেকে বেরিয়ে যাবেন?</string>
+    <string name="session_ended">আবার প্রবেশ করুন। আগের প্রবেশ নিরাপদভাবে চালু রাখা যায়নি।</string>
+    <string name="session_connection_failed">প্রবেশ যাচাই বা পরিবর্তন সম্পূর্ণ হয়নি। সংযোগ দেখে আবার চেষ্টা করুন।</string>
+    <string name="current_device">এই ডিভাইস (%1$s)</string>
+    <string name="other_device">অন্য ডিভাইস (%1$s)</string>
+    <string name="device_last_seen">শেষ ব্যবহার: %1$s</string>
+    <string name="remove_device">ডিভাইস থেকে বের করুন</string>
+    <string name="remove_device_confirm">এই ডিভাইস থেকে বের করবেন? আবার প্রবেশ করতে হবে।</string>
 </resources>

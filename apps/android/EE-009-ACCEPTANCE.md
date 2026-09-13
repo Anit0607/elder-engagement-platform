@@ -12,8 +12,10 @@ production release of the full app.
   Member in ten minutes. Revoking a session or changing device identifiers does
   not reset this limit. The limit is stored in existing database session records
   and works across processes/instances; no new personal-data table is added.
-- Verify that the local Android test relay accepts only the development login
-  route, never returns the operator's cloud token and does not expose other APIs.
+- Verify that the default local Android test relay accepts only the development
+  login route, never returns the operator's cloud token and does not expose other
+  APIs. Explicit EE-011 mode adds only the bounded session-control routes described
+  in `EE-011-ACCEPTANCE.md`.
 
 Google's official phone SDK provides app verification, code checks and provider
 limits. Local resend/wrong-code controls are usability guards, not a claim that

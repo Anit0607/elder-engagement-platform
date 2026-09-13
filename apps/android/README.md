@@ -1,8 +1,9 @@
-# Amiko Android: EE-009 phone-login candidate
+# Amiko Android: phone login and EE-011 session candidate
 
 Native Kotlin Android application, permanent package `com.eldercaresaathi.amiko`.
-This first build implements phone sign-in only, not the complete platform.
-It is a small native test harness for the EE-009 backend acceptance checks.
+This build implements phone sign-in and saved Member-session controls, not the
+complete platform. It is a small native test harness for EE-009 and EE-011
+backend/device acceptance checks.
 The tracker still plans the complete React Native Android shell under EE-028;
 this harness does not approve a change to that delivery stack or complete
 EE-028/EE-029. Final app-screen integration remains in those planned items.
@@ -34,6 +35,15 @@ Debug-only loopback HTTP exists for a local, authenticated development relay
 accessed with Android Debug Bridge port reversal. The live Cloud Run service
 remains private. Do not weaken that boundary or put an operator token in the APK.
 Only the loopback hostname is allowed cleartext in debug; release forbids it.
+
+EE-011 adds Keystore-encrypted restoration, server checks on reopening/foreground,
+serialized single-use renewal, confirmed sign-out and own-device controls. An
+ordinary outage retains encrypted credentials without showing successful access;
+an uncertain renewal clears them and asks for phone sign-in again. Default relay
+mode remains login-only. Explicit session mode and pending client device checks
+are documented in [EE-011-ACCEPTANCE.md](EE-011-ACCEPTANCE.md). Hardware storage and
+real lifecycle behavior require device acceptance, not only unit tests. This
+candidate does not complete EE-011's EE-010-dependent staff coverage.
 
 Acceptance requires configured Firebase Android registration/signing fingerprints,
 fictional-number device testing, final real phone/SMS testing, review of the

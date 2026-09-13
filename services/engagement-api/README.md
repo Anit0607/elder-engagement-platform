@@ -158,11 +158,20 @@ codes in the official SDK; the app exchanges the resulting identity proof throug
 the shared REST endpoint. A local, loopback-only development relay may be started
 with `python -m tools.development_login_relay --project approved-development-project
 --region approved-region --confirm TEST-EE-009-development` (one line).
-It proxies only Android Member login and acquires the operator's existing cloud
+By default it proxies only Android Member login and acquires the operator's existing cloud
 identity internally; it never gives that cloud identity to the phone. Developer
 access stays out of the APK. Device testing uses Android Debug Bridge port reversal
 for port 8787. This is not a public production gateway. See the app acceptance
 checklist before declaring EE-009 complete.
+
+The Android EE-011 candidate opts into bounded session routes with
+`--session-controls --confirm TEST-EE-011-development`. This adds only refresh,
+logout, own-device listing and UUID-scoped removal. Platform access travels in
+`Authorization`, and the internally obtained cloud token travels only upstream
+in `X-Serverless-Authorization`. Extra routes/queries/bodies, missing platform
+authentication, redirects and oversized upstream responses are refused. The
+relay remains loopback-only, carries no cloud credential in the APK and is not
+a production entry point.
 
 The first live development trial passed all eight checks against the deployed
 Google identity service and private Cloud SQL. Both Android and iOS request shapes
