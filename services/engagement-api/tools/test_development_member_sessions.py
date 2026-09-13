@@ -1,7 +1,7 @@
 """Private development session trial using only approved fictional phone identities.
 
-Creates three synthetic Member sessions, then revokes them. Does not inspect or
-remove existing devices, change account state, print credentials or send real SMS.
+Creates three synthetic Member sessions, then revokes them. Does not remove
+existing devices, change account state, print credentials or send real SMS.
 """
 from __future__ import annotations
 
