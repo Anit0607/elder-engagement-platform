@@ -88,8 +88,8 @@ Device removal is scoped to the authenticated owner and revokes the target token
 family. Missing and foreign targets return the same not-found response. Logout
 returns an empty 204 response; a subsequent use of the removed session is refused.
 
-Member listing, logout and removal are already deployed in development. The new
-refresh implementation described below remains an undeployed candidate. Staff
+Member listing, logout, removal and refresh are deployed and verified in private
+development. Staff
 sessions and the client device-list screen are not implemented. Existing login
 routes remain unchanged. A private
 Cloud Run trial must send the cloud-invocation token in `X-Serverless-Authorization`
@@ -98,7 +98,7 @@ would compete for one header. No cloud permissions or schema changes are require
 JWT verification follows the [PyJWT verification documentation](https://pyjwt.readthedocs.io/en/stable/api.html)
 with a fixed allowed signing algorithm, never a token-selected algorithm.
 
-### Single-use Member renewal candidate
+### Single-use Member renewal (development verified)
 
 `POST /v1/auth/refresh` accepts a refresh token in its request body; no still-valid
 platform access token is required. Successful renewal replaces both credentials,
@@ -120,10 +120,21 @@ This safety policy follows the rotation/reuse principles in
 The thirty-day absolute expiry is this application's configured policy, not a
 requirement imposed by that standard.
 
-EE-011 remains in progress: this candidate needs the real PostgreSQL test gate and
-deployment verification; Android encrypted restoration, serialized renewal,
+EE-011 remains in progress: Android encrypted restoration, serialized renewal,
 sign-out/device controls and client acceptance remain outstanding. Staff-session
 coverage depends on EE-010. Do not treat backend-only tests as full EE-011 acceptance.
+
+Development verification on 13 September 2026: source commit
+`83f095c578794da6bf046ecaefa141e2242bee0e`, container digest
+`sha256:cf4ab097b8086b99964edd439ed6ece996b5c2e52ce54cc03f22469b9d3b4190`.
+GitHub verification passed all 207 backend tests, including PostgreSQL 16
+integration tests, with 96.80% branch-aware coverage. Candidate build and private
+deployed-health checks passed. The fictional-account trial passed all seven live
+checks below without real SMS. The reviewed cloud plan changed only the server
+image; database structure, permissions, phone provider and country settings did
+not change. This is development evidence, not a full production release or
+Android/client acceptance. Subsequent operator-trial tests are separate from the
+deployed image and do not change its source identity.
 
 ### Private development session trial
 

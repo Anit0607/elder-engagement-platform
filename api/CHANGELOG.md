@@ -2,6 +2,12 @@
 
 The contract remains a controlled Sprint 2 draft and no listed operation is claimed callable until its matching backend deployment is verified.
 
+## Member refresh development verification — 13 September 2026
+
+- The Member refresh implementation from commit `83f095c578794da6bf046ecaefa141e2242bee0e` is deployed and verified in the private development environment. GitHub passed 207 backend tests, including PostgreSQL 16 integration checks; the deployed private-health check also passed.
+- Seven live fictional-account checks passed: stable Android/iOS Member identifier, replacement credentials, old-access rejection, reuse-family revocation with another family unaffected, logout blocking renewal, own-device removal blocking renewal, and private-service access. No real SMS was sent.
+- This does not make every operation in this draft callable. Android persistent-session acceptance and EE-010 staff support remain outstanding. No public/production origin or iOS handover is included.
+
 ## Member refresh implementation note — 13 September 2026
 
 - Implemented single-use Member refresh at the existing `/v1/auth/refresh` path: stable user identifier, new credentials, unchanged session-family expiry, and committed family revocation on token reuse.
