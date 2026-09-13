@@ -137,3 +137,17 @@ terraform -chdir=infrastructure\terraform\foundation validate
 ## Production gates
 
 Production apply is forbidden until the client approves the environment project, budget, data-retention rules, alert recipients, domain, immutable image digest, database sizing, recovery targets and release/rollback evidence. Client acceptance testing remains a separate release gate.
+## Development verification-code rotation
+
+After fictional phone-number testing, replace any verification codes exposed in
+screenshots. `scripts/New-DevelopmentTestCodes.ps1` generates replacements only
+for existing India test identities in a Git-ignored development tfvars input.
+It validates workspace/project/environment boundaries and preserves unrelated
+settings. It never prints codes or applies cloud changes itself.
+
+Use the normal reviewed saved Terraform plan/apply workflow afterward, supplying
+an absolute plan-file path. Review only resource addresses and safe change
+summaries; full Identity Platform configuration and Terraform plan JSON can
+contain confidential password-hash metadata even when phone sign-in is the
+only enabled provider. Verify the updated test-code map privately and confirm
+real phone sign-in and the allowed-country policy are unchanged.
