@@ -82,6 +82,9 @@ assert.doesNotMatch(operationalAlertTester, /@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/, 'th
 assert.match(source, /identitytoolkit\.googleapis\.com/, 'Google Identity Platform must be enabled through the reviewed cloud configuration');
 assert.match(source, /google_identity_platform_config" "member_phone"/, 'Member phone sign-in must be managed as a repeatable cloud resource');
 assert.match(source, /phone_number\s*\{[\s\S]*?enabled\s*=\s*true/m, 'the approved Member phone provider must be enabled');
+assert.match(read('terraform/foundation/identity_platform.tf'),
+  /email\s*\{\s*enabled\s*=\s*false\s*password_required\s*=\s*false\s*\}/m,
+  'Member login must preserve explicit disabled-email defaults instead of repeatedly removing the provider block');
 assert.match(source, /allowlist_only\s*\{[\s\S]*?allowed_regions\s*=\s*var\.identity_sms_allowed_regions/m, 'real sign-in messages must be restricted to approved regions');
 assert.match(source, /identity_test_phone_numbers/, 'fictional phone identities must be supplied only as an environment input');
 assert.match(source, /enable_member_session/, 'live Member session wiring must be opt-in');
