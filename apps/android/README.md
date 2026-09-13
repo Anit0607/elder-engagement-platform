@@ -45,3 +45,10 @@ and exception class names only. They never include exception messages, stack
 traces, phone numbers, verification codes, tokens, payloads or response bodies.
 These distinguish Google-proof, backend and encrypted-storage failures during
 device acceptance; they are disabled in release builds.
+
+Narrow HTTPS browser and Custom Tab service queries enable Firebase's browser
+discovery on Android 11+. No `QUERY_ALL_PACKAGES` permission is requested.
+`VerificationBrowserManifestTest` guards these declarations; see Android's
+[package-visibility guidance](https://developer.android.com/training/package-visibility/use-cases).
+The real-number verification-page return path still requires device acceptance;
+the declarations alone do not prove successful verification or SMS delivery.
