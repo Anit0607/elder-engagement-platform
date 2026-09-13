@@ -125,6 +125,21 @@ deployment verification; Android encrypted restoration, serialized renewal,
 sign-out/device controls and client acceptance remain outstanding. Staff-session
 coverage depends on EE-010. Do not treat backend-only tests as full EE-011 acceptance.
 
+### Private development session trial
+
+After verifying deployment of the reviewed refresh implementation, run
+`python -m tools.test_development_member_sessions --project approved-development-project --region approved-region --confirm TEST-EE-011-development`
+from this service directory. It uses only phone identities already allowlisted
+as fictional test numbers by Google and requests only those configuration fields
+and the client API key, not the full identity configuration. It creates three
+test sessions, checks stable Android/iOS identity, renews one, exercises reuse
+revocation, signs another out, and removes only its own newly created current
+device. The service must remain private. No real text message is sent; secrets,
+tokens, phone values and Member identifiers are never printed. Synthetic database
+rows remain; a failed trial may leave its newly created test sessions active until
+expiry or controlled removal. Existing user devices are not altered. This trial
+does not replace Android phone testing or EE-010 staff acceptance.
+
 ## EE-009 Android development trial
 
 The first native Android phone-login app lives in `apps/android`. Google verifies
