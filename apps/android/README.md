@@ -39,3 +39,9 @@ Acceptance requires configured Firebase Android registration/signing fingerprint
 fictional-number device testing, final real phone/SMS testing, review of the
 client's privacy/consent text and client sign-off. Fictional tests do not prove
 Play Integrity or actual SMS delivery. No completed profile/feed is simulated.
+
+Debug-only `AmikoLoginCheck` diagnostics contain stage names, HTTP status numbers
+and exception class names only. They never include exception messages, stack
+traces, phone numbers, verification codes, tokens, payloads or response bodies.
+These distinguish Google-proof, backend and encrypted-storage failures during
+device acceptance; they are disabled in release builds.

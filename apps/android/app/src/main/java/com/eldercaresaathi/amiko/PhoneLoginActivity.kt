@@ -191,6 +191,7 @@ class PhoneLoginActivity : Activity() {
             if (!validEpoch(requestEpoch)) return@addOnCompleteListener
             val proof = if (result.isSuccessful) result.result?.token else null
             if (!result.isSuccessful || proof.isNullOrBlank()) {
+                if (BuildConfig.DEBUG) android.util.Log.w("AmikoLoginCheck", "stage=google_proof_failed")
                 busy = false; retry.visibility = View.VISIBLE; message(R.string.connection_failed); render()
                 return@addOnCompleteListener
             }
@@ -200,9 +201,19 @@ class PhoneLoginActivity : Activity() {
             }
             executor.execute {
                 var errorMessage = 0
-                try { SessionStore(this).save(MemberApi().exchange(proof, installation)) }
+                var stage = "backend"
+                try {
+                    val response = MemberApi().exchange(proof, installation)
+                    stage = "secure_storage"
+                    SessionStore(this).save(response)
+                }
                 catch (_: LoginRateLimited) { errorMessage = R.string.rate_limited }
-                catch (_: Exception) { errorMessage = R.string.connection_failed }
+                catch (error: Exception) {
+                    // Never log exception messages, stack traces, request/response data or tokens.
+                    if (BuildConfig.DEBUG) android.util.Log.w("AmikoLoginCheck",
+                        "stage=${stage}_failed type=${error.javaClass.simpleName}")
+                    errorMessage = R.string.connection_failed
+                }
                 main.post {
                     if (validEpoch(requestEpoch)) {
                         busy = false
