@@ -33,6 +33,7 @@ from app.problems import problem_response
 from app.readiness import REQUIRED_DEPENDENCIES, DependencyProbe, NotConfiguredProbe
 from app.request_limits import RequestBodyLimitMiddleware
 from app.session_controls import SessionControls, SessionSummary, UnconfiguredSessionControls, denied
+from app.session_refresh import RefreshRequest
 
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 TRACEPARENT_PATTERN = re.compile(
@@ -219,6 +220,13 @@ def create_app(
                 exc.title,
                 retryable=exc.retryable,
             )
+
+    @app.post("/v1/auth/refresh", tags=["Authentication"], response_model=SessionResponse)
+    async def refresh_session(request: Request, payload: RefreshRequest):
+        try:
+            return await app.state.session_controls.refresh(payload.refresh_token)
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
 
     def bearer_token(request: Request) -> str:
         header = request.headers.get("Authorization", "")

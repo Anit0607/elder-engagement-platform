@@ -94,7 +94,11 @@ class PostgresSessionIssuer:
                 status=401, code="AUTHENTICATION_FAILED", title="Authentication failed",
             )
         recent = await connection.fetchval(
-            "SELECT count(*) FROM engagement_app.auth_sessions WHERE user_id=$1 AND created_at >= $2",
+            """SELECT count(*) FROM engagement_app.auth_sessions AS candidate
+                WHERE user_id=$1 AND created_at >= $2 AND NOT EXISTS (
+                    SELECT 1 FROM engagement_app.auth_sessions AS previous
+                    WHERE previous.replaced_by_session_id=candidate.id
+                )""",
             member.id, issued_at - timedelta(minutes=10),
         )
         if recent >= self._member_session_limit:
@@ -121,26 +125,7 @@ class PostgresSessionIssuer:
             token_family_id = uuid4()
             access_expires_at = issued_at + self._access_delta
             refresh_expires_at = issued_at + self._refresh_delta
-            refresh_token = f"amr1_{secrets.token_urlsafe(48)}"
-            refresh_hash = hmac.digest(
-                self._refresh_pepper, refresh_token.encode(), "sha256"
-            ).hex()
-            access_token = jwt.encode(
-                {
-                    "iss": self._issuer,
-                    "aud": self._audience,
-                    "sub": str(member.id),
-                    "sid": str(session_id),
-                    "jti": str(uuid4()),
-                    "role": "member",
-                    "iat": int(issued_at.timestamp()),
-                    "nbf": int(issued_at.timestamp()),
-                    "exp": int(access_expires_at.timestamp()),
-                },
-                self._signing_key,
-                algorithm="HS256",
-                headers={"typ": "JWT"},
-            )
+            tokens, refresh_hash = self._tokens(member.id, session_id, issued_at, access_expires_at)
             try:
                 async with self._pool.acquire() as connection:
                     transaction = (
@@ -175,9 +160,18 @@ class PostgresSessionIssuer:
             except (asyncpg.PostgresError, OSError, TimeoutError) as exc:
                 raise AuthenticationDependencyUnavailable from exc
 
-            return IssuedSession(
-                access_token=access_token,
-                refresh_token=refresh_token,
-                expires_in_seconds=int(self._access_delta.total_seconds()),
-            )
+            return tokens
         raise AuthenticationDependencyUnavailable
+
+    def _tokens(self, user_id: UUID, session_id: UUID, issued_at: datetime, expires_at: datetime):
+        refresh_token = f"amr1_{secrets.token_urlsafe(48)}"
+        refresh_hash = hmac.digest(self._refresh_pepper, refresh_token.encode(), "sha256").hex()
+        access_token = jwt.encode(
+            {"iss": self._issuer, "aud": self._audience, "sub": str(user_id),
+             "sid": str(session_id), "jti": str(uuid4()), "role": "member",
+             "iat": int(issued_at.timestamp()), "nbf": int(issued_at.timestamp()),
+             "exp": int(expires_at.timestamp())},
+            self._signing_key, algorithm="HS256", headers={"typ": "JWT"},
+        )
+        return IssuedSession(access_token=access_token, refresh_token=refresh_token,
+                             expires_in_seconds=int((expires_at - issued_at).total_seconds())), refresh_hash

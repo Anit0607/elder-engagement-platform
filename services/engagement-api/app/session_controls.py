@@ -8,7 +8,7 @@ import asyncpg
 import jwt
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.member_auth import MemberSessionFailure
+from app.member_auth import MemberSessionFailure, SessionResponse
 from app.postgres_session_issuer import PostgresSessionIssuer
 
 
@@ -25,6 +25,7 @@ class SessionSummary(BaseModel):
 
 
 class SessionControls(Protocol):
+    async def refresh(self, token: str) -> SessionResponse: ...
     async def list_sessions(self, token: str) -> list[SessionSummary]: ...
     async def logout(self, token: str) -> None: ...
     async def revoke(self, token: str, target: UUID) -> None: ...
@@ -35,6 +36,13 @@ def denied() -> MemberSessionFailure:
 
 
 class UnconfiguredSessionControls:
+    async def refresh(self, token: str) -> SessionResponse:
+        # Refresh credentials are single-use; do not advertise automatic replay.
+        raise MemberSessionFailure(
+            status=503, code="DEPENDENCY_UNAVAILABLE",
+            title="Session service is temporarily unavailable",
+        )
+
     async def _unavailable(self):
         raise MemberSessionFailure(
             status=503, code="DEPENDENCY_UNAVAILABLE",

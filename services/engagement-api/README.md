@@ -75,7 +75,7 @@ Run. It does not impersonate the GitHub service account, grant roles or make the
 service public. Do not paste tokens or codes into the terminal, chat or repository.
 A phone/login screen for client acceptance comes later.
 
-## Member session controls (EE-011 candidate)
+## Member session controls (EE-011, partial implementation)
 
 The enabled Member runtime also supplies `GET /v1/me/sessions`,
 `POST /v1/auth/logout` and `DELETE /v1/me/sessions/{sessionId}`. These operations
@@ -88,13 +88,42 @@ Device removal is scoped to the authenticated owner and revokes the target token
 family. Missing and foreign targets return the same not-found response. Logout
 returns an empty 204 response; a subsequent use of the removed session is refused.
 
-This candidate is not yet deployed and does not implement refresh rotation, staff sessions or the client
-device-list screen. Existing routes for login remain unchanged. A future private
+Member listing, logout and removal are already deployed in development. The new
+refresh implementation described below remains an undeployed candidate. Staff
+sessions and the client device-list screen are not implemented. Existing login
+routes remain unchanged. A private
 Cloud Run trial must send the cloud-invocation token in `X-Serverless-Authorization`
 and the platform token in `Authorization`; otherwise the two authentication layers
 would compete for one header. No cloud permissions or schema changes are required.
 JWT verification follows the [PyJWT verification documentation](https://pyjwt.readthedocs.io/en/stable/api.html)
 with a fixed allowed signing algorithm, never a token-selected algorithm.
+
+### Single-use Member renewal candidate
+
+`POST /v1/auth/refresh` accepts a refresh token in its request body; no still-valid
+platform access token is required. Successful renewal replaces both credentials,
+keeps the Member identifier and installation, and preserves the family's original
+expiry (30 days with the default configuration). Access tokens last ten minutes
+by default, capped by remaining family lifetime. Less than sixty seconds remaining
+requires a fresh phone sign-in. Tokens are stored only as keyed hashes in the
+database. Reusing a replaced refresh token commits revocation of the entire owned
+family before returning `REFRESH_TOKEN_REUSED`. Removed, expired, suspended,
+deleted and non-Member accounts cannot renew. All session writers lock the user
+before session rows to avoid inconsistent concurrent renewals/removal. Renewal
+rows do not consume the five-fresh-logins-per-ten-minutes allowance.
+
+Clients must serialize renewal, atomically save both replacement credentials and
+never retry the old token after an uncertain response or a dependency outage.
+The refresh route deliberately does not advertise automatic outage retries.
+This safety policy follows the rotation/reuse principles in
+[RFC 9700, section 4.14](https://www.rfc-editor.org/rfc/rfc9700.html#section-4.14).
+The thirty-day absolute expiry is this application's configured policy, not a
+requirement imposed by that standard.
+
+EE-011 remains in progress: this candidate needs the real PostgreSQL test gate and
+deployment verification; Android encrypted restoration, serialized renewal,
+sign-out/device controls and client acceptance remain outstanding. Staff-session
+coverage depends on EE-010. Do not treat backend-only tests as full EE-011 acceptance.
 
 ## EE-009 Android development trial
 
