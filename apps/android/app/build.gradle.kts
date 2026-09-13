@@ -39,6 +39,9 @@ tasks.matching { it.name == "preReleaseBuild" }.configureEach {
     }
 }
 dependencies {
+    // Firebase phone verification calls ContextCompat.registerReceiver (added in 1.9).
+    // Its transitive dependencies alone resolve an older Core lacking that method.
+    implementation("androidx.core:core:1.17.0")
     implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
     implementation("com.google.firebase:firebase-auth")
     testImplementation("junit:junit:4.13.2")

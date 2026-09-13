@@ -15,6 +15,14 @@ the official [Android build compatibility](https://developer.android.com/build/r
 [Kotlin compatibility](https://kotlinlang.org/docs/gradle-configure-project.html) and
 [Firebase phone authentication](https://firebase.google.com/docs/auth/android/phone-auth) documentation.
 
+AndroidX Core is explicitly pinned to 1.17.0, compatible with this SDK 36/Kotlin
+toolchain. Firebase phone verification requires the `ContextCompat.registerReceiver`
+overload introduced in Core 1.9.0; its transitive dependencies alone can resolve
+an older version and crash on code request. `PhoneAuthRuntimeTest` verifies that
+the actual resolved library has the exact static method needed by the SDK.
+See the [Core release notes](https://developer.android.com/jetpack/androidx/releases/core)
+and [Firebase upstream report](https://github.com/firebase/firebase-android-sdk/issues/8505).
+
 Build inputs belong only in ignored `amiko-local.properties` or environment:
 `AMIKO_FIREBASE_API_KEY`, `AMIKO_FIREBASE_APP_ID`, `AMIKO_FIREBASE_PROJECT`,
 `AMIKO_API_ORIGIN`. Do not publish actual project inputs, signing keys, test
