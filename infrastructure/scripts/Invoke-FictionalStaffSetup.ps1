@@ -20,7 +20,11 @@ $jobResource = "projects/$Project/locations/$Region/jobs/$jobName"
 $controlDirectory = Join-Path $root 'secure-runtime\staff-setup-execution'
 $markerPath = Join-Path $controlDirectory 'fictional-staff-setup.json'
 $oldConfig = $env:CLOUDSDK_CONFIG
+$oldTemp = $env:TEMP
+$oldTmp = $env:TMP
 $env:CLOUDSDK_CONFIG = Join-Path $root 'secure-runtime\gcloud-config'
+$env:TEMP = Join-Path $root 'tools-runtime\temp'
+$env:TMP = $env:TEMP
 
 function Invoke-SetupCloud {
     param([string]$Method, [string]$Uri, $Body)
@@ -205,4 +209,4 @@ try {
         Assert-SetupCompletion $logs.entries $execution
         Write-Host 'Verified fictional Administrator/Contributor setup and signed-out test sessions. Client authenticator acceptance remains pending.'
     }
-} finally { $env:CLOUDSDK_CONFIG=$oldConfig; $accessToken=$null }
+} finally { $env:CLOUDSDK_CONFIG=$oldConfig; $env:TEMP=$oldTemp; $env:TMP=$oldTmp; $accessToken=$null }
