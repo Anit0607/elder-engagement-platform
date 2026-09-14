@@ -2,6 +2,18 @@
 
 The contract remains a controlled Sprint 2 draft and no listed operation is claimed callable until its matching backend deployment is verified.
 
+## Account-control candidate — 0.2.2 draft — 14 September 2026
+
+- Implemented disabled-by-default status/role PATCH handlers at the existing
+  paths. Added explicit profile/account outage responses and profile forbidden
+  responses; no success-payload changes.
+- Current Administrator permissions, serialized mutations, last-Administrator
+  protection, session revocation and atomic audit apply. Invitations cannot be
+  activated through status changes; Administrator promotion requires confirmed
+  MFA. Role conversion never converts an existing saved login's privileges.
+- Staff creation/enrollment, profile photos, controlled cloud release and client
+  acceptance remain open. This source increment is not a production release.
+
 ## Staff sign-in interface candidate — 14 September 2026
 
 ### Profile implementation and language extension — 0.2.1 draft

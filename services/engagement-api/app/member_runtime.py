@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 import asyncpg
 from google.cloud.sql.connector import Connector, IPTypes
 
+from app.account_controls import PostgresAccountControls
 from app.authorization import SessionAuthorization
 from app.config import ConfigurationError, Settings
 from app.google_phone_identity import GooglePhoneIdentityVerifier
@@ -129,6 +130,10 @@ async def member_runtime(
                 if settings.profile_enabled:
                     await verify_profile_schema(pool)
                     handler.profile_service = PostgresProfileService(
+                        SessionAuthorization(pool, sessions, staff_controls)
+                    )
+                if settings.account_controls_enabled:
+                    handler.account_controls = PostgresAccountControls(
                         SessionAuthorization(pool, sessions, staff_controls)
                     )
                 yield handler

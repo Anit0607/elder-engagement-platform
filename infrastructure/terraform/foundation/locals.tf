@@ -73,6 +73,7 @@ locals {
     EE_MEMBER_SESSION_ENABLED             = tostring(var.enable_member_session)
     EE_STAFF_SESSION_ENABLED              = tostring(var.enable_staff_session)
     EE_PROFILE_ENABLED                    = tostring(var.enable_profiles)
+    EE_ACCOUNT_CONTROLS_ENABLED           = tostring(var.enable_account_controls)
     EE_STAFF_AUTHENTICATOR_KEY_SECRET_REF = var.enable_staff_session ? "projects/${var.project_id}/secrets/${local.name_prefix}-staff-authenticator-key/versions/${coalesce(var.staff_authenticator_secret_version, "invalid")}" : ""
     EE_DATABASE_IAM_USER                  = var.enable_member_session ? google_sql_user.runtime_iam.name : ""
     EE_UPLOADS_BUCKET                     = google_storage_bucket.uploads.name

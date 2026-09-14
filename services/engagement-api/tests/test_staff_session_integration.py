@@ -17,6 +17,7 @@ import jwt
 import pyotp
 import pytest
 
+from app.account_controls import PostgresAccountControls, RoleChangeRequest, StatusChangeRequest
 from app.authorization import Permission, SessionAuthorization
 from app.config import ConfigurationError
 from app.member_auth import MemberSessionFailure
@@ -284,6 +285,119 @@ async def test_profile_english_partial_edits_and_uncertain_update_rollback(staff
             )
             == audits
         )
+
+
+async def administrator_controls(pool):
+    owner, service, request, clock, _, _ = await account(pool, "administrator", True)
+    clock[0] = datetime.now(UTC)
+    result = await service().create(request(secondFactorCode=pyotp.TOTP(SEED).at(clock[0])))
+    member = Mock()
+    member._claims.side_effect = MemberSessionFailure(
+        status=401, code="AUTHENTICATION_FAILED", title="Denied"
+    )
+    staff = PostgresStaffSessionControls(
+        pool,
+        signing_key=KEY,
+        refresh_pepper=PEPPER,
+        issuer="https://api.synthetic.example",
+        now=lambda: clock[0],
+    )
+    return (
+        owner,
+        result.access_token,
+        PostgresAccountControls(SessionAuthorization(pool, member, staff, now=lambda: clock[0])),
+    )
+
+
+@pytest.mark.anyio
+async def test_concurrent_self_suspensions_leave_one_usable_administrator(staff_db):
+    first, second = await administrator_controls(staff_db), await administrator_controls(staff_db)
+    request = StatusChangeRequest(status="suspended", reason="Synthetic accepted test")
+    results = await asyncio.wait_for(
+        asyncio.gather(
+            first[2].status(first[1], first[0], request, "synthetic-trace"),
+            second[2].status(second[1], second[0], request, "synthetic-trace"),
+            return_exceptions=True,
+        ),
+        timeout=10,
+    )
+    assert sum(not isinstance(result, Exception) for result in results) == 1
+    error = next(result for result in results if isinstance(result, Exception))
+    assert isinstance(error, MemberSessionFailure) and error.status == 409
+    async with staff_db.acquire() as connection:
+        assert (
+            await connection.fetchval(
+                "SELECT count(*) FROM engagement_app.app_users WHERE role='administrator' AND status='active'"
+            )
+            == 1
+        )
+        assert (
+            await connection.fetchval(
+                "SELECT count(*) FROM engagement_app.audit_events WHERE action='account.status'"
+            )
+            == 1
+        )
+
+
+@pytest.mark.anyio
+async def test_suspend_reactivate_revokes_tokens_and_member_promotion_requires_activation(staff_db):
+    _, token, controls = await administrator_controls(staff_db)
+    target, service, request, clock, _, _ = await account(staff_db)
+    clock[0] = datetime.now(UTC)
+    signed = await service().create(request())
+    suspended = await controls.status(
+        token,
+        target,
+        StatusChangeRequest(status="suspended", reason="Synthetic accepted test"),
+        "synthetic-trace",
+    )
+    assert suspended.status == "suspended"
+    active = await controls.status(
+        token,
+        target,
+        StatusChangeRequest(status="active", reason="Synthetic accepted test"),
+        "synthetic-trace",
+    )
+    assert active.status == "active"
+    staff = PostgresStaffSessionControls(
+        staff_db,
+        signing_key=KEY,
+        refresh_pepper=PEPPER,
+        issuer="https://api.synthetic.example",
+        now=lambda: clock[0],
+    )
+    with pytest.raises(MemberSessionFailure):
+        await staff.list_sessions(signed.access_token)
+    with pytest.raises(MemberSessionFailure) as error:
+        await controls.role(
+            token,
+            target,
+            RoleChangeRequest(role="administrator", reason="Synthetic accepted test"),
+            "synthetic-trace",
+        )
+    assert error.value.status == 409
+    async with staff_db.acquire() as connection:
+        member = await connection.fetchval(
+            """INSERT INTO engagement_app.app_users(public_id,role,status,identity_provider_subject)
+               VALUES($1,'member','active',$2) RETURNING id""",
+            f"AMI-SYN-{uuid4().hex[:16]}",
+            f"synthetic-{uuid4()}",
+        )
+    invited = await controls.role(
+        token,
+        member,
+        RoleChangeRequest(role="contributor", reason="Synthetic accepted test"),
+        "synthetic-trace",
+    )
+    assert (invited.role, invited.status) == ("contributor", "invited")
+    with pytest.raises(MemberSessionFailure) as error:
+        await controls.status(
+            token,
+            member,
+            StatusChangeRequest(status="active", reason="Synthetic accepted test"),
+            "synthetic-trace",
+        )
+    assert error.value.status == 409
 
 
 @pytest.mark.anyio

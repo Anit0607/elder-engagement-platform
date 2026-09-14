@@ -2,7 +2,7 @@
   "openapi": "3.1.1",
   "info": {
     "title": "Elder Engagement REST API",
-    "version": "0.2.1",
+    "version": "0.2.2",
     "summary": "Controlled Sprint 2 contract draft for Android, iOS, Contributor and Administrator clients",
     "description": "This draft covers the Week 2 identity, session, profile and account-control foundation. It contains no production hostname, credential or personal data. Circles, content, moderation, feed and events will be added to the same v1 contract before the Week 4 interface freeze."
   },
@@ -242,7 +242,9 @@
             }
           },
           "401": { "$ref": "#/components/responses/Unauthorised" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
         }
       },
       "patch": {
@@ -270,7 +272,9 @@
           },
           "400": { "$ref": "#/components/responses/InvalidRequest" },
           "401": { "$ref": "#/components/responses/Unauthorised" },
-          "409": { "$ref": "#/components/responses/Conflict" }
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
         }
       }
     },
@@ -457,6 +461,7 @@
         "tags": ["Administration"],
         "operationId": "changeUserStatus",
         "summary": "Suspend or reactivate a user",
+        "description": "Requires a current Administrator session. Suspension revokes saved sessions; reactivation requires a new sign-in. Invitations use separate credential activation. The last usable active Administrator cannot be suspended. Updates and their audit commit together.",
         "parameters": [
           {
             "name": "userId",
@@ -486,7 +491,8 @@
           "401": { "$ref": "#/components/responses/Unauthorised" },
           "403": { "$ref": "#/components/responses/Forbidden" },
           "404": { "$ref": "#/components/responses/NotFound" },
-          "409": { "$ref": "#/components/responses/Conflict" }
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
         }
       }
     },
@@ -495,6 +501,7 @@
         "tags": ["Administration"],
         "operationId": "changeUserRole",
         "summary": "Change a user role with an audit reason",
+        "description": "Requires a current Administrator session. Role changes revoke saved sessions. Member-to-Contributor creates invited status until credential activation. Administrator promotion requires a confirmed authenticator. Staff-to-Member requires existing Google phone identity. The last usable active Administrator cannot be demoted. Mutations and audit commit together.",
         "parameters": [
           {
             "name": "userId",
@@ -524,7 +531,8 @@
           "401": { "$ref": "#/components/responses/Unauthorised" },
           "403": { "$ref": "#/components/responses/Forbidden" },
           "404": { "$ref": "#/components/responses/NotFound" },
-          "409": { "$ref": "#/components/responses/Conflict" }
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
         }
       }
     }

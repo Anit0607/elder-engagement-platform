@@ -127,6 +127,13 @@ and saved plan with the following gates; this checklist is not live execution.
 
 ### 6. Deploy the service
 
+Before the first English profile is saved, verify an English-capable application
+revision with profile writes disabled as the rollback target. Older revisions
+whose session-summary language lists accept only Bengali/Hindi cannot safely read
+an English profile. Do not rewrite customer language preferences to force an old
+rollback. Use an English-capable reviewed revision and independently control the
+profile feature switch. V0004 alone is not permission to expose profile writes.
+
 - Deploy the approved image digest as a new Cloud Run revision without sending production traffic immediately.
 - Attach only the runtime identity and approved Secret Manager references.
 - Enforce encrypted database connectivity, bounded concurrency, request timeout, minimum/maximum instances and resource limits defined for that environment.

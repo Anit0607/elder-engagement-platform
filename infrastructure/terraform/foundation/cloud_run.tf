@@ -120,6 +120,10 @@ resource "google_cloud_run_v2_service" "api" {
 
   lifecycle {
     precondition {
+      condition     = !var.enable_account_controls || var.enable_staff_session
+      error_message = "Account controls require connected staff authentication and its database readiness gates."
+    }
+    precondition {
       condition     = !var.enable_profiles || var.enable_member_session
       error_message = "Profiles require the connected identity runtime; the profile database migration is checked at startup."
     }

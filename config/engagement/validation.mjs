@@ -16,6 +16,7 @@ const allowedKeys = new Set([
   "EE_MEMBER_SESSION_ENABLED", "EE_DATABASE_IAM_USER",
   "EE_STAFF_SESSION_ENABLED", "EE_STAFF_AUTHENTICATOR_KEY_SECRET_REF",
   "EE_PROFILE_ENABLED",
+  "EE_ACCOUNT_CONTROLS_ENABLED",
 ]);
 
 const alwaysRequired = [
@@ -63,6 +64,12 @@ function boundedInteger(values, errors, key, minimum, maximum) {
 
 export function validateConfig(values) {
   const errors = [];
+  if (Object.hasOwn(values, "EE_ACCOUNT_CONTROLS_ENABLED") && !["true", "false"].includes(values.EE_ACCOUNT_CONTROLS_ENABLED)) {
+    errors.push("EE_ACCOUNT_CONTROLS_ENABLED must be true or false");
+  }
+  if (values.EE_ACCOUNT_CONTROLS_ENABLED === "true" && values.EE_STAFF_SESSION_ENABLED !== "true") {
+    errors.push("Account controls require the connected staff runtime");
+  }
   if (Object.hasOwn(values, "EE_PROFILE_ENABLED") && !["true", "false"].includes(values.EE_PROFILE_ENABLED)) {
     errors.push("EE_PROFILE_ENABLED must be true or false");
   }
