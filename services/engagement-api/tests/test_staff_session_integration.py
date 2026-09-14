@@ -5,8 +5,10 @@ from __future__ import annotations
 import asyncio
 import hmac
 import os
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from unittest.mock import Mock
 from urllib.parse import urlsplit
 from uuid import uuid4
 
@@ -15,10 +17,16 @@ import jwt
 import pyotp
 import pytest
 
+from app.authorization import Permission, SessionAuthorization
+from app.config import ConfigurationError
 from app.member_auth import MemberSessionFailure
 from app.postgres_staff_session import PostgresStaffSessionService
+from app.session_refresh import PostgresSessionRefresh
+from app.shared_session_controls import SharedSessionControls
 from app.staff_auth import StaffSessionRequest
 from app.staff_credentials import StaffAuthenticator, StaffCredentialVerifier, StaffPasswords
+from app.staff_schema import verify_staff_schema
+from app.staff_session_controls import PostgresStaffSessionControls
 
 DATABASE_URL = os.environ.get("TEST_DATABASE_URL")
 MIGRATIONS = Path(__file__).parents[3] / "database" / "migrations"
@@ -105,6 +113,109 @@ async def account(pool, role="contributor", enabled=False):
         return StaffSessionRequest(**values)
 
     return owner, service, request, clock, passwords, authenticator
+
+
+@pytest.mark.anyio
+async def test_runtime_metadata_gate_with_application_permissions_and_no_ledger(staff_db):
+    role = "synthetic_runtime_" + uuid4().hex
+    async with staff_db.acquire() as connection:
+        await connection.execute(f'CREATE ROLE "{role}" NOLOGIN')
+        try:
+            await connection.execute(f'GRANT USAGE ON SCHEMA engagement_app TO "{role}"')
+            await connection.execute(f'GRANT SELECT ON ALL TABLES IN SCHEMA engagement_app TO "{role}"')
+
+            class RuntimePool:
+                @asynccontextmanager
+                async def acquire(self):
+                    async with connection.transaction():
+                        await connection.execute(f'SET LOCAL ROLE "{role}"')
+                        yield connection
+
+            # The application cannot access the update ledger; it is not even
+            # present in this fixture. Metadata must still prove staff readiness.
+            await verify_staff_schema(RuntimePool())
+            await connection.execute(
+                "ALTER TABLE engagement_app.app_users DISABLE TRIGGER app_users_session_role_guard"
+            )
+            with pytest.raises(ConfigurationError):
+                await verify_staff_schema(RuntimePool())
+            await connection.execute(
+                "ALTER TABLE engagement_app.app_users ENABLE TRIGGER app_users_session_role_guard"
+            )
+            await verify_staff_schema(RuntimePool())
+        finally:
+            await connection.execute(f'DROP OWNED BY "{role}"')
+            await connection.execute(f'DROP ROLE "{role}"')
+
+
+@pytest.mark.anyio
+async def test_shared_endpoint_adapter_preserves_staff_role_and_logout(staff_db):
+    _, service, request, clock, _, _ = await account(staff_db)
+    # This scenario also verifies real JWT expiry; unlike the TOTP replay
+    # fixtures above, its issuance clock must match the verifier's wall clock.
+    clock[0] = datetime.now(UTC)
+    result = await service().create(request())
+    options = dict(
+        signing_key=KEY, refresh_pepper=PEPPER, issuer="https://api.synthetic.example", now=lambda: clock[0]
+    )
+    shared = SharedSessionControls(
+        staff_db,
+        PostgresSessionRefresh(staff_db, **options),
+        PostgresStaffSessionControls(staff_db, **options),
+        PEPPER,
+    )
+    assert len(await shared.list_sessions(result.access_token)) == 1
+    renewed = await shared.refresh(result.refresh_token)
+    assert renewed.user.role == "contributor"
+    await shared.logout(renewed.access_token)
+    with pytest.raises(MemberSessionFailure) as error:
+        await shared.list_sessions(renewed.access_token)
+    assert error.value.status == 401
+
+
+@pytest.mark.anyio
+async def test_authorization_holds_account_lock_until_protected_work_finishes(staff_db):
+    owner, service, request, clock, _, _ = await account(staff_db)
+    clock[0] = datetime.now(UTC)
+    result = await service().create(request())
+    member = Mock()
+    member._claims.side_effect = MemberSessionFailure(
+        status=401, code="AUTHENTICATION_FAILED", title="Denied"
+    )
+    staff = PostgresStaffSessionControls(
+        staff_db,
+        signing_key=KEY,
+        refresh_pepper=PEPPER,
+        issuer="https://api.synthetic.example",
+        now=lambda: clock[0],
+    )
+    auth = SessionAuthorization(staff_db, member, staff, now=lambda: clock[0])
+    entered, release = asyncio.Event(), asyncio.Event()
+
+    async def protected_work():
+        async with auth.transaction(result.access_token, Permission.OWN_PROFILE, target=owner):
+            entered.set()
+            await release.wait()
+
+    async def suspend():
+        async with staff_db.acquire() as connection:
+            await connection.execute(
+                "UPDATE engagement_app.app_users SET status='suspended' WHERE id=$1", owner
+            )
+
+    worker = asyncio.create_task(protected_work())
+    await asyncio.wait_for(entered.wait(), timeout=5)
+    mutation = asyncio.create_task(suspend())
+    try:
+        done, _ = await asyncio.wait({mutation}, timeout=0.1)
+        assert not done, "Account mutation bypassed the protected-work lock"
+    finally:
+        release.set()
+        await asyncio.wait_for(asyncio.gather(worker, mutation), timeout=5)
+    with pytest.raises(MemberSessionFailure) as error:
+        async with auth.transaction(result.access_token, Permission.OWN_PROFILE, target=owner):
+            pytest.fail("Suspended staff entered protected work")
+    assert error.value.code == "ACCOUNT_SUSPENDED"
 
 
 @pytest.mark.anyio

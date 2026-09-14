@@ -275,6 +275,23 @@ variable "enable_member_session" {
   default     = false
 }
 
+variable "enable_staff_session" {
+  description = "Enable reviewed staff login only after the staff database migration and enrollment release gates."
+  type        = bool
+  default     = false
+}
+
+variable "staff_authenticator_secret_version" {
+  description = "Pinned numeric version of the separate staff authenticator encryption secret; never a secret value."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.staff_authenticator_secret_version == null ? true : can(regex("^[1-9][0-9]*$", var.staff_authenticator_secret_version))
+    error_message = "The staff authenticator secret version must be a positive numeric version."
+  }
+}
+
 variable "member_session_secret_versions" {
   description = "Numeric Secret Manager versions for session-signing-key and refresh-token-pepper. No secret values."
   type        = map(string)

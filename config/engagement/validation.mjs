@@ -14,6 +14,7 @@ const allowedKeys = new Set([
   "EE_BROADCAST_PROVIDER", "EE_AGORA_APP_ID", "EE_AGORA_APP_CERTIFICATE_SECRET_REF",
   "EE_ACCESS_TOKEN_MINUTES", "EE_REFRESH_TOKEN_DAYS",
   "EE_MEMBER_SESSION_ENABLED", "EE_DATABASE_IAM_USER",
+  "EE_STAFF_SESSION_ENABLED", "EE_STAFF_AUTHENTICATOR_KEY_SECRET_REF",
 ]);
 
 const alwaysRequired = [
@@ -115,6 +116,17 @@ export function validateConfig(values) {
   ]);
 
   boundedInteger(values, errors, "EE_ACCESS_TOKEN_MINUTES", 5, 30);
+  if (Object.hasOwn(values, "EE_STAFF_SESSION_ENABLED") && !["true", "false"].includes(values.EE_STAFF_SESSION_ENABLED)) {
+    errors.push("EE_STAFF_SESSION_ENABLED must be true or false");
+  }
+  if (values.EE_STAFF_SESSION_ENABLED === "true") {
+    const ref = values.EE_STAFF_AUTHENTICATOR_KEY_SECRET_REF;
+    if (values.EE_MEMBER_SESSION_ENABLED !== "true" || !ref || ref.endsWith("/latest") ||
+        [values.EE_SESSION_SIGNING_KEY_SECRET_REF, values.EE_REFRESH_TOKEN_PEPPER_SECRET_REF,
+         values.EE_FIELD_ENCRYPTION_KEY_SECRET_REF].some(other => ref.split("/versions/")[0] === other?.split("/versions/")[0])) {
+      errors.push("Staff sessions require connected Member runtime and a separate pinned authenticator secret");
+    }
+  }
   if (values.EE_MEMBER_SESSION_ENABLED && !["true", "false"].includes(values.EE_MEMBER_SESSION_ENABLED)) {
     errors.push("EE_MEMBER_SESSION_ENABLED must be true or false");
   }

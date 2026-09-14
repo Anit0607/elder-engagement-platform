@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.member_auth import MemberSessionFailure, SessionResponse
 from app.postgres_session_issuer import PostgresSessionIssuer
+from app.staff_auth import StaffSessionResponse
 
 
 class SessionSummary(BaseModel):
@@ -25,7 +26,7 @@ class SessionSummary(BaseModel):
 
 
 class SessionControls(Protocol):
-    async def refresh(self, token: str) -> SessionResponse: ...
+    async def refresh(self, token: str) -> SessionResponse | StaffSessionResponse: ...
     async def list_sessions(self, token: str) -> list[SessionSummary]: ...
     async def logout(self, token: str) -> None: ...
     async def revoke(self, token: str, target: UUID) -> None: ...
