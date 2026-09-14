@@ -292,6 +292,12 @@ variable "staff_authenticator_secret_version" {
   }
 }
 
+variable "enable_profiles" {
+  description = "Enable reviewed own-profile endpoints after the English preference migration is verified."
+  type        = bool
+  default     = false
+}
+
 variable "member_session_secret_versions" {
   description = "Numeric Secret Manager versions for session-signing-key and refresh-token-pepper. No secret values."
   type        = map(string)

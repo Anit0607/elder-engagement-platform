@@ -53,10 +53,20 @@ for (const [exampleName, schemaName] of Object.entries(examples)) {
     );
 }
 
+let negativeRuleCount = 0;
 const expectInvalid = (label, schemaName, value) => {
+  negativeRuleCount += 1;
   const validate = compile(schemaName);
   if (validate(value)) failures.push(`${label} unexpectedly validated as ${schemaName}.`);
 };
+
+for (const schemaName of ["ProfileUpdate", "AdminCreateUserRequest"]) {
+  const value = schemaName === "ProfileUpdate"
+    ? { preferredLanguage: "en", ageGroup: "55+" }
+    : { ...contract.components.examples.SyntheticAdminCreateContributor.value, preferredLanguage: "en" };
+  if (!compile(schemaName)(value)) failures.push(`${schemaName} rejected approved English preference.`);
+}
+expectInvalid("Unapproved profile language", "ProfileUpdate", { preferredLanguage: "fr" });
 
 expectInvalid("Profile unknown field", "Profile", {
   ...contract.components.examples.SyntheticProfile.value,
@@ -151,5 +161,5 @@ if (failures.length) {
 }
 
 console.log(
-  `Contract schema validation passed: ${Object.keys(contract.components.schemas).length} schemas compiled, ${Object.keys(examples).length} examples validated, 7 negative rules rejected, and ${postmanRequests.size} Postman requests matched.`,
+  `Contract schema validation passed: ${Object.keys(contract.components.schemas).length} schemas compiled, ${Object.keys(examples).length} examples validated, ${negativeRuleCount} negative rules rejected, and ${postmanRequests.size} Postman requests matched.`,
 );

@@ -2,7 +2,7 @@
   "openapi": "3.1.1",
   "info": {
     "title": "Elder Engagement REST API",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "summary": "Controlled Sprint 2 contract draft for Android, iOS, Contributor and Administrator clients",
     "description": "This draft covers the Week 2 identity, session, profile and account-control foundation. It contains no production hostname, credential or personal data. Circles, content, moderation, feed and events will be added to the same v1 contract before the Week 4 interface freeze."
   },
@@ -726,7 +726,7 @@
           "role": { "$ref": "#/components/schemas/UserRole" },
           "status": { "$ref": "#/components/schemas/UserStatus" },
           "displayName": { "type": ["string", "null"], "minLength": 1, "maxLength": 120 },
-          "preferredLanguage": { "type": ["string", "null"], "enum": ["bn", "hi", null] },
+          "preferredLanguage": { "type": ["string", "null"], "enum": ["bn", "hi", "en", null] },
           "profileComplete": { "type": "boolean", "description": "False directs the client to the self-service profile setup journey without blocking access." },
           "createdAt": { "type": "string", "format": "date-time", "readOnly": true },
           "updatedAt": { "type": "string", "format": "date-time", "readOnly": true }
@@ -750,7 +750,7 @@
           "role": { "$ref": "#/components/schemas/UserRole" },
           "status": { "$ref": "#/components/schemas/UserStatus" },
           "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
-          "preferredLanguage": { "type": "string", "enum": ["bn", "hi"] },
+          "preferredLanguage": { "type": "string", "enum": ["bn", "hi", "en"] },
           "createdAt": { "type": "string", "format": "date-time", "readOnly": true },
           "updatedAt": { "type": "string", "format": "date-time", "readOnly": true },
           "ageGroup": { "type": ["string", "null"], "maxLength": 64 },
@@ -812,7 +812,7 @@
         "description": "This is a documented partial-update object carried as application/json, not JSON Merge Patch. Omitted fields remain unchanged. Explicit null clears only fields whose schema permits null. Arrays replace the complete previous array. notificationWindow replaces the complete nested object and must therefore contain enabled and timeZone plus both local times when enabled.",
         "properties": {
           "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
-          "preferredLanguage": { "type": "string", "enum": ["bn", "hi"] },
+          "preferredLanguage": { "type": "string", "enum": ["bn", "hi", "en"] },
           "ageGroup": { "type": ["string", "null"], "maxLength": 64 },
           "interests": {
             "type": "array",
@@ -883,7 +883,7 @@
           "phoneE164": { "type": ["string", "null"], "pattern": "^\\+[1-9][0-9]{7,14}$" },
           "username": { "type": ["string", "null"], "minLength": 3, "maxLength": 120 },
           "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
-          "preferredLanguage": { "type": "string", "enum": ["bn", "hi"] },
+          "preferredLanguage": { "type": "string", "enum": ["bn", "hi", "en"] },
           "ageGroup": { "type": ["string", "null"], "maxLength": 64 },
           "interests": {
             "type": "array",
@@ -1099,7 +1099,7 @@
           "preferredLanguage": "bn",
           "createdAt": "2026-09-09T09:00:00Z",
           "updatedAt": "2026-09-09T09:00:00Z",
-          "ageGroup": "65-74",
+          "ageGroup": "55+",
           "interests": ["music", "community"],
           "broadLocation": {
             "countryCode": "IN",

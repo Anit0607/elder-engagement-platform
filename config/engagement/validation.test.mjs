@@ -12,6 +12,12 @@ test("safe development example passes", () => {
   assert.deepEqual(validateConfig(baseline), []);
 });
 
+test("profile flag rejects unsafe or disconnected activation", () => {
+  for (const value of ["true", "yes", ""]) {
+    assert.notEqual(validateConfig({ ...baseline, EE_PROFILE_ENABLED: value }).length, 0);
+  }
+});
+
 test("staff runtime requires connected member runtime and a dedicated pinned secret", () => {
   const project = baseline.EE_GCP_PROJECT_ID;
   const staff = {
