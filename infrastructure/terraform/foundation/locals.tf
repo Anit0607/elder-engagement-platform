@@ -41,7 +41,7 @@ locals {
     "field-encryption-key",
     "refresh-token-pepper",
     "session-signing-key"
-  ], var.enable_staff_session ? ["staff-authenticator-key"] : []))
+  ], var.enable_staff_session || var.prepare_development_staff_secrets ? ["staff-authenticator-key"] : []))
 
   runtime_project_roles = toset([
     "roles/cloudsql.client",

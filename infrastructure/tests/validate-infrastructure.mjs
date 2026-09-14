@@ -31,6 +31,21 @@ const bootstrapTemplate = readFileSync(
 );
 
 assert.ok(files.length >= 8, 'foundation must be split into reviewable concerns');
+const staffSetup = read('terraform/foundation/development_staff_setup.tf');
+assert.match(source, /variable "prepare_development_staff_secrets"\s*\{[^}]*default\s*=\s*false/s, 'staff secret preparation must be opt-in');
+assert.match(source, /variable "deploy_development_staff_setup_job"\s*\{[^}]*default\s*=\s*false/s, 'fictional setup deployment must be opt-in');
+assert.match(staffSetup, /var\.environment == "development"/, 'fictional setup must reject production');
+assert.match(staffSetup, /parallelism\s*=\s*1/, 'fictional setup must not run concurrently');
+assert.match(staffSetup, /task_count\s*=\s*1/, 'fictional setup must have one task');
+assert.match(staffSetup, /max_retries\s*=\s*0/, 'fictional setup must not retry uncertain execution');
+assert.match(staffSetup, /PRIVATE_RANGES_ONLY/, 'fictional setup must use the private network');
+assert.match(staffSetup, /args\s*=\s*\["-m", "app\.development_staff_setup"\]/, 'fictional setup must use the reviewed module');
+assert.match(staffSetup, /STAFF_SETUP_MODE\s*=\s*"fictional-development"/, 'fictional setup must use its guarded mode');
+assert.match(staffSetup, /AMIKO_FICTIONAL_STAFF_SETUP_INPUT[\s\S]*secret_key_ref/, 'private setup input must come from Secret Manager');
+assert.match(staffSetup, /var\.development_staff_setup_input_version != null/, 'setup input version must be explicitly pinned');
+assert.match(staffSetup, /var\.staff_authenticator_secret_version != null/, 'authenticator secret version must be explicitly pinned');
+assert.match(staffSetup, /@sha256:\[0-9a-f\]\{64\}/, 'fictional setup must require an immutable image');
+assert.doesNotMatch(staffSetup, /secret_data|allUsers|allAuthenticatedUsers|local-exec|gcloud|terraform apply/, 'setup resource definitions must not contain plaintext, public access or automatic execution');
 assert.match(source, /backend\s+"gcs"/, 'remote Google Cloud Storage state is required');
 assert.match(source, /disable_on_destroy\s*=\s*false/, 'required interfaces must survive ordinary destroy');
 assert.match(source, /roles\/iam\.workloadIdentityUser/, 'GitHub must use Workload Identity Federation');
