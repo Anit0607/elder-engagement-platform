@@ -331,3 +331,7 @@ for (const timezone of ['UTC', 'Asia/Kolkata']) {
 }
 
 console.log(`Infrastructure safety validation passed for ${files.length} Terraform files and 3 environment examples.`);
+for (const timezone of ['UTC', 'Asia/Kolkata']) {
+  execFileSync('pwsh', ['-NoProfile', '-File', join(root, 'tests', 'test-fictional-staff-setup.ps1')],
+    { stdio: 'inherit', env: { ...process.env, TZ: timezone } });
+}
