@@ -53,7 +53,9 @@ for (const [exampleName, schemaName] of Object.entries(examples)) {
     );
 }
 
+let negativeRuleCount = 0;
 const expectInvalid = (label, schemaName, value) => {
+  negativeRuleCount += 1;
   const validate = compile(schemaName);
   if (validate(value)) failures.push(`${label} unexpectedly validated as ${schemaName}.`);
 };
@@ -159,5 +161,5 @@ if (failures.length) {
 }
 
 console.log(
-  `Contract schema validation passed: ${Object.keys(contract.components.schemas).length} schemas compiled, ${Object.keys(examples).length} examples validated, 7 negative rules rejected, and ${postmanRequests.size} Postman requests matched.`,
+  `Contract schema validation passed: ${Object.keys(contract.components.schemas).length} schemas compiled, ${Object.keys(examples).length} examples validated, ${negativeRuleCount} negative rules rejected, and ${postmanRequests.size} Postman requests matched.`,
 );
