@@ -114,9 +114,8 @@ not wired into application startup or deployed.
   counters cannot move backwards. Credential rows cannot transfer to another user.
 - Staff tokens/session rows contain the server-selected role and credential
   version. Existing Member tokens are unchanged and Member controls reject staff
-  tokens. Staff refresh, logout, device management and current-version/role checks
-  must be implemented before activation; the version snapshot alone is not an
-  implemented authorization layer.
+  tokens. The staff controls candidate below supplies current-version/role checks;
+  runtime routing and secure enrollment must still be connected before activation.
 
 Unit tests use synthetic rows. PostgreSQL integration tests accept only the
 disposable local PostgreSQL 16 test database, test actual locking/rollback/state
@@ -127,6 +126,28 @@ session controls, deployment and client acceptance are ready. Before applying
 The existing one-time `V0001` runner is pinned to its original source/image and
 must not be repurposed through ad hoc overrides. Do not edit the applied baseline
 or relax the private database boundary.
+
+### Staff session controls candidate (not runtime-connected)
+
+`app/staff_session_controls.py` checks signed staff tokens, the current account
+role/status, current credential version and owned unrevoked session on each
+list/sign-out/device-removal operation. Administrators without an enabled
+authenticator are rejected. Device removal cancels that owned session family;
+another account's device is indistinguishable from a missing device.
+
+Refresh rotates the one-use token, retaining the family's original absolute
+expiry. Reuse revokes the family before returning an error. Password changes
+invalidate previous credentials/sessions. Additive `V0003` revokes sessions on
+role changes: an old Contributor refresh token cannot gain Administrator access
+after promotion. Outages, insert collisions and uncertain commits never
+automatically replay refresh/removal. Fresh sign-in remains possible.
+
+This is backend testing, not client acceptance or a deployed staff console. Both
+`V0002` and `V0003` are required. HTTP controls remain Member-only; shared-role
+routing, the refresh-response contract, runtime startup wiring, a dedicated
+encryption key, secure enrollment/recovery and live acceptance remain planned
+EE-010/EE-011 work. Do not enable staff login in isolation. Connected Android,
+iOS and web clients must use the reviewed shared REST contract.
 
 ## Local verification
 

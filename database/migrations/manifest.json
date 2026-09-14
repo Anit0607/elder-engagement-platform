@@ -14,6 +14,13 @@
       "file": "V0002__staff_authentication.sql",
       "sha256": "e0d424c9d9a4f89a14da46d9187d2ee8b7bc2b58277ff19d1acf88f3ff432543",
       "requires_empty": false
+    },
+    {
+      "id": "V0003",
+      "name": "role_change_session_revocation",
+      "file": "V0003__role_change_session_revocation.sql",
+      "sha256": "a4b5cabe24d641e061ab02a54963878e16faf3de8ba4962ebb2788433206f588",
+      "requires_empty": false
     }
   ]
 }

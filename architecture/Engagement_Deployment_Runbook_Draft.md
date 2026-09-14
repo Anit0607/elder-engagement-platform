@@ -93,6 +93,38 @@ The guarded migration runner must compare the live job with the reviewed saved p
 
 Only one Plan, Apply or Cleanup process may run at a time; the protected exclusive lock must be held through final cleanup, and an existing recovery marker must never be overwritten. The lock coordinates only this workstation, so the release owner must prohibit concurrent execution from any second computer. If the runner or computer is interrupted, do not repeat Apply. Use the explicit guarded Cleanup action; it reads the ignored recovery marker, closes the Data API first, removes only the recorded temporary operator and deletes the protected temporary SQL. A different authorised named human may perform this recovery. After successful cleanup, make and verify a new on-demand backup before retrying. If any bootstrap preflight or cleanup check fails, stop. Do not run the table migration and do not attempt an improvised repair.
 
+### Staff authentication release preparation (EE-010/EE-011)
+
+The original one-time executor is pinned to V0001 source/image. Do not repurpose
+it with ad hoc overrides. A later staff release requires a reviewed new executor
+and saved plan with the following gates; this checklist is not live execution.
+
+1. Select clean reviewed source and immutable migration/application digests.
+   Preserve released migration bytes and test upgrades from every released
+   version, rerun, rollback and runtime-role permissions.
+2. Require V0002 encrypted credential storage and V0003 role-change session
+   revocation. Verify ledger checksums and trigger definitions after execution.
+3. Complete shared-role session routing, the refresh-response contract, runtime
+   startup wiring and secure enrollment/recovery before enabling staff sign-in.
+   Use an independently generated authenticator encryption key distinct from
+   signing/refresh secrets, pinned in Secret Manager. Never publish passwords,
+   plaintext seeds or setup URLs.
+4. Confirm a private database and fresh completed pre-update backup. Older backup
+   screenshots establish availability, not fresh pre-update verification. Resolve
+   a command-line refusal specifically or use a reviewed console verification
+   path; organisation Cloud Asset inspection remains unnecessary.
+5. Execute only the reviewed dormant job once without overrides. Record source,
+   image, execution, checksums and completion in protected evidence. Remove its
+   temporary execution access and dormant job after verification.
+6. Provision approved fictional development staff accounts through controlled
+   enrollment. An Administrator must confirm an authenticator code before
+   activation; Contributor creation remains Administrator-controlled. Production
+   administrator ownership requires its separate client-approved setup.
+7. Test password/code login, saved-login renewal, sign-out, device isolation,
+   replay rejection, role/password changes and interruption recovery. Obtain
+   client acceptance; backend tests alone do not complete EE-010/EE-011 or prove
+   production readiness.
+
 ### 6. Deploy the service
 
 - Deploy the approved image digest as a new Cloud Run revision without sending production traffic immediately.
