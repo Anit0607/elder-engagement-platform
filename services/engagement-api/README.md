@@ -27,6 +27,17 @@ The development container is deployed to private Cloud Run, and database migrati
 
 ## Staff sign-in (EE-010, disabled implementation candidate)
 
+### Week 2 permission foundation (EE-012, not yet routed or deployed)
+
+`app/authorization.py` defines own-profile/own-account permissions for active
+users and Administrator-only staff creation/status/role controls. A verified
+session is rechecked against current account, credential and session state.
+Protected handlers must use the yielded connection: account and session locks
+remain held until protected work and its audit record commit together. Unknown
+permissions, unowned targets, suspended accounts, changed roles/credential
+versions and revoked sessions are rejected. This library alone does not implement
+profile or account-control endpoints and does not complete EE-012 acceptance.
+
 ### Shared runtime wiring candidate (not deployed)
 
 `EE_STAFF_SESSION_ENABLED` defaults to `false`. Enabling it requires connected

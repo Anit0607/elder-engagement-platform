@@ -8,6 +8,7 @@ import os
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from unittest.mock import Mock
 from urllib.parse import urlsplit
 from uuid import uuid4
 
@@ -16,6 +17,7 @@ import jwt
 import pyotp
 import pytest
 
+from app.authorization import Permission, SessionAuthorization
 from app.config import ConfigurationError
 from app.member_auth import MemberSessionFailure
 from app.postgres_staff_session import PostgresStaffSessionService
@@ -169,6 +171,51 @@ async def test_shared_endpoint_adapter_preserves_staff_role_and_logout(staff_db)
     with pytest.raises(MemberSessionFailure) as error:
         await shared.list_sessions(renewed.access_token)
     assert error.value.status == 401
+
+
+@pytest.mark.anyio
+async def test_authorization_holds_account_lock_until_protected_work_finishes(staff_db):
+    owner, service, request, clock, _, _ = await account(staff_db)
+    clock[0] = datetime.now(UTC)
+    result = await service().create(request())
+    member = Mock()
+    member._claims.side_effect = MemberSessionFailure(
+        status=401, code="AUTHENTICATION_FAILED", title="Denied"
+    )
+    staff = PostgresStaffSessionControls(
+        staff_db,
+        signing_key=KEY,
+        refresh_pepper=PEPPER,
+        issuer="https://api.synthetic.example",
+        now=lambda: clock[0],
+    )
+    auth = SessionAuthorization(staff_db, member, staff, now=lambda: clock[0])
+    entered, release = asyncio.Event(), asyncio.Event()
+
+    async def protected_work():
+        async with auth.transaction(result.access_token, Permission.OWN_PROFILE, target=owner):
+            entered.set()
+            await release.wait()
+
+    async def suspend():
+        async with staff_db.acquire() as connection:
+            await connection.execute(
+                "UPDATE engagement_app.app_users SET status='suspended' WHERE id=$1", owner
+            )
+
+    worker = asyncio.create_task(protected_work())
+    await asyncio.wait_for(entered.wait(), timeout=5)
+    mutation = asyncio.create_task(suspend())
+    try:
+        done, _ = await asyncio.wait({mutation}, timeout=0.1)
+        assert not done, "Account mutation bypassed the protected-work lock"
+    finally:
+        release.set()
+        await asyncio.wait_for(asyncio.gather(worker, mutation), timeout=5)
+    with pytest.raises(MemberSessionFailure) as error:
+        async with auth.transaction(result.access_token, Permission.OWN_PROFILE, target=owner):
+            pytest.fail("Suspended staff entered protected work")
+    assert error.value.code == "ACCOUNT_SUSPENDED"
 
 
 @pytest.mark.anyio
