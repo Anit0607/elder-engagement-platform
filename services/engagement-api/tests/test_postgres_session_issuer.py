@@ -159,6 +159,19 @@ def test_unsafe_session_configuration_is_rejected(override):
         issuer(FakePool(FakeConnection()), **override)
 
 
+@pytest.mark.parametrize("role,version", [
+    ("member", MEMBER_ID), ("contributor", None), ("administrator", "not-a-uuid"),
+    ("unapproved-role", None),
+])
+def test_internal_token_helper_rejects_inconsistent_staff_claims(role, version):
+    now = datetime.now(UTC)
+    with pytest.raises(ValueError):
+        issuer(FakePool(FakeConnection()))._tokens(
+            MEMBER_ID, INSTALLATION_ID, now, now,
+            role=role, credential_version=version,
+        )
+
+
 @pytest.mark.anyio
 async def test_session_clock_must_be_timezone_aware():
     with pytest.raises(ValueError, match="timezone-aware"):

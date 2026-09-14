@@ -17,7 +17,7 @@ YouTube rows store only the official video identifier and metadata; they never r
 ## Decisions deliberately left open
 
 - Final profile fields, age groups, circle suggestion rules, notification-window behaviour, retention periods, and deletion/export policy.
-- Identity provider, Administrator second factor, dedicated encryption keys, and whether contributor credentials remain local or federated.
+- Dedicated staff-authenticator runtime encryption key and secure enrollment/recovery. Member phone identity uses Google; Administrator password plus an authenticator-app code and Administrator-created Contributor username/password have been approved.
 - Final domains and external provider identifiers.
 
 These values must become explicit configuration or later approved immutable migrations after the client responds. No real personal data, secret, host name, or provider credential appears here.
@@ -33,3 +33,18 @@ These values must become explicit configuration or later approved immutable migr
 3. Keep the PostgreSQL 16 concurrency regression in `database/tests/test_staff_role_concurrency.py` passing; it proves that credential insertion and role demotion cannot race past each other.
 4. Test empty-database upgrade, upgrade from every released version, downgrade policy, remaining PostgreSQL concurrency, indexes, backup, and restore.
 5. Obtain independent review and record the exact Git revision and database image used for the change.
+
+## EE-010 additive candidate: V0002
+
+`V0002__staff_authentication.sql` is a new, separately checksum-locked migration;
+it does not edit the applied baseline. It adds encrypted staff-authenticator
+storage, a nonnegative last-used code step, a credential version and a staff
+session version snapshot. Credential changes revoke previous sessions; accepted
+steps cannot move backwards without replacing/disabling the authenticator.
+
+This candidate is not yet applied to the client database. Existing rows with
+`second_factor_enabled=true` but no encrypted seed deliberately fail the update;
+do not silently disable their protection to make it pass. Secure staff enrollment
+and current role/version authorization checks remain application work. The
+original one-time cloud executor is pinned to V0001 and its source/image; applying
+V0002 requires a reviewed new release path and a verified usable backup.

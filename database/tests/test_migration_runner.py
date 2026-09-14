@@ -202,7 +202,7 @@ def _expect_migration_error(action, contains: str) -> None:
 
 def test_empty_apply_and_rerun() -> None:
     with database_fixture() as fixture:
-        assert _run(fixture) == ["V0001"]
+        assert _run(fixture) == ["V0001", "V0002"]
         assert _run(fixture) == []
         with psycopg.connect(fixture.migration_url) as connection:
             table_count = connection.execute(
@@ -212,14 +212,63 @@ def test_empty_apply_and_rerun() -> None:
             ledger = connection.execute(
                 sql.SQL(
                     "SELECT migration_id, checksum, source_revision, runner_version "
-                    "FROM {}.schema_migrations"
+                    "FROM {}.schema_migrations ORDER BY migration_id"
                 ).format(sql.Identifier(fixture.migration_schema))
             ).fetchall()
-        expected_checksum = json.loads(BASELINE_MANIFEST.read_text(encoding="utf-8"))[
-            "migrations"
-        ][0]["sha256"]
+        entries = json.loads(BASELINE_MANIFEST.read_text(encoding="utf-8"))["migrations"]
         assert table_count == 18
-        assert ledger == [("V0001", expected_checksum, "ci-test", "1.0.0")]
+        assert ledger == [(entry["id"], entry["sha256"], "ci-test", "1.0.0") for entry in entries]
+
+
+def test_baseline_upgrade_preserves_existing_accounts_and_sessions() -> None:
+    with database_fixture() as fixture, tempfile.TemporaryDirectory() as temp_directory:
+        directory = Path(temp_directory)
+        current = json.loads(BASELINE_MANIFEST.read_text(encoding="utf-8"))
+        baseline = current["migrations"][0]
+        (directory / baseline["file"]).write_bytes(
+            (BASELINE_MANIFEST.parent / baseline["file"]).read_bytes()
+        )
+        prefix = directory / "manifest.json"
+        prefix.write_text(json.dumps({"manifest_version": 1, "migrations": [baseline]}), encoding="utf-8")
+        assert _run(fixture, prefix) == ["V0001"]
+        with psycopg.connect(fixture.runtime_url) as connection:
+            owner = connection.execute(
+                sql.SQL("INSERT INTO {}.app_users (public_id, role, status, username) "
+                        "VALUES ('AMI-UPGRADE-SYNTHETIC','contributor','active','synthetic-upgrade') "
+                        "RETURNING id")
+                .format(sql.Identifier(fixture.app_schema))
+            ).fetchone()[0]
+            connection.execute(
+                sql.SQL("INSERT INTO {}.staff_credentials (user_id, password_hash) VALUES (%s,%s)")
+                .format(sql.Identifier(fixture.app_schema)),
+                (owner, "non-working-upgrade-hash-fixture"),
+            )
+            session = connection.execute(
+                sql.SQL("INSERT INTO {}.auth_sessions "
+                        "(user_id, token_family_id, refresh_token_hash, installation_id, "
+                        "platform, expires_at) "
+                        "VALUES (%s,%s,'non-working-upgrade-refresh-hash',%s,'android', "
+                        "now()+interval '1 day') "
+                        "RETURNING id").format(sql.Identifier(fixture.app_schema)),
+                (owner, uuid.uuid4(), uuid.uuid4()),
+            ).fetchone()[0]
+        assert _run(fixture) == ["V0002"]
+        assert _run(fixture) == []
+        with psycopg.connect(fixture.runtime_url) as connection:
+            credential = connection.execute(
+                sql.SQL("SELECT password_hash, second_factor_enabled, mfa_secret_ciphertext, "
+                        "last_accepted_totp_step, credential_version FROM {}.staff_credentials "
+                        "WHERE user_id=%s")
+                .format(sql.Identifier(fixture.app_schema)), (owner,),
+            ).fetchone()
+            assert credential[:4] == ("non-working-upgrade-hash-fixture", False, None, None)
+            assert credential[4] is not None
+            saved = connection.execute(
+                sql.SQL("SELECT user_id, revoked_at, staff_credential_version "
+                        "FROM {}.auth_sessions WHERE id=%s")
+                .format(sql.Identifier(fixture.app_schema)), (session,),
+            ).fetchone()
+            assert saved == (owner, None, None)
 
 
 def test_ledger_checksum_mismatch_is_rejected() -> None:
@@ -360,7 +409,7 @@ def test_system_schema_names_are_rejected() -> None:
 
 def test_pg8000_apply_rerun_and_rollback() -> None:
     with database_fixture() as fixture:
-        assert _run_pg8000(fixture) == ["V0001"]
+        assert _run_pg8000(fixture) == ["V0001", "V0002"]
         assert _run_pg8000(fixture) == []
 
     with database_fixture() as fixture, tempfile.TemporaryDirectory() as temp_directory:
@@ -695,6 +744,7 @@ def test_runtime_role_has_dml_but_not_ddl_or_ledger_access() -> None:
 def main() -> None:
     tests = [
         test_empty_apply_and_rerun,
+        test_baseline_upgrade_preserves_existing_accounts_and_sessions,
         test_ledger_checksum_mismatch_is_rejected,
         test_file_checksum_mismatch_is_rejected_before_connection,
         test_unexpected_object_is_rejected,
