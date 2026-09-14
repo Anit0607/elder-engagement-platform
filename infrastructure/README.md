@@ -165,6 +165,12 @@ automatically retries and never removes that record, even if the connection
 drops. `Verify` is read-only: it checks the one additional execution and the exact
 V0002-V0004 completion record, including the runner's database postchecks. If
 verification is uncertain, investigate or repeat `Verify`, never `Start`.
+The read-only log request uses the [Cloud Logging entries API](https://docs.cloud.google.com/logging/docs/reference/v2/rest/v2/entries/list)
+with one exact project, region, job and execution. JSON preserves the literal
+label key when Windows command-line quoting would otherwise lose it. A later
+reviewed controller-only correction may verify an earlier start controller that
+is an ancestor of main; the original marker is never rewritten, and the exact
+image, migration source, plan checksum and target must still match.
 Staff account enrollment, application deployment and client acceptance remain
 separate steps. The original V0001 executor and released SQL are not repurposed.
 ## Development verification-code rotation

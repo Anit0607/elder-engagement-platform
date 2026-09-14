@@ -174,6 +174,31 @@ function Assert-SuccessRecord {
     if ($matches.Count -ne 1) { throw 'The exact V0002-V0004 completion record is not yet proven. Do not restart.' }
 }
 
+function Get-CompletionLogRequest {
+    param([string]$Project, [string]$Region, [string]$Job, [string]$Execution)
+    if ($Project -notmatch '^[a-z][a-z0-9-]{4,28}[a-z0-9]$' -or
+        $Region -notmatch '^[a-z]+-[a-z]+[0-9]$' -or
+        $Execution -notmatch '^[a-z][a-z0-9-]{0,61}[a-z0-9]$' -or
+        -not $Execution.StartsWith("$Job-", [StringComparison]::Ordinal)) {
+        throw 'The completion-log target is invalid.'
+    }
+    $filter = (Get-ExecutionLogFilter -JobName $Job) +
+        ' AND resource.labels.location="' + $Region + '"' +
+        ' AND labels."run.googleapis.com/execution_name"="' + $Execution + '"'
+    return @{ resourceNames = @("projects/$Project"); filter = $filter; orderBy = 'timestamp desc'; pageSize = 100 }
+}
+
+function Assert-UpdateMarker {
+    param($Marker, [string]$Project, [string]$Region, [string]$Job,
+        [string]$MigrationRevision, [string]$Image, [string]$PlanChecksum)
+    if ($Marker.projectId -cne $Project -or $Marker.region -cne $Region -or $Marker.jobName -cne $Job -or
+        $Marker.revision -cnotmatch '^[0-9a-f]{40}$' -or $Marker.migrationRevision -cne $MigrationRevision -or
+        $Marker.image -cne $Image -or $Marker.planSha256 -cne $PlanChecksum) {
+        throw 'The update-start record identifies a different release.'
+    }
+    return [string]$Marker.revision
+}
+
 $resolvedBackend = Resolve-IgnoredInputFile -Path $BackendConfig -Label 'BackendConfig'
 $resolvedPlan = Resolve-IgnoredInputFile -Path $ReviewedPlan -Label 'ReviewedPlan'
 if ((Get-FileHash -LiteralPath $resolvedPlan -Algorithm SHA256).Hash.ToLowerInvariant() -cne $ExpectedPlanSha256) {
@@ -274,10 +299,12 @@ try {
     if ($Action -eq 'Verify') {
         if (-not (Test-Path $markerPath -PathType Leaf)) { throw 'No update-start record exists.' }
         $marker = Get-Content $markerPath -Raw | ConvertFrom-Json
-        if ($marker.projectId -cne $projectId -or $marker.region -cne $region -or $marker.jobName -cne $jobName -or
-            $marker.revision -cne $ExpectedRevision -or $marker.image -cne $ExpectedImage -or
-            $marker.migrationRevision -cne $migrationRevision -or
-            $marker.planSha256 -cne $ExpectedPlanSha256) { throw 'The update-start record identifies a different release.' }
+        $startedController = Assert-UpdateMarker -Marker $marker -Project $projectId -Region $region -Job $jobName `
+            -MigrationRevision $migrationRevision -Image $ExpectedImage -PlanChecksum $ExpectedPlanSha256
+        # Read-only verification may be corrected after Start. Preserve the
+        # original start record; its controller must be a reviewed main ancestor.
+        & git -C $repositoryRoot merge-base --is-ancestor $startedController HEAD
+        if ($LASTEXITCODE -ne 0) { throw 'The recorded start controller is not in reviewed main history.' }
         $new = @($history | Where-Object { $_.metadata.name -cne $marker.previousExecution })
         if ($history.Count -ne 2 -or $new.Count -ne 1) { throw 'The one additional execution cannot be isolated. Do not restart.' }
         $executionName = [string]$new[0].metadata.name
@@ -296,10 +323,16 @@ try {
         if ($completed.Count -ne 1 -or [int]$execution.status.succeededCount -ne 1 -or [int]$execution.status.failedCount -ne 0) {
             throw 'Successful completion is not yet proven. Verify again; never restart the update.'
         }
-        $filter = (Get-ExecutionLogFilter -JobName $jobName) +
-            ' AND labels."run.googleapis.com/execution_name"="' + $executionName + '"'
-        $logs = @(Invoke-GcloudJson -Arguments @('logging', 'read', $filter,
-            "--project=$projectId", '--limit=100', '--format=json', '--quiet') -FailureMessage 'Completion logs could not be read. Do not restart.')
+        $logRequest = Get-CompletionLogRequest -Project $projectId -Region $region -Job $jobName -Execution $executionName
+        # JSON preserves the literal dotted/slashed label key. Passing this
+        # quoted key through gcloud.cmd can lose quotes in Windows cmd handling.
+        try {
+            $logResponse = Invoke-RestMethod -Method Post -Uri 'https://logging.googleapis.com/v2/entries:list' `
+                -Headers @{ Authorization = "Bearer $accessToken" } -ContentType 'application/json' `
+                -Body ($logRequest | ConvertTo-Json -Depth 10) -TimeoutSec 30
+        }
+        catch { throw 'Completion logs could not be read. Verify again; do not restart.' }
+        $logs = @($logResponse.entries | Where-Object { $null -ne $_ })
         Assert-SuccessRecord -Logs $logs -Execution $executionName
         Write-Output 'Verified: V0002, V0003 and V0004 completed in one recorded execution, including database postchecks.'
         return

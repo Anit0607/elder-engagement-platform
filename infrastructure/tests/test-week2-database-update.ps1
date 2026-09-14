@@ -9,13 +9,14 @@ if ($errors.Count -ne 0) { throw ($errors | Out-String) }
 $baseline = [Management.Automation.Language.Parser]::ParseFile(
     (Join-Path $PSScriptRoot '..\scripts\Invoke-DatabaseMigration.ps1'), [ref]$tokens, [ref]$errors
 )
-foreach ($name in @('Get-PlanEnvironmentMap', 'Test-ExecutionLogEntry')) {
+foreach ($name in @('Get-PlanEnvironmentMap', 'Test-ExecutionLogEntry', 'Get-ExecutionLogFilter')) {
     $definition = $baseline.FindAll({ param($node)
         $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name
     }, $true)
     . ([scriptblock]::Create($definition[0].Extent.Text))
 }
-foreach ($name in @('Assert-UpdatePlan', 'Assert-BackupRecord', 'Assert-SuccessRecord', 'Convert-EmptyJobDefaults')) {
+foreach ($name in @('Assert-UpdatePlan', 'Assert-BackupRecord', 'Assert-SuccessRecord', 'Convert-EmptyJobDefaults',
+    'Get-CompletionLogRequest', 'Assert-UpdateMarker')) {
     $definition = $ast.FindAll({ param($node)
         $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name
     }, $true)
@@ -173,4 +174,28 @@ Expect-Rejected { Assert-SuccessRecord @($bad) 'migration-job-run1' }
 $textEntry = [pscustomobject]@{ labels = $entry.labels; textPayload = ($entry.jsonPayload | ConvertTo-Json -Compress) }
 Assert-SuccessRecord @($textEntry) 'migration-job-run1'
 $cases++
+$request = Get-CompletionLogRequest 'sample-project' 'asia-south1' 'migration-job' 'migration-job-run1'
+$roundTrip = $request | ConvertTo-Json | ConvertFrom-Json
+if ($roundTrip.resourceNames.Count -ne 1 -or $roundTrip.resourceNames[0] -cne 'projects/sample-project' -or
+    $roundTrip.filter -cne 'resource.type="cloud_run_job" AND resource.labels.job_name="migration-job" AND resource.labels.location="asia-south1" AND labels."run.googleapis.com/execution_name"="migration-job-run1"' -or
+    $roundTrip.pageSize -ne 100 -or $roundTrip.orderBy -cne 'timestamp desc') { throw 'Log request lost its exact scope or literal label key.' }
+$cases++
+Expect-Rejected { Get-CompletionLogRequest 'bad/project' 'asia-south1' 'migration-job' 'migration-job-run1' }
+Expect-Rejected { Get-CompletionLogRequest 'sample-project' 'bad/region' 'migration-job' 'migration-job-run1' }
+Expect-Rejected { Get-CompletionLogRequest 'sample-project' 'asia-south1' 'migration-job' 'another-job-run1' }
+Expect-Rejected { Get-CompletionLogRequest 'sample-project' 'asia-south1' 'migration-job' 'migration-job-run1" OR severity>=ERROR' }
+$marker = [pscustomobject]@{
+    projectId = 'sample-project'; region = 'asia-south1'; jobName = 'migration-job'
+    revision = 'e' * 40; migrationRevision = $newRevision; image = $newImage; planSha256 = 'f' * 64
+}
+function Check-Marker { param($Value)
+    Assert-UpdateMarker $Value 'sample-project' 'asia-south1' 'migration-job' $newRevision $newImage ('f' * 64)
+}
+if ((Check-Marker $marker) -cne ('e' * 40)) { throw 'The original controller revision was not retained.' }
+$cases++
+foreach ($field in @('projectId', 'region', 'jobName', 'revision', 'migrationRevision', 'image', 'planSha256')) {
+    $bad = Copy-Object $marker
+    $bad.$field = 'different-release'
+    Expect-Rejected { Check-Marker $bad }
+}
 Write-Output "Week 2 update safeguards passed: $cases cases; no cloud access or mutation."
