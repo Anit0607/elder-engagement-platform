@@ -281,6 +281,46 @@ variable "enable_staff_session" {
   default     = false
 }
 
+variable "prepare_development_staff_secrets" {
+  description = "Prepare private secrets for the approved fictional development staff trial without enabling app staff login."
+  type        = bool
+  default     = false
+}
+
+variable "deploy_development_staff_setup_job" {
+  description = "Create the dormant fictional-only staff setup job. Terraform never executes it."
+  type        = bool
+  default     = false
+}
+
+variable "development_staff_setup_image" {
+  description = "Reviewed immutable engagement-api image for the separate fictional staff setup job."
+  type        = string
+  default     = null
+}
+
+variable "development_staff_setup_source_revision" {
+  description = "Exact reviewed source revision embedded in the fictional setup image."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.development_staff_setup_source_revision == null ? true : can(regex("^[0-9a-f]{40}$", var.development_staff_setup_source_revision))
+    error_message = "The setup source must be an exact lowercase 40-character revision."
+  }
+}
+
+variable "development_staff_setup_input_version" {
+  description = "Pinned numeric Secret Manager version for private fictional setup input. No secret values."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.development_staff_setup_input_version == null ? true : can(regex("^[1-9][0-9]*$", var.development_staff_setup_input_version))
+    error_message = "The setup input version must be a positive numeric version."
+  }
+}
+
 variable "staff_authenticator_secret_version" {
   description = "Pinned numeric version of the separate staff authenticator encryption secret; never a secret value."
   type        = string
