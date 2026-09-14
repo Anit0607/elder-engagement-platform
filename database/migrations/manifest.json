@@ -7,6 +7,13 @@
       "file": "V0001__engagement_baseline.sql",
       "sha256": "efc9542d6ed35c4cb780385c705e3ba5353866f4e3590e39024b10c8b4997c68",
       "requires_empty": true
+    },
+    {
+      "id": "V0002",
+      "name": "staff_authentication",
+      "file": "V0002__staff_authentication.sql",
+      "sha256": "e0d424c9d9a4f89a14da46d9187d2ee8b7bc2b58277ff19d1acf88f3ff432543",
+      "requires_empty": false
     }
   ]
 }

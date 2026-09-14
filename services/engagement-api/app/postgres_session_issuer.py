@@ -163,14 +163,26 @@ class PostgresSessionIssuer:
             return tokens
         raise AuthenticationDependencyUnavailable
 
-    def _tokens(self, user_id: UUID, session_id: UUID, issued_at: datetime, expires_at: datetime):
+    def _tokens(
+        self, user_id: UUID, session_id: UUID, issued_at: datetime, expires_at: datetime,
+        *, role: str = "member", credential_version: UUID | None = None,
+    ):
+        if role not in {"member", "contributor", "administrator"} or (
+            (role == "member") != (credential_version is None)
+        ):
+            raise ValueError("Session role and credential version are inconsistent")
+        if credential_version is not None and not isinstance(credential_version, UUID):
+            raise ValueError("Staff credential version must be a UUID")
         refresh_token = f"amr1_{secrets.token_urlsafe(48)}"
         refresh_hash = hmac.digest(self._refresh_pepper, refresh_token.encode(), "sha256").hex()
-        access_token = jwt.encode(
-            {"iss": self._issuer, "aud": self._audience, "sub": str(user_id),
-             "sid": str(session_id), "jti": str(uuid4()), "role": "member",
+        claims = {"iss": self._issuer, "aud": self._audience, "sub": str(user_id),
+             "sid": str(session_id), "jti": str(uuid4()), "role": role,
              "iat": int(issued_at.timestamp()), "nbf": int(issued_at.timestamp()),
-             "exp": int(expires_at.timestamp())},
+             "exp": int(expires_at.timestamp())}
+        if credential_version is not None:
+            claims["cv"] = str(credential_version)
+        access_token = jwt.encode(
+            claims,
             self._signing_key, algorithm="HS256", headers={"typ": "JWT"},
         )
         return IssuedSession(access_token=access_token, refresh_token=refresh_token,

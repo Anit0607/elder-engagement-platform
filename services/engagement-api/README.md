@@ -25,7 +25,7 @@ Implemented now:
 
 The development container is deployed to private Cloud Run, and database migration `V0001` is applied to private Cloud SQL. The Member-session service follows the approved immediate-access boundary: the repository atomically finds or creates an active Member for a verified phone identity, and `profileComplete=false` routes a new Member to self-service profile setup. `EE_MEMBER_SESSION_ENABLED=true` connects the verifier, repository and session issuer through the application lifespan. Cloud SQL uses private IP, automatic IAM authentication and a four-connection pool; it never loads the password-style database URL secret. Cloud Run injects the two pinned Secret Manager values as base64 into `AMIKO_SESSION_SIGNING_KEY_BASE64` and `AMIKO_REFRESH_PEPPER_BASE64`. Missing, weak or equal keys prevent startup. Disabling the flag preserves the unavailable login boundary. Database commands and certificate requests are time-bounded, and pool, connector and certificate session resources close at shutdown. Refresh, logout and session-management operations remain EE-011 work. Contributors remain Administrator-created. Profiles, staff sign-in, circles, content, moderation, feeds, events, notifications and media providers are not yet implemented.
 
-## Staff sign-in (EE-010, interface candidate only)
+## Staff sign-in (EE-010, disabled implementation candidate)
 
 `POST /v1/auth/staff/session` now has validated username/password, optional
 second-factor code, installation and Android/iOS/web inputs. Passwords and codes
@@ -38,11 +38,10 @@ Administrators and omit credential fields.
 **No real staff sign-in is enabled or deployed by this change.** With no real
 adapter, the endpoint returns `503 DEPENDENCY_UNAVAILABLE` without issuing tokens.
 Test fixtures are injected only in tests, never through a runtime flag or cloud
-configuration. Password verification, credential activation, Administrator
-authenticator-code enrollment/verification, replay prevention, persistent failed-
-attempt limits and staff session issuance/renewal remain the next EE-010/EE-011
-implementation work. Those require database-backed account state and coordinated
-locks, not only input checks. Keep Member login and session controls unchanged.
+configuration. Password/code verification and transactional issuance/counters
+are implemented as disabled candidates below. Secure activation, authenticator
+enrollment/recovery, live database update, runtime wiring and staff session
+renewal/controls remain EE-010/EE-011 work. Keep Member login unchanged.
 
 The agreed policy is Administrator-created Contributor usernames/passwords and
 Administrator password plus an authenticator-app code. Secure test-account
@@ -81,13 +80,53 @@ representations. Wrong keys and corrupted ciphertext fail closed.
 The log redactor also masks staff password hashes, second-factor codes, encrypted
 seeds and authenticator setup URLs in structured context and diagnostic text.
 
-This increment does not activate staff users, enroll authenticators, update the
-live database, issue staff sessions or enable the staff route. Database-backed
-atomic verification/issuance, durable counters, enrollment/recovery, staff
-refresh/logout/device controls and client acceptance remain required. Keep the
-default unavailable adapter until those are ready. Any database update must use
-a new recorded migration and a verified usable backup; do not edit the applied
-baseline or relax the private database boundary.
+The credential primitives alone do not activate users, enroll authenticators or
+issue sessions. The database-backed candidate below builds on these primitives.
+
+### Transactional database candidate (not enabled or applied to the client database)
+
+`app/postgres_staff_session.py` connects authoritative staff credentials to
+password/code verification and session issuance in one PostgreSQL transaction.
+It locks the user before the credential row and never accepts a client-supplied
+role. The default route still uses the unavailable adapter; this candidate is
+not wired into application startup or deployed.
+
+- Incorrect passwords or incorrect/reused authenticator codes persist a failed
+  attempt before the error is returned. Five failures pause that account for ten
+  minutes; an expired pause starts a fresh window. Valid sign-in clears failures.
+  Missing codes, suspended/invited accounts, capacity/outage errors and successful
+  sign-in throttling do not count as incorrect credentials.
+- An Administrator must have an enrolled/enabled authenticator. Password-only
+  Contributor sign-in remains supported. Unknown accounts receive the bounded
+  dummy password check without creating an account.
+- Accepted authenticator step, cleared failures and new session are committed
+  together. Concurrent use of one code allows only one success. A failed session
+  insert rolls back code consumption; lost commit acknowledgement returns no
+  tokens and must not automatically replay the submitted code.
+- At most five new session families may be issued per account in ten minutes,
+  including recently revoked sessions. This is an implementation-candidate
+  protection, not a viewer or subscription limit. Unknown-username/IP throttling
+  still requires the planned shared ingress protections before public release.
+- Additive migration `V0002` stores only account-bound encrypted authenticator
+  seeds, the accepted step and a credential version. Password/authenticator
+  changes rotate the version and revoke existing sessions; password-only changes
+  do not erase the previously accepted authenticator step. Unchanged authenticator
+  counters cannot move backwards. Credential rows cannot transfer to another user.
+- Staff tokens/session rows contain the server-selected role and credential
+  version. Existing Member tokens are unchanged and Member controls reject staff
+  tokens. Staff refresh, logout, device management and current-version/role checks
+  must be implemented before activation; the version snapshot alone is not an
+  implemented authorization layer.
+
+Unit tests use synthetic rows. PostgreSQL integration tests accept only the
+disposable local PostgreSQL 16 test database, test actual locking/rollback/state
+and never connect to the client database. Keep the default unavailable adapter
+until secure enrollment/recovery, a dedicated runtime encryption key, staff
+session controls, deployment and client acceptance are ready. Before applying
+`V0002`, verify a usable backup and use a reviewed immutable migration image/job.
+The existing one-time `V0001` runner is pinned to its original source/image and
+must not be repurposed through ad hoc overrides. Do not edit the applied baseline
+or relax the private database boundary.
 
 ## Local verification
 
