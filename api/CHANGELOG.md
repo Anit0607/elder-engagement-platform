@@ -2,6 +2,17 @@
 
 The contract remains a controlled Sprint 2 draft and no listed operation is claimed callable until its matching backend deployment is verified.
 
+## Staff sign-in interface candidate — 14 September 2026
+
+- Validated the existing staff-sign-in request/response interface for Android,
+  iOS and web. No path or success-payload changes. Added the unavailable response.
+- Administrator password plus authenticator-app code is approved; Contributors
+  remain Administrator-created username/password accounts. Actual credential
+  activation, verification and staff-session controls still need implementation.
+- The endpoint remains unavailable without a real adapter. Test fixtures cannot
+  be enabled through cloud/runtime configuration. This is not deployed staff
+  login, production acceptance or an external iOS handover.
+
 ## Member refresh development verification — 13 September 2026
 
 - The Member refresh implementation from commit `83f095c578794da6bf046ecaefa141e2242bee0e` is deployed and verified in the private development environment. GitHub passed 207 backend tests, including PostgreSQL 16 integration checks; the deployed private-health check also passed.

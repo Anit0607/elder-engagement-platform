@@ -25,6 +25,31 @@ Implemented now:
 
 The development container is deployed to private Cloud Run, and database migration `V0001` is applied to private Cloud SQL. The Member-session service follows the approved immediate-access boundary: the repository atomically finds or creates an active Member for a verified phone identity, and `profileComplete=false` routes a new Member to self-service profile setup. `EE_MEMBER_SESSION_ENABLED=true` connects the verifier, repository and session issuer through the application lifespan. Cloud SQL uses private IP, automatic IAM authentication and a four-connection pool; it never loads the password-style database URL secret. Cloud Run injects the two pinned Secret Manager values as base64 into `AMIKO_SESSION_SIGNING_KEY_BASE64` and `AMIKO_REFRESH_PEPPER_BASE64`. Missing, weak or equal keys prevent startup. Disabling the flag preserves the unavailable login boundary. Database commands and certificate requests are time-bounded, and pool, connector and certificate session resources close at shutdown. Refresh, logout and session-management operations remain EE-011 work. Contributors remain Administrator-created. Profiles, staff sign-in, circles, content, moderation, feeds, events, notifications and media providers are not yet implemented.
 
+## Staff sign-in (EE-010, interface candidate only)
+
+`POST /v1/auth/staff/session` now has validated username/password, optional
+second-factor code, installation and Android/iOS/web inputs. Passwords and codes
+use masked secret types in ordinary model diagnostics, following
+[Pydantic secret-type guidance](https://docs.pydantic.dev/latest/api/types/#pydantic.types.SecretStr).
+Validation failures use the existing safe problem response, never input values.
+Client-supplied roles are rejected. Responses allow only active Contributors or
+Administrators and omit credential fields.
+
+**No real staff sign-in is enabled or deployed by this change.** With no real
+adapter, the endpoint returns `503 DEPENDENCY_UNAVAILABLE` without issuing tokens.
+Test fixtures are injected only in tests, never through a runtime flag or cloud
+configuration. Password verification, credential activation, Administrator
+authenticator-code enrollment/verification, replay prevention, persistent failed-
+attempt limits and staff session issuance/renewal remain the next EE-010/EE-011
+implementation work. Those require database-backed account state and coordinated
+locks, not only input checks. Keep Member login and session controls unchanged.
+
+The agreed policy is Administrator-created Contributor usernames/passwords and
+Administrator password plus an authenticator-app code. Secure test-account
+activation and client acceptance are required before enabling the real adapter.
+There is no staff console in this interface change; console work remains in its
+planned sprint. No iOS application is developed here.
+
 ## Local verification
 
 The service is independently installable and does not use the inherited `backend/.venv`. From a PowerShell prompt:
@@ -90,7 +115,8 @@ returns an empty 204 response; a subsequent use of the removed session is refuse
 
 Member listing, logout, removal and refresh are deployed and verified in private
 development. Staff
-sessions and the client device-list screen are not implemented. Existing login
+sessions are not implemented. The native Android device-list/session test app
+exists, with partial client phone acceptance; it is not the full final app. Existing login
 routes remain unchanged. A private
 Cloud Run trial must send the cloud-invocation token in `X-Serverless-Authorization`
 and the platform token in `Authorization`; otherwise the two authentication layers
@@ -120,8 +146,12 @@ This safety policy follows the rotation/reuse principles in
 The thirty-day absolute expiry is this application's configured policy, not a
 requirement imposed by that standard.
 
-EE-011 remains in progress: Android encrypted restoration, serialized renewal,
-sign-out/device controls and client acceptance remain outstanding. Staff-session
+EE-011 remains in progress: Android encrypted restoration, serialized renewal
+and sign-out/device controls are implemented in the test app, with partial client
+acceptance. Confirmed phone checks include saved sign-in after reopening and a
+full app restart, English-language persistence, sign-out, current-device removal,
+cancellation, and connection-error/recovery behavior. Timed renewal, designated
+other-device removal and interrupted-renewal device evidence remain pending. Staff-session
 coverage depends on EE-010. Do not treat backend-only tests as full EE-011 acceptance.
 
 Development verification on 13 September 2026: source commit

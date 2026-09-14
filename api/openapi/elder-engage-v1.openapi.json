@@ -148,7 +148,7 @@
         "tags": ["Authentication"],
         "operationId": "createStaffSession",
         "summary": "Create a Contributor or Administrator session",
-        "description": "The backend resolves Contributor or Administrator role from the stored account and never trusts a role supplied by the client. The stronger Administrator second-factor rule remains subject to client approval. The backend may require secondFactorCode according to account role and policy.",
+        "description": "The backend resolves Contributor or Administrator role from the stored account and never trusts a role supplied by the client. Contributors use Administrator-created usernames and passwords. Administrators require a password plus a verified authenticator-app code; enrollment and verification remain pending implementation. The validated staff endpoint is a disabled-by-default interface candidate, not deployed or accepting real credentials yet. Without a real staff adapter it returns DEPENDENCY_UNAVAILABLE and never issues tokens.",
         "security": [],
         "requestBody": {
           "required": true,
@@ -171,7 +171,8 @@
           "400": { "$ref": "#/components/responses/InvalidRequest" },
           "401": { "$ref": "#/components/responses/Unauthorised" },
           "403": { "$ref": "#/components/responses/Forbidden" },
-          "429": { "$ref": "#/components/responses/RateLimited" }
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
         }
       }
     },
