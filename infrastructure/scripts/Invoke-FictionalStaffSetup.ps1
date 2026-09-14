@@ -71,8 +71,8 @@ function Assert-SetupJob {
         throw 'Live fictional job limits, identity, executable or private network differ from the reviewed setup.'
     }
     $network = $task.vpcAccess.networkInterfaces[0]
-    if ($network.network -cne "projects/$ProjectId/global/networks/ee-development-network" -or
-        $network.subnetwork -cne "projects/$ProjectId/regions/$Location/subnetworks/ee-development-serverless") {
+    if ($network.network -cnotin @('ee-development-network', "projects/$ProjectId/global/networks/ee-development-network") -or
+        $network.subnetwork -cnotin @('ee-development-serverless', "projects/$ProjectId/regions/$Location/subnetworks/ee-development-serverless")) {
         throw 'The setup job uses an unexpected private network.'
     }
     $wanted = @($Expected.template[0].template[0].containers[0].env)
