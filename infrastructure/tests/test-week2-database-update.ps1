@@ -128,6 +128,20 @@ $backup = [pscustomobject]@{
 }
 if ((Assert-BackupRecord @($backup) $now).id -cne '123') { throw 'A recent successful backup was not accepted.' }
 $cases++
+$typedBackup = Copy-Object $backup
+$typedBackup.endTime = [datetime]::SpecifyKind([datetime]::new(2026, 9, 14, 17, 30, 0), [DateTimeKind]::Utc)
+if ((Assert-BackupRecord @($typedBackup) $now).id -cne '123') { throw 'A UTC DateTime backup was not accepted.' }
+$cases++
+$typedBackup.endTime = $typedBackup.endTime.ToLocalTime()
+if ((Assert-BackupRecord @($typedBackup) $now).id -cne '123') { throw 'A local DateTime lost its correct offset.' }
+$cases++
+$typedBackup.endTime = [datetimeoffset]'2026-09-14T23:00:00+05:30'
+if ((Assert-BackupRecord @($typedBackup) $now).id -cne '123') { throw 'An offset DateTime backup was not accepted.' }
+$cases++
+$typedBackup.endTime = [datetime]::new(2026, 9, 14, 17, 30, 0)
+Expect-Rejected { Assert-BackupRecord @($typedBackup) $now }
+$typedBackup.endTime = '2026-09-14T17:30:00'
+Expect-Rejected { Assert-BackupRecord @($typedBackup) $now }
 foreach ($change in @(
     @{ field = 'status'; value = 'RUNNING' }, @{ field = 'status'; value = 'FAILED' },
     @{ field = 'type'; value = 'AUTOMATED' }, @{ field = 'description'; value = 'different-update' },

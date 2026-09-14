@@ -90,7 +90,21 @@ function Assert-BackupRecord {
         if ($_.status -cne 'SUCCESSFUL' -or $_.type -cne 'ON_DEMAND' -or
             $_.description -cne 'Pre-Week-2 staff and English profile update' -or -not $_.endTime) { return $false }
         $ended = [datetimeoffset]::MinValue
-        if (-not [datetimeoffset]::TryParse([string]$_.endTime, [ref]$ended)) { return $false }
+        if ($_.endTime -is [datetimeoffset]) { $ended = $_.endTime }
+        elseif ($_.endTime -is [datetime]) {
+            # Invoke-RestMethod may parse ISO timestamps into DateTime. Casting
+            # to string drops the UTC kind and wrongly assumes local time.
+            if ($_.endTime.Kind -eq [DateTimeKind]::Unspecified) { return $false }
+            $ended = [datetimeoffset]$_.endTime
+        }
+        elseif ($_.endTime -is [string]) {
+            if ($_.endTime -notmatch '(?:Z|[+-][0-9]{2}:[0-9]{2})$' -or
+                -not [datetimeoffset]::TryParse($_.endTime,
+                    [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::None, [ref]$ended)) {
+                return $false
+            }
+        }
+        else { return $false }
         $age = ($Now - $ended).TotalHours
         return $age -ge 0 -and $age -le 4
     } | Sort-Object endTime -Descending)
