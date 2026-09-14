@@ -137,6 +137,30 @@ terraform -chdir=infrastructure\terraform\foundation validate
 ## Production gates
 
 Production apply is forbidden until the client approves the environment project, budget, data-retention rules, alert recipients, domain, immutable image digest, database sizing, recovery targets and release/rollback evidence. Client acceptance testing remains a separate release gate.
+
+## Recorded Week 2 development database update
+
+`scripts/Invoke-Week2DatabaseUpdate.ps1` prepares or starts the single V0002-V0004
+batch after the dormant job has been updated through a reviewed saved Terraform
+plan. That plan must change only the job image and source revision; task settings,
+identities, database and private network must remain unchanged. Build and test the
+immutable image from the same reviewed main revision, and check its GitHub build
+evidence before supplying the image pin. No password or new organisation role is
+needed for this update.
+
+`Plan` reads and validates only. `Start` also requires a successful on-demand
+backup, completed within four hours, with the description
+`Pre-Week-2 staff and English profile update`, and the exact confirmation
+`UPDATE-WEEK2-DEVELOPMENT-V0004`. The backup check confirms recorded successful
+completion; it does not claim a restore rehearsal has been performed.
+
+`Start` writes a durable private record before requesting execution. It never
+automatically retries and never removes that record, even if the connection
+drops. `Verify` is read-only: it checks the one additional execution and the exact
+V0002-V0004 completion record, including the runner's database postchecks. If
+verification is uncertain, investigate or repeat `Verify`, never `Start`.
+Staff account enrollment, application deployment and client acceptance remain
+separate steps. The original V0001 executor and released SQL are not repurposed.
 ## Development verification-code rotation
 
 After fictional phone-number testing, replace any verification codes exposed in
