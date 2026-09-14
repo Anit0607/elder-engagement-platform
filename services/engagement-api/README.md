@@ -78,6 +78,8 @@ passwords and codes; suspended accounts and current locks are respected.
 Administrator access never falls back to password-only if authenticator setup
 is missing or damaged. Secret setup values are not in ordinary record
 representations. Wrong keys and corrupted ciphertext fail closed.
+The log redactor also masks staff password hashes, second-factor codes, encrypted
+seeds and authenticator setup URLs in structured context and diagnostic text.
 
 This increment does not activate staff users, enroll authenticators, update the
 live database, issue staff sessions or enable the staff route. Database-backed

@@ -10,6 +10,7 @@ import pytest
 from argon2 import extract_parameters
 
 from app import staff_credentials as credentials
+from app.logging_config import redact, sanitize
 from app.member_auth import MemberSessionFailure
 from app.staff_auth import StaffSessionRequest
 from app.staff_credentials import (
@@ -394,3 +395,32 @@ def test_ambiguous_code_collision_never_allows_a_used_step_replay(monkeypatch):
     encrypted = checker.protect(USER, RFC_SEED)
     assert checker.matched_step(USER, encrypted, "287082", NOW, None) == 0
     assert checker.matched_step(USER, encrypted, "287082", NOW, 0) is None
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        "password_hash",
+        "secondFactorCode",
+        "second_factor_code",
+        "encrypted_seed",
+        "mfa_secret_ciphertext",
+        "totpSeed",
+        "provisioningUri",
+    ],
+)
+def test_staff_setup_fields_are_redacted_in_nested_log_context(key):
+    assert sanitize({"nested": {key: "synthetic-private-marker"}})["nested"][key] == "[REDACTED]"
+
+
+def test_staff_fields_are_redacted_in_text_logs():
+    message = 'password_hash="synthetic-hash-marker" secondFactorCode=654321 encrypted_seed="cipher-marker"'
+    safe = redact(message)
+    assert "synthetic-hash-marker" not in safe
+    assert "654321" not in safe
+    assert "cipher-marker" not in safe
+
+
+def test_authenticator_setup_url_is_redacted_even_without_a_named_field():
+    uri = "otpauth://totp/synthetic-account?secret=synthetic-seed-marker&issuer=Amiko"
+    assert redact("setup " + uri) == "setup [REDACTED]"

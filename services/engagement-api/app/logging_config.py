@@ -11,7 +11,9 @@ trace_id_context: ContextVar[str | None] = ContextVar("trace_id", default=None)
 
 SENSITIVE_NAME = (
     r"authorization|cookie|access_?token|refresh_?token|provider_?id_?token|"
-    r"phone(?:_?(?:number|e164))?|signed_?url|upload_?url|[a-z0-9_]*secret_ref|password|secret|token"
+    r"phone(?:_?(?:number|e164))?|signed_?url|upload_?url|[a-z0-9_]*secret_ref|"
+    r"password(?:_?hash)?|secret|token|seed|second_?factor_?code|encrypted_?seed|"
+    r"(?:totp|mfa)_?(?:seed|secret(?:_?ciphertext)?)|provisioning_?(?:uri|url)|otpauth_?(?:uri|url)"
 )
 SENSITIVE_KEY = re.compile(rf"(?i)^(?:{SENSITIVE_NAME})$")
 QUOTED_SENSITIVE = re.compile(
@@ -27,9 +29,11 @@ UNQUOTED_SENSITIVE = re.compile(
 SIGNED_URL_QUERY = re.compile(
     r'''(?i)([?&](?:x-goog-signature|x-amz-signature)=)[^&#\s"']+'''
 )
+OTPAUTH_URI = re.compile(r'''(?i)otpauth://[^\s"']+''')
 
 
 def redact(value: str) -> str:
+    value = OTPAUTH_URI.sub("[REDACTED]", value)
     value = SIGNED_URL_QUERY.sub(r"\1[REDACTED]", value)
     value = QUOTED_SENSITIVE.sub(r"\1\2\3[REDACTED]\5", value)
     value = AUTHORIZATION_VALUE.sub(r"\1[REDACTED]", value)
