@@ -14,6 +14,7 @@ SENSITIVE_NAME = (
     r"phone(?:_?(?:number|e164))?|signed_?url|upload_?url|[a-z0-9_]*secret_ref|"
     r"password(?:_?hash)?|secret|token|seed|second_?factor_?code|encrypted_?seed|"
     r"(?:totp|mfa)_?(?:seed|secret(?:_?ciphertext)?)|authenticator_?(?:seed|code)|"
+    r"(?:administrator|contributor)_?password|administrator_?seed|amiko_?fictional_?staff_?setup_?input|"
     r"provisioning_?(?:uri|url)|otpauth_?(?:uri|url)"
 )
 SENSITIVE_KEY = re.compile(rf"(?i)^(?:{SENSITIVE_NAME})$")

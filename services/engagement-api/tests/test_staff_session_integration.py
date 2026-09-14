@@ -20,6 +20,7 @@ import pytest
 from app.account_controls import PostgresAccountControls, RoleChangeRequest, StatusChangeRequest
 from app.authorization import Permission, SessionAuthorization
 from app.config import ConfigurationError
+from app.development_staff_setup import FictionalSetupInput, create_fictional_fixture
 from app.member_auth import MemberSessionFailure
 from app.postgres_profiles import PostgresProfileService
 from app.postgres_staff_session import PostgresStaffSessionService
@@ -132,6 +133,34 @@ def enrollment_request(role, clock, **changes):
         values.update(authenticatorSeed=SEED, authenticatorCode=pyotp.TOTP(SEED).at(clock))
     values.update(changes)
     return StaffEnrollmentRequest(**values)
+
+
+@pytest.mark.anyio
+async def test_fictional_setup_is_atomic_and_revokes_its_test_sessions(staff_db):
+    inputs = FictionalSetupInput(
+        administrator_password=PASSWORD, contributor_password=PASSWORD, administrator_seed=SEED
+    )
+    options = dict(signing_key=KEY, refresh_pepper=PEPPER, issuer="https://api.synthetic.example")
+    checks = await create_fictional_fixture(
+        staff_db, inputs, StaffPasswords(), StaffAuthenticator(bytes(range(32))), options
+    )
+    assert len(checks) == 4
+    async with staff_db.acquire() as connection:
+        assert await connection.fetchval("SELECT count(*) FROM engagement_app.app_users") == 2
+        assert (
+            await connection.fetchval(
+                "SELECT count(*) FROM engagement_app.auth_sessions WHERE revoked_at IS NULL"
+            )
+            == 0
+        )
+        assert await connection.fetchval("SELECT count(*) FROM engagement_app.audit_events") == 2
+    with pytest.raises(MemberSessionFailure) as error:
+        await create_fictional_fixture(
+            staff_db, inputs, StaffPasswords(), StaffAuthenticator(bytes(range(32))), options
+        )
+    assert error.value.status == 409
+    async with staff_db.acquire() as connection:
+        assert await connection.fetchval("SELECT count(*) FROM engagement_app.app_users") == 2
 
 
 @pytest.mark.anyio

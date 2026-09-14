@@ -22,6 +22,16 @@ endpoint may expose the first-Administrator method. Production bootstrap and
 credential recovery require their own controlled workflow. Existing public
 manual-profile request shapes and REST contracts are unchanged by this module.
 
+`python -m app.development_staff_setup` is the fictional-only Cloud Run job
+candidate. It refuses production, an unexpected job/project and missing private
+input. It uses private IAM Cloud SQL access and the same credential/session
+checks as the app. Both fictional accounts and their verification/audit records
+share one outer transaction; a failed check rolls everything back. Its test
+logins are signed out. Generated fixture codes do not count as client acceptance
+of an authenticator app. The job, pinned secret versions, immutable image and
+controlled execution are **not provisioned by this source change**. Never run
+it against another environment or expose it through a public route.
+
 Status: Sprint 1 development foundation deployed; Week 2 identity work started but not production-ready. This is the current Amiko service. The top-level `backend/` directory is an inherited booking implementation and is not imported, renamed or extended here.
 
 Implemented now:
