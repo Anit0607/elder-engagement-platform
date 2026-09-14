@@ -117,9 +117,19 @@ def create_app(
                     application.state.session_controls = (
                         getattr(handler, "session_controls", None) or UnconfiguredSessionControls()
                     )
-                yield
-                application.state.member_session_handler = UnconfiguredMemberSessionService()
-                application.state.session_controls = UnconfiguredSessionControls()
+                if config.staff_session_enabled and staff_session_handler is None:
+                    application.state.staff_session_handler = getattr(
+                        handler,
+                        "staff_session_handler",
+                        UnconfiguredStaffSessionService(),
+                    )
+                try:
+                    yield
+                finally:
+                    application.state.member_session_handler = UnconfiguredMemberSessionService()
+                    application.state.session_controls = UnconfiguredSessionControls()
+                    if staff_session_handler is None:
+                        application.state.staff_session_handler = UnconfiguredStaffSessionService()
         else:
             yield
 
@@ -236,7 +246,11 @@ def create_app(
         except MemberSessionFailure as exc:
             return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
 
-    @app.post("/v1/auth/refresh", tags=["Authentication"], response_model=SessionResponse)
+    @app.post(
+        "/v1/auth/refresh",
+        tags=["Authentication"],
+        response_model=SessionResponse | StaffSessionResponse,
+    )
     async def refresh_session(request: Request, payload: RefreshRequest):
         try:
             return await app.state.session_controls.refresh(payload.refresh_token)
@@ -273,7 +287,10 @@ def create_app(
         return await session_operation(request, "logout")
 
     @app.delete(
-        "/v1/me/sessions/{sessionId}", tags=["Authentication"], status_code=204, response_class=Response,
+        "/v1/me/sessions/{sessionId}",
+        tags=["Authentication"],
+        status_code=204,
+        response_class=Response,
     )
     async def revoke_my_session(request: Request, sessionId: uuid.UUID):
         return await session_operation(request, "revoke", sessionId)

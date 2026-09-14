@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import binascii
+import hmac
 import os
 from collections.abc import Mapping
 from contextlib import asynccontextmanager
@@ -14,7 +15,12 @@ from app.config import ConfigurationError, Settings
 from app.google_phone_identity import GooglePhoneIdentityVerifier
 from app.member_auth import MemberSessionService
 from app.postgres_member_repository import PostgresMemberRepository
+from app.postgres_staff_session import PostgresStaffSessionService
 from app.session_refresh import PostgresSessionRefresh
+from app.shared_session_controls import SharedSessionControls
+from app.staff_credentials import StaffAuthenticator, StaffCredentialVerifier, StaffPasswords
+from app.staff_schema import verify_staff_schema
+from app.staff_session_controls import PostgresStaffSessionControls
 
 
 def _session_secret(environ: Mapping[str, str], name: str) -> bytes:
@@ -38,9 +44,14 @@ async def member_runtime(
     environment = os.environ if environ is None else environ
     signing_key = _session_secret(environment, "AMIKO_SESSION_SIGNING_KEY_BASE64")
     refresh_pepper = _session_secret(environment, "AMIKO_REFRESH_PEPPER_BASE64")
-    verifier = GooglePhoneIdentityVerifier(
-        settings.firebase_project_id, settings.member_token_audience
-    )
+    authenticator_key = None
+    if settings.staff_session_enabled:
+        authenticator_key = _session_secret(environment, "AMIKO_STAFF_AUTHENTICATOR_KEY_BASE64")
+        if len(authenticator_key) != 32 or any(
+            hmac.compare_digest(authenticator_key, other) for other in (signing_key, refresh_pepper)
+        ):
+            raise ConfigurationError("Staff authenticator key must be independent and exactly 32 bytes")
+    verifier = GooglePhoneIdentityVerifier(settings.firebase_project_id, settings.member_token_audience)
     try:
         async with connector_factory(
             loop=asyncio.get_running_loop(),
@@ -49,6 +60,7 @@ async def member_runtime(
             refresh_strategy="LAZY",
             timeout=10,
         ) as connector:
+
             async def get_connection(instance, **kwargs):
                 return await connector.connect_async(
                     instance,
@@ -82,11 +94,35 @@ async def member_runtime(
                     refresh_token_days=settings.refresh_token_days,
                     member_session_limit=5,
                 )
-                yield MemberSessionService(
+                handler = MemberSessionService(
                     verifier,
                     PostgresMemberRepository(pool),
                     sessions,
                     session_controls=sessions,
                 )
+                if settings.staff_session_enabled:
+                    await verify_staff_schema(pool)
+                    options = dict(
+                        signing_key=signing_key,
+                        refresh_pepper=refresh_pepper,
+                        issuer=settings.public_api_origin,
+                        access_token_minutes=settings.access_token_minutes,
+                        refresh_token_days=settings.refresh_token_days,
+                    )
+                    staff_controls = PostgresStaffSessionControls(pool, **options)
+                    handler.staff_session_handler = PostgresStaffSessionService(
+                        pool,
+                        verifier=StaffCredentialVerifier(
+                            StaffPasswords(), StaffAuthenticator(authenticator_key)
+                        ),
+                        **options,
+                    )
+                    handler.session_controls = SharedSessionControls(
+                        pool,
+                        sessions,
+                        staff_controls,
+                        refresh_pepper,
+                    )
+                yield handler
     finally:
         verifier.close()

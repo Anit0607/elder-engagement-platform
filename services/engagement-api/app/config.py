@@ -48,6 +48,8 @@ class Settings(BaseModel):
     firebase_project_id: str = ""
     member_token_audience: str = ""
     member_session_enabled: bool = False
+    staff_session_enabled: bool = False
+    staff_authenticator_key_secret_ref: str = ""
     database_iam_user: str = ""
 
     uploads_bucket: str = Field(min_length=1)
@@ -84,6 +86,7 @@ class Settings(BaseModel):
         "session_signing_key_secret_ref",
         "refresh_token_pepper_secret_ref",
         "field_encryption_key_secret_ref",
+        "staff_authenticator_key_secret_ref",
         "youtube_api_key_secret_ref",
         "meet_oauth_client_secret_ref",
         "agora_app_certificate_secret_ref",
@@ -101,12 +104,17 @@ class Settings(BaseModel):
             raise ValueError("upload signer must be a service-account email")
         return value
 
+    @field_validator("staff_session_enabled", mode="before")
+    @classmethod
+    def strict_staff_switch(cls, value):
+        if type(value) is bool or (isinstance(value, str) and value in {"true", "false"}):
+            return value
+        raise ValueError("Staff session switch must be true or false")
+
     @model_validator(mode="after")
     def validate_environment_contract(self) -> Settings:
         references = {
-            name: value
-            for name, value in self.model_dump().items()
-            if name.endswith("_secret_ref") and value
+            name: value for name, value in self.model_dump().items() if name.endswith("_secret_ref") and value
         }
         for name, value in references.items():
             if value.split("/")[1] != self.gcp_project_id:
@@ -132,6 +140,21 @@ class Settings(BaseModel):
                 raise ValueError("live Member sessions require the application IAM database user")
             if not self.cloud_sql_instance.startswith(f"{self.gcp_project_id}:{self.gcp_region}:"):
                 raise ValueError("Cloud SQL must match the environment project and region")
+        if self.staff_session_enabled:
+            if not self.member_session_enabled:
+                raise ValueError("Staff sessions require the connected shared identity runtime")
+            ref = self.staff_authenticator_key_secret_ref
+            other_refs = (
+                self.session_signing_key_secret_ref,
+                self.refresh_token_pepper_secret_ref,
+                self.field_encryption_key_secret_ref,
+            )
+            if (
+                not ref
+                or ref.endswith("/latest")
+                or any(ref.split("/versions/")[0] == other.split("/versions/")[0] for other in other_refs)
+            ):
+                raise ValueError("Staff authenticator requires a separate pinned secret")
         if self.fcm_enabled and not self.fcm_project_id:
             raise ValueError("enabled FCM requires FCM_PROJECT_ID")
         if self.youtube_enabled and not self.youtube_api_key_secret_ref:
@@ -174,9 +197,7 @@ class Settings(BaseModel):
                     raise ValueError("secure environment CORS values must be HTTPS origins without paths")
             if "*" in self.trusted_host_list or "*" in self.cors_origin_list:
                 raise ValueError("wildcard host or origin is forbidden")
-            if any(
-                "://" in host or "/" in host or " " in host for host in self.trusted_host_list
-            ):
+            if any("://" in host or "/" in host or " " in host for host in self.trusted_host_list):
                 raise ValueError("trusted hosts must contain host names only")
             if public_origin.hostname not in self.trusted_host_list:
                 raise ValueError("public API host must appear in TRUSTED_HOSTS")

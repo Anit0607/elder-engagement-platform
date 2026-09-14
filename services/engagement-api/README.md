@@ -27,6 +27,25 @@ The development container is deployed to private Cloud Run, and database migrati
 
 ## Staff sign-in (EE-010, disabled implementation candidate)
 
+### Shared runtime wiring candidate (not deployed)
+
+`EE_STAFF_SESSION_ENABLED` defaults to `false`. Enabling it requires connected
+Member sessions and a dedicated numeric
+`EE_STAFF_AUTHENTICATOR_KEY_SECRET_REF`. Cloud Run injects that secret into
+`AMIKO_STAFF_AUTHENTICATOR_KEY_BASE64`; it must decode to exactly 32 independent
+bytes. Runtime startup checks staff columns, validated constraints and enabled
+credential/role-change guards through metadata, without migration-ledger access.
+The shared session adapter verifies signed claims before access-token routing;
+refresh routing uses the stored credential-version marker and the selected
+adapter revalidates authoritative state under its transaction locks.
+
+Staff refresh responses retain Contributor/Administrator roles. Member sign-in
+and the existing REST paths/payloads remain unchanged. Terraform wiring is also
+off by default; this source change does not apply infrastructure or enable staff
+login. Staff enrollment/recovery, the controlled live update, measured cloud
+performance and client acceptance remain open. Earlier candidate descriptions
+below record preceding implementation steps, not the current deployment status.
+
 `POST /v1/auth/staff/session` now has validated username/password, optional
 second-factor code, installation and Android/iOS/web inputs. Passwords and codes
 use masked secret types in ordinary model diagnostics, following

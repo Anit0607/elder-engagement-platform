@@ -12,6 +12,29 @@ test("safe development example passes", () => {
   assert.deepEqual(validateConfig(baseline), []);
 });
 
+test("staff runtime requires connected member runtime and a dedicated pinned secret", () => {
+  const project = baseline.EE_GCP_PROJECT_ID;
+  const staff = {
+    ...baseline,
+    EE_MEMBER_SESSION_ENABLED: "true",
+    EE_MEMBER_IDENTITY_PROVIDER: "identity_platform",
+    EE_FIREBASE_PROJECT_ID: project,
+    EE_MEMBER_TOKEN_AUDIENCE: project,
+    EE_DATABASE_IAM_USER: "synthetic-runtime@example-development-project.iam",
+    EE_STAFF_SESSION_ENABLED: "true",
+    EE_STAFF_AUTHENTICATOR_KEY_SECRET_REF: `projects/${project}/secrets/staff-auth/versions/1`,
+  };
+  assert.deepEqual(validateConfig(staff), []);
+  for (const changes of [
+    { EE_MEMBER_SESSION_ENABLED: "false" },
+    { EE_STAFF_AUTHENTICATOR_KEY_SECRET_REF: "" },
+    { EE_STAFF_AUTHENTICATOR_KEY_SECRET_REF: `projects/${project}/secrets/staff-auth/versions/latest` },
+    { EE_STAFF_AUTHENTICATOR_KEY_SECRET_REF: baseline.EE_FIELD_ENCRYPTION_KEY_SECRET_REF },
+    { EE_STAFF_SESSION_ENABLED: "yes" },
+    { EE_STAFF_SESSION_ENABLED: "" },
+  ]) assert.notEqual(validateConfig({ ...staff, ...changes }).length, 0);
+});
+
 test("unknown raw-secret key is rejected", () => {
   const errors = validateConfig({ ...baseline, EE_DATABASE_PASSWORD: "not-a-real-secret" });
   assert.ok(errors.includes("unknown key: EE_DATABASE_PASSWORD"));

@@ -4,6 +4,17 @@ The contract remains a controlled Sprint 2 draft and no listed operation is clai
 
 ## Staff sign-in interface candidate — 14 September 2026
 
+### Shared runtime implementation candidate (not deployed)
+
+- Connected the existing staff sign-in handler and shared refresh, logout and
+  device operations behind an off-by-default staff switch. Signed access proofs
+  determine routing; each adapter rechecks current account and session state.
+- Staff startup requires the recorded staff schema changes and a separate pinned
+  authenticator encryption secret. The application does not read the migration
+  ledger. No path or success-payload changes; staff refresh preserves staff role.
+- Enrollment/recovery, controlled live database update and client acceptance
+  remain outstanding. This entry is not a production release or iOS handover.
+
 - Validated the existing staff-sign-in request/response interface for Android,
   iOS and web. No path or success-payload changes. Added the unavailable response.
 - Administrator password plus authenticator-app code is approved; Contributors

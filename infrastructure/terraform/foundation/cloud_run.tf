@@ -63,6 +63,19 @@ resource "google_cloud_run_v2_service" "api" {
         }
       }
 
+      dynamic "env" {
+        for_each = var.enable_staff_session ? [1] : []
+        content {
+          name = "AMIKO_STAFF_AUTHENTICATOR_KEY_BASE64"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.application["staff-authenticator-key"].secret_id
+              version = var.staff_authenticator_secret_version
+            }
+          }
+        }
+      }
+
       startup_probe {
         initial_delay_seconds = 0
         timeout_seconds       = 3
@@ -106,6 +119,10 @@ resource "google_cloud_run_v2_service" "api" {
   }
 
   lifecycle {
+    precondition {
+      condition     = !var.enable_staff_session || (var.enable_member_session && var.staff_authenticator_secret_version != null)
+      error_message = "Staff login requires the connected Member runtime and a separate pinned authenticator secret. Database readiness is also checked at application startup."
+    }
     precondition {
       condition = !var.enable_member_session || (
         var.enable_identity_platform &&

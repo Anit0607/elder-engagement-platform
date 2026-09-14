@@ -32,6 +32,13 @@ Secret reference values use `projects/<project>/secrets/<name>/versions/<version
 
 ## Validation rules
 
+Staff login is off by default (`EE_STAFF_SESSION_ENABLED=false`). Turning it on
+requires the connected Member runtime and a dedicated, numeric
+`EE_STAFF_AUTHENTICATOR_KEY_SECRET_REF`, distinct from session and field-encryption
+secrets even across versions. Secret material is injected privately; startup
+rejects missing/invalid material and absent staff database guards. Configuration
+validation alone does not prove enrollment, database execution or acceptance.
+
 - Reject duplicate, malformed and unknown keys. This prevents an undocumented setting from silently changing behavior.
 - Reject raw credential-style keys such as `*_PASSWORD`, `*_TOKEN`, private keys or service-account JSON; only documented `*_SECRET_REF` names are accepted.
 - Reject secret-reference fields that do not name a Secret Manager version.
