@@ -48,3 +48,9 @@ do not silently disable their protection to make it pass. Secure staff enrollmen
 and current role/version authorization checks remain application work. The
 original one-time cloud executor is pinned to V0001 and its source/image; applying
 V0002 requires a reviewed new release path and a verified usable backup.
+
+`V0003__role_change_session_revocation.sql` adds atomic owned-session revocation
+on role changes. Staff refresh must not be enabled without this guard: an old
+Contributor refresh token must not inherit Administrator access after promotion.
+It does not edit applied migrations. Cloud execution remains pending reviewed
+release preparation and a fresh verified backup.

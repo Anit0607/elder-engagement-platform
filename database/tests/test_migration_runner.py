@@ -202,7 +202,7 @@ def _expect_migration_error(action, contains: str) -> None:
 
 def test_empty_apply_and_rerun() -> None:
     with database_fixture() as fixture:
-        assert _run(fixture) == ["V0001", "V0002"]
+        assert _run(fixture) == ["V0001", "V0002", "V0003"]
         assert _run(fixture) == []
         with psycopg.connect(fixture.migration_url) as connection:
             table_count = connection.execute(
@@ -252,7 +252,7 @@ def test_baseline_upgrade_preserves_existing_accounts_and_sessions() -> None:
                         "RETURNING id").format(sql.Identifier(fixture.app_schema)),
                 (owner, uuid.uuid4(), uuid.uuid4()),
             ).fetchone()[0]
-        assert _run(fixture) == ["V0002"]
+        assert _run(fixture) == ["V0002", "V0003"]
         assert _run(fixture) == []
         with psycopg.connect(fixture.runtime_url) as connection:
             credential = connection.execute(
@@ -269,6 +269,47 @@ def test_baseline_upgrade_preserves_existing_accounts_and_sessions() -> None:
                 .format(sql.Identifier(fixture.app_schema)), (session,),
             ).fetchone()
             assert saved == (owner, None, None)
+
+
+def test_v0002_upgrade_revokes_sessions_with_runtime_permissions() -> None:
+    with database_fixture() as fixture, tempfile.TemporaryDirectory() as temp_directory:
+        directory = Path(temp_directory)
+        entries = json.loads(BASELINE_MANIFEST.read_text(encoding="utf-8"))["migrations"][:2]
+        for entry in entries:
+            (directory / entry["file"]).write_bytes(
+                (BASELINE_MANIFEST.parent / entry["file"]).read_bytes()
+            )
+        prefix = directory / "manifest.json"
+        prefix.write_text(json.dumps({"manifest_version": 1, "migrations": entries}), encoding="utf-8")
+        assert _run(fixture, prefix) == ["V0001", "V0002"]
+        with psycopg.connect(fixture.runtime_url) as connection:
+            owner = connection.execute(
+                sql.SQL("INSERT INTO {}.app_users (public_id,role,status,username) "
+                        "VALUES ('AMI-ROLE-UPGRADE','contributor','active','synthetic-role-upgrade') "
+                        "RETURNING id").format(sql.Identifier(fixture.app_schema))
+            ).fetchone()[0]
+            connection.execute(
+                sql.SQL("INSERT INTO {}.staff_credentials (user_id,password_hash) "
+                        "VALUES (%s,'non-working-upgrade-hash-fixture')")
+                .format(sql.Identifier(fixture.app_schema)), (owner,),
+            )
+            connection.execute(
+                sql.SQL("INSERT INTO {}.auth_sessions "
+                        "(user_id,token_family_id,refresh_token_hash,installation_id,platform,expires_at) "
+                        "VALUES (%s,%s,'non-working-role-upgrade-refresh',%s,'web',now()+interval '1 day')")
+                .format(sql.Identifier(fixture.app_schema)), (owner, uuid.uuid4(), uuid.uuid4()),
+            )
+        assert _run(fixture) == ["V0003"]
+        assert _run(fixture) == []
+        with psycopg.connect(fixture.runtime_url) as connection:
+            connection.execute(
+                sql.SQL("UPDATE {}.app_users SET role='administrator' WHERE id=%s")
+                .format(sql.Identifier(fixture.app_schema)), (owner,),
+            )
+            assert connection.execute(
+                sql.SQL("SELECT bool_and(revoked_at IS NOT NULL) FROM {}.auth_sessions WHERE user_id=%s")
+                .format(sql.Identifier(fixture.app_schema)), (owner,),
+            ).fetchone()[0]
 
 
 def test_ledger_checksum_mismatch_is_rejected() -> None:
@@ -409,7 +450,7 @@ def test_system_schema_names_are_rejected() -> None:
 
 def test_pg8000_apply_rerun_and_rollback() -> None:
     with database_fixture() as fixture:
-        assert _run_pg8000(fixture) == ["V0001", "V0002"]
+        assert _run_pg8000(fixture) == ["V0001", "V0002", "V0003"]
         assert _run_pg8000(fixture) == []
 
     with database_fixture() as fixture, tempfile.TemporaryDirectory() as temp_directory:
@@ -745,6 +786,7 @@ def main() -> None:
     tests = [
         test_empty_apply_and_rerun,
         test_baseline_upgrade_preserves_existing_accounts_and_sessions,
+        test_v0002_upgrade_revokes_sessions_with_runtime_permissions,
         test_ledger_checksum_mismatch_is_rejected,
         test_file_checksum_mismatch_is_rejected_before_connection,
         test_unexpected_object_is_rejected,

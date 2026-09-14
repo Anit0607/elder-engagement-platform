@@ -45,7 +45,11 @@ async def staff_db(anyio_backend):
         await setup.execute("DROP SCHEMA IF EXISTS engagement_app CASCADE")
         await setup.execute("CREATE SCHEMA engagement_app")
         await setup.execute("SET search_path TO engagement_app, pg_catalog")
-        for filename in ("V0001__engagement_baseline.sql", "V0002__staff_authentication.sql"):
+        for filename in (
+            "V0001__engagement_baseline.sql",
+            "V0002__staff_authentication.sql",
+            "V0003__role_change_session_revocation.sql",
+        ):
             await setup.execute((MIGRATIONS / filename).read_text(encoding="utf-8"))
     finally:
         await setup.close()
@@ -316,3 +320,112 @@ async def test_staff_token_cannot_be_used_as_member_token(staff_db):
     with pytest.raises(MemberSessionFailure) as error:
         await controls.list_sessions(result.access_token)
     assert error.value.status == 401
+
+
+def staff_controls(pool, clock, monkeypatch):
+    from app.staff_session_controls import PostgresStaffSessionControls
+
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return clock[0].astimezone(tz) if tz else clock[0].replace(tzinfo=None)
+
+    monkeypatch.setattr(jwt.api_jwt, "datetime", Clock)
+    return PostgresStaffSessionControls(
+        pool,
+        signing_key=KEY,
+        refresh_pepper=PEPPER,
+        issuer="https://api.synthetic.example",
+        now=lambda: clock[0],
+    )
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("role,enabled", [("contributor", False), ("administrator", True)])
+async def test_staff_refresh_owner_isolation_and_logout(staff_db, monkeypatch, role, enabled):
+    _, service, request, clock, _, _ = await account(staff_db, role, enabled)
+    controls = staff_controls(staff_db, clock, monkeypatch)
+    code = pyotp.TOTP(SEED).at(clock[0]) if enabled else None
+    first = await service().create(request(secondFactorCode=code))
+    _, foreign_service, foreign_request, _, _, _ = await account(staff_db)
+    foreign = await foreign_service().create(foreign_request())
+    foreign_id = controls._claims(foreign.access_token)[1]
+    with pytest.raises(MemberSessionFailure) as error:
+        await controls.revoke(first.access_token, foreign_id)
+    assert error.value.status == 404
+    assert len(await controls.list_sessions(first.access_token)) == 1
+    clock[0] += timedelta(minutes=11)
+    with pytest.raises(MemberSessionFailure):
+        await controls.list_sessions(first.access_token)
+    refreshed = await controls.refresh(first.refresh_token)
+    assert refreshed.user.role == role
+    assert len(await controls.list_sessions(refreshed.access_token)) == 1
+    async with staff_db.acquire() as connection:
+        expiries = await connection.fetch(
+            "SELECT expires_at FROM engagement_app.auth_sessions WHERE user_id=$1", refreshed.user.id
+        )
+        assert len({row["expires_at"] for row in expiries}) == 1
+    await controls.logout(refreshed.access_token)
+    with pytest.raises(MemberSessionFailure):
+        await controls.refresh(refreshed.refresh_token)
+
+
+@pytest.mark.anyio
+async def test_staff_refresh_replay_and_role_promotion_never_gain_privilege(staff_db, monkeypatch):
+    owner, service, request, clock, _, _ = await account(staff_db, "contributor", True)
+    controls = staff_controls(staff_db, clock, monkeypatch)
+    first = await service().create(request(secondFactorCode=pyotp.TOTP(SEED).at(clock[0])))
+    results = await asyncio.gather(
+        *(controls.refresh(first.refresh_token) for _ in range(2)), return_exceptions=True
+    )
+    refreshed = next(result for result in results if not isinstance(result, Exception))
+    error = next(result for result in results if isinstance(result, MemberSessionFailure))
+    assert error.code == "REFRESH_TOKEN_REUSED"
+    with pytest.raises(MemberSessionFailure):
+        await controls.refresh(refreshed.refresh_token)
+    clock[0] += timedelta(seconds=30)
+    second = await service().create(request(secondFactorCode=pyotp.TOTP(SEED).at(clock[0])))
+    async with staff_db.acquire() as connection:
+        await connection.execute(
+            "UPDATE engagement_app.app_users SET role='administrator' WHERE id=$1", owner
+        )
+        assert await connection.fetchval(
+            "SELECT bool_and(revoked_at IS NOT NULL) FROM engagement_app.auth_sessions WHERE user_id=$1",
+            owner,
+        )
+    with pytest.raises(MemberSessionFailure):
+        await controls.refresh(second.refresh_token)
+    with pytest.raises(MemberSessionFailure):
+        await controls.list_sessions(second.access_token)
+    clock[0] += timedelta(seconds=30)
+    admin = await service().create(request(secondFactorCode=pyotp.TOTP(SEED).at(clock[0])))
+    assert (await controls.refresh(admin.refresh_token)).user.role == "administrator"
+
+
+@pytest.mark.anyio
+async def test_staff_current_credential_and_suspension_checks(staff_db, monkeypatch):
+    owner, service, request, clock, passwords, _ = await account(staff_db)
+    controls = staff_controls(staff_db, clock, monkeypatch)
+    first = await service().create(request())
+    async with staff_db.acquire() as connection:
+        await connection.execute("UPDATE engagement_app.app_users SET status='suspended' WHERE id=$1", owner)
+    for operation in (
+        lambda: controls.refresh(first.refresh_token),
+        lambda: controls.logout(first.access_token),
+    ):
+        with pytest.raises(MemberSessionFailure) as error:
+            await operation()
+        assert error.value.status == 403
+    async with staff_db.acquire() as connection:
+        await connection.execute("UPDATE engagement_app.app_users SET status='active' WHERE id=$1", owner)
+        async with connection.transaction():
+            await connection.fetchval("SELECT id FROM engagement_app.app_users WHERE id=$1 FOR UPDATE", owner)
+            await connection.execute(
+                "UPDATE engagement_app.staff_credentials SET password_hash=$2 WHERE user_id=$1",
+                owner,
+                passwords.hash(PASSWORD + "-changed"),
+            )
+    with pytest.raises(MemberSessionFailure):
+        await controls.list_sessions(first.access_token)
+    with pytest.raises(MemberSessionFailure):
+        await controls.refresh(first.refresh_token)
