@@ -58,11 +58,13 @@ def request_json(method: str, url: str, **kwargs):
     return response.status_code, payload
 
 
-def select_fictional_identity(config):
+def select_fictional_identity(config, *, identity_index=0):
     pairs = config.get("signIn", {}).get("phoneNumber", {}).get("testPhoneNumbers", {})
     if not pairs:
         raise SafeTestFailure("No fictional cloud test identities are configured")
-    phone, code = next(iter(pairs.items()))
+    if type(identity_index) is not int or not 0 <= identity_index < len(pairs):
+        raise SafeTestFailure("Fictional test identity selection is invalid")
+    phone, code = sorted(pairs.items())[identity_index]
     if not phone.startswith("+91") or not re.fullmatch(r"[0-9]{6}", str(code)):
         raise SafeTestFailure("Fictional test identity must match the approved India region")
     return phone, str(code)
