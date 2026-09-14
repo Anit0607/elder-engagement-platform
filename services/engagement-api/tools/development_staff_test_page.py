@@ -73,9 +73,15 @@ class StaffTrial:
             if not self.session:
                 return 400, {"message": "Sign in to the fictional account first"}
             if action == "refresh":
-                status, response = self.call(
-                    "POST", "/v1/auth/refresh", {"refreshToken": self.session["refreshToken"]}
-                )
+                try:
+                    status, response = self.call(
+                        "POST", "/v1/auth/refresh", {"refreshToken": self.session["refreshToken"]}
+                    )
+                except SafeTestFailure:
+                    self.session = None
+                    return 503, {
+                        "message": "Saved login was not confirmed. Sign in again; do not retry renewal"
+                    }
                 if status == 200:
                     if (
                         response.get("user", {}).get("id") != self.session["user"]["id"]
@@ -86,6 +92,11 @@ class StaffTrial:
                         self.session = None
                         return 503, {"message": "Saved-login response could not be verified; sign in again"}
                     self.session = response
+                else:
+                    self.session = None
+                    return status, {
+                        "message": "Saved login was not confirmed. Sign in again; do not retry renewal"
+                    }
             elif action == "logout":
                 status, response = self.call("POST", "/v1/auth/logout")
                 if status == 204:
