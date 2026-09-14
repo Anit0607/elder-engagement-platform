@@ -4,7 +4,7 @@ $source=Join-Path $PSScriptRoot '..\scripts\Invoke-FictionalStaffSetup.ps1'
 $tokens=$null; $errors=$null
 $ast=[Management.Automation.Language.Parser]::ParseFile((Resolve-Path $source),[ref]$tokens,[ref]$errors)
 if ($errors.Count) { throw 'Setup script does not parse.' }
-foreach ($name in @('Assert-SetupPlan','Assert-SetupJob','Read-SetupBackupTime','Assert-SetupCompletion')) {
+foreach ($name in @('Assert-SetupPlan','Assert-SetupJob','Read-SetupBackupTime','Assert-SetupCompletion','Assert-SetupImageMembership','Get-SetupExecutionNetwork')) {
     $definition=@($ast.FindAll({param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name},$true))
     if ($definition.Count -ne 1) {throw 'Missing pure setup helper.'}
     . ([scriptblock]::Create($definition[0].Extent.Text))
@@ -93,4 +93,18 @@ $text=Get-Content -LiteralPath $source -Raw
 foreach ($pattern in @("'CreateNew'",'Flush\(\$true\)','backupRuns/\$BackupId','@\(\$history.executions','Never restart|never restart','Assert-SetupJob \$executedJob')) {
     if ($text -notmatch $pattern) {throw 'Execution safeguard missing.'}; $script:cases++
 }
+$index=@{mediaType='application/vnd.oci.image.index.v1+json';manifests=@(@{digest='sha256:'+('d'*64);platform=@{os='linux';architecture='amd64'}},@{digest='sha256:'+('e'*64);platform=@{os='unknown';architecture='unknown'}})}
+$bytes=[Text.Encoding]::UTF8.GetBytes(($index | ConvertTo-Json -Depth 10 -Compress))
+$parent='registry.example/image@sha256:'+([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes)).ToLowerInvariant())
+$leaf='registry.example/image@sha256:'+('d'*64)
+Assert-SetupImageMembership $bytes $parent $leaf; $script:cases++
+Assert-SetupImageMembership $bytes $parent $parent; $script:cases++
+Must-Reject {Assert-SetupImageMembership $bytes $parent ('registry.example/image@sha256:'+('e'*64))}
+Must-Reject {Assert-SetupImageMembership $bytes $parent ('other.example/image@sha256:'+('d'*64))}
+Must-Reject {Assert-SetupImageMembership $bytes ($parent+'wrong') $leaf}
+$v1=Clone @{metadata=@{name=$execution;uid='fictional-uid';annotations=@{'run.googleapis.com/vpc-access-egress'='private-ranges-only';'run.googleapis.com/execution-environment'='gen2';'run.googleapis.com/network-interfaces'='[{"network":"ee-development-network","subnetwork":"ee-development-serverless"}]'}}}
+$v2=@{uid='fictional-uid'}
+$null=Get-SetupExecutionNetwork $v1 $v2 $execution; $script:cases++
+foreach ($field in @('uid','name')) {$bad=Clone $v1;$bad.metadata.$field='wrong';Must-Reject {Get-SetupExecutionNetwork $bad $v2 $execution}}
+foreach ($field in @('run.googleapis.com/vpc-access-egress','run.googleapis.com/execution-environment')) {$bad=Clone $v1;$bad.metadata.annotations.$field='wrong';Must-Reject {Get-SetupExecutionNetwork $bad $v2 $execution}}
 Write-Host "Fictional staff setup safeguards passed: $script:cases cases; no cloud access or mutation."
