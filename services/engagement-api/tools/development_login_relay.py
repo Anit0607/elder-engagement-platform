@@ -22,6 +22,12 @@ class LoginRelay(BaseHTTPRequestHandler):
         pass  # No requests, bodies, identity tokens or personal data in console logs.
 
     def reply(self, status, body=b"{}"):
+        if not getattr(self, "_body_consumed", False) and not self.headers.get("Transfer-Encoding"):
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                length = 0
+            self.reject_body(length)
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
@@ -46,7 +52,7 @@ class LoginRelay(BaseHTTPRequestHandler):
                 self.reply(413)
                 return
             self.connection.settimeout(30)
-            body = self.rfile.read(length)
+            body = self.read_body(length)
             payload = json.loads(body)
             if (
                 not isinstance(payload, dict)
@@ -107,7 +113,7 @@ class LoginRelay(BaseHTTPRequestHandler):
                     self.reply(413)
                     return
                 self.connection.settimeout(30)
-                payload = json.loads(self.rfile.read(length))
+                payload = json.loads(self.read_body(length))
                 if (not isinstance(payload, dict) or set(payload) != {"refreshToken"}
                         or not isinstance(payload["refreshToken"], str)
                         or not re.fullmatch(r"amr1_[A-Za-z0-9_-]{64}", payload["refreshToken"])):
@@ -142,11 +148,18 @@ class LoginRelay(BaseHTTPRequestHandler):
             self.reply(503)
 
     def reject_body(self, length):
-        # Drain only a bounded near-limit body so Windows can receive the rejection
+        # Drain only a bounded rejected body so Windows can receive the rejection
         # instead of resetting the socket with unread bytes. Never forward it.
-        if self.max_body < length <= self.max_body * 2:
+        if 0 < length <= self.max_body * 2:
             self.connection.settimeout(2)
-            self.rfile.read(length)
+            try:
+                self.read_body(length)
+            except OSError:
+                pass  # A partial rejected body never needs an unbounded retry.
+
+    def read_body(self, length):
+        self._body_consumed = True
+        return self.rfile.read(length)
 
 
 def main():

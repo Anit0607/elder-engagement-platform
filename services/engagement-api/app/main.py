@@ -34,6 +34,12 @@ from app.readiness import REQUIRED_DEPENDENCIES, DependencyProbe, NotConfiguredP
 from app.request_limits import RequestBodyLimitMiddleware
 from app.session_controls import SessionControls, SessionSummary, UnconfiguredSessionControls, denied
 from app.session_refresh import RefreshRequest
+from app.staff_auth import (
+    StaffSessionHandler,
+    StaffSessionRequest,
+    StaffSessionResponse,
+    UnconfiguredStaffSessionService,
+)
 
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 TRACEPARENT_PATTERN = re.compile(
@@ -81,6 +87,7 @@ def create_app(
     probes: Mapping[str, DependencyProbe] | None = None,
     *,
     member_session_handler: MemberSessionHandler | None = None,
+    staff_session_handler: StaffSessionHandler | None = None,
     session_controls_handler: SessionControls | None = None,
     member_runtime_factory=member_runtime,
     probe_timeout_seconds: float = 2.0,
@@ -127,6 +134,7 @@ def create_app(
     app.state.settings = config
     app.state.readiness_probes = readiness_probes
     app.state.member_session_handler = member_session_handler or UnconfiguredMemberSessionService()
+    app.state.staff_session_handler = staff_session_handler or UnconfiguredStaffSessionService()
     app.state.session_controls = session_controls_handler or UnconfiguredSessionControls()
 
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=config.trusted_host_list)
@@ -220,6 +228,13 @@ def create_app(
                 exc.title,
                 retryable=exc.retryable,
             )
+
+    @app.post("/v1/auth/staff/session", tags=["Authentication"], response_model=StaffSessionResponse)
+    async def create_staff_session(request: Request, payload: StaffSessionRequest):
+        try:
+            return await app.state.staff_session_handler.create(payload)
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
 
     @app.post("/v1/auth/refresh", tags=["Authentication"], response_model=SessionResponse)
     async def refresh_session(request: Request, payload: RefreshRequest):

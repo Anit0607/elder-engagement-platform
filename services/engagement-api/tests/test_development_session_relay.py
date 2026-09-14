@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from io import BytesIO
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -11,6 +12,47 @@ from tools import development_login_relay as relay
 
 ACCESS = "Bearer " + "a" * 32
 REFRESH = "amr1_" + "a" * 64
+
+
+@pytest.mark.parametrize("length", [-1, 0, 1, 25, 16_384, 16_385, 32_768, 32_769])
+def test_rejected_body_drain_covers_small_bodies_but_stays_bounded(length):
+    handler = object.__new__(relay.LoginRelay)
+    timeouts = []
+    handler.connection = SimpleNamespace(settimeout=lambda value: timeouts.append(value))
+    handler.rfile = BytesIO(b"x" * max(0, length))
+    handler.reject_body(length)
+    bounded = 0 < length <= handler.max_body * 2
+    assert handler.rfile.tell() == (length if bounded else 0)
+    assert timeouts == ([2] if bounded else [])
+
+
+def test_reply_does_not_read_an_already_consumed_request_body():
+    handler = object.__new__(relay.LoginRelay)
+    handler.headers = {"Content-Length": "25"}
+    handler._body_consumed = True
+    handler.rfile = BytesIO(b"unexpected-second-read")
+    handler.wfile = BytesIO()
+    handler.send_response = lambda status: None
+    handler.send_header = lambda name, value: None
+    handler.end_headers = lambda: None
+    handler.reply(400)
+    assert handler.rfile.tell() == 0
+    assert handler.wfile.getvalue() == b"{}"
+
+
+def test_partial_rejected_body_is_not_retried_after_timeout():
+    handler = object.__new__(relay.LoginRelay)
+    handler.connection = SimpleNamespace(settimeout=lambda value: None)
+    calls = []
+
+    def timed_out_read(length):
+        calls.append(length)
+        raise TimeoutError()
+
+    handler.rfile = SimpleNamespace(read=timed_out_read)
+    handler.reject_body(25)
+    assert calls == [25]
+    assert handler._body_consumed is True
 
 
 class Raw:
