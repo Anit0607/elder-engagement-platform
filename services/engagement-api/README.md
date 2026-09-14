@@ -1,5 +1,27 @@
 # Elder Engagement API process foundation
 
+## Week 2 staff enrollment foundation
+
+`app/staff_enrollment.py` is a tested internal service, **not an enabled route,
+an executable cloud bootstrap, or a completed enrollment/recovery workflow**.
+It creates a Contributor only inside current Administrator authorization and
+creates the first development Administrator only after a valid authenticator
+confirmation. Administrator setup records that code as used: the next sign-in
+must use a newly changing code. Passwords are hashed; authenticator seeds are
+account-bound encrypted; neither is returned or written to audit metadata.
+Creation, credentials, profile and audit commit together. A duplicate username
+or existing Administrator is never overwritten. Uncertain commits are not
+automatically retried. The first-Administrator check uses the same database
+lock as role/status controls and is tested for concurrent attempts.
+
+The development confirmation/environment arguments prevent operator mistakes;
+they are **not access control**. Before cloud execution, provide a reviewed,
+private operation with Google Cloud permissions, secure input transport, a
+dedicated encryption key, an execution record and a verified backup. No public
+endpoint may expose the first-Administrator method. Production bootstrap and
+credential recovery require their own controlled workflow. Existing public
+manual-profile request shapes and REST contracts are unchanged by this module.
+
 Status: Sprint 1 development foundation deployed; Week 2 identity work started but not production-ready. This is the current Amiko service. The top-level `backend/` directory is an inherited booking implementation and is not imported, renamed or extended here.
 
 Implemented now:

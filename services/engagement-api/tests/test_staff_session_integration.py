@@ -28,6 +28,7 @@ from app.session_refresh import PostgresSessionRefresh
 from app.shared_session_controls import SharedSessionControls
 from app.staff_auth import StaffSessionRequest
 from app.staff_credentials import StaffAuthenticator, StaffCredentialVerifier, StaffPasswords
+from app.staff_enrollment import PostgresStaffEnrollment, StaffEnrollmentRequest
 from app.staff_schema import verify_staff_schema
 from app.staff_session_controls import PostgresStaffSessionControls
 
@@ -117,6 +118,139 @@ async def account(pool, role="contributor", enabled=False):
         return StaffSessionRequest(**values)
 
     return owner, service, request, clock, passwords, authenticator
+
+
+def enrollment_request(role, clock, **changes):
+    values = dict(
+        username="fictional.enrollment",
+        password=PASSWORD,
+        role=role,
+        displayName="Fictional enrollment",
+        preferredLanguage="en",
+    )
+    if role == "administrator":
+        values.update(authenticatorSeed=SEED, authenticatorCode=pyotp.TOTP(SEED).at(clock))
+    values.update(changes)
+    return StaffEnrollmentRequest(**values)
+
+
+@pytest.mark.anyio
+async def test_concurrent_first_administrator_enrollment_allows_only_one(staff_db):
+    now = datetime(2026, 9, 15, 3, tzinfo=UTC)
+    handler = PostgresStaffEnrollment(
+        staff_db, None, StaffPasswords(), StaffAuthenticator(bytes(range(32))), now=lambda: now
+    )
+
+    async def bootstrap(username):
+        return await handler.bootstrap_development_administrator(
+            enrollment_request("administrator", now, username=username),
+            "fictional-trace",
+            environment="development",
+            confirmation="BOOTSTRAP-FIRST-DEVELOPMENT-ADMINISTRATOR",
+        )
+
+    outcomes = await asyncio.gather(
+        bootstrap("fictional.admin.one"), bootstrap("fictional.admin.two"), return_exceptions=True
+    )
+    assert sum(not isinstance(value, Exception) for value in outcomes) == 1
+    failures = [value for value in outcomes if isinstance(value, Exception)]
+    assert isinstance(failures[0], MemberSessionFailure) and failures[0].status == 409
+    async with staff_db.acquire() as connection:
+        assert await connection.fetchval("SELECT count(*) FROM engagement_app.app_users") == 1
+        assert await connection.fetchval("SELECT count(*) FROM engagement_app.staff_credentials") == 1
+        assert await connection.fetchval("SELECT count(*) FROM engagement_app.audit_events") == 1
+
+
+@pytest.mark.anyio
+async def test_enrolled_administrator_cannot_reuse_confirmation_code_to_sign_in(staff_db):
+    clock = [datetime(2026, 9, 15, 3, tzinfo=UTC)]
+    passwords, authenticator = StaffPasswords(), StaffAuthenticator(bytes(range(32)))
+    enrollment = PostgresStaffEnrollment(staff_db, None, passwords, authenticator, now=lambda: clock[0])
+    result = await enrollment.bootstrap_development_administrator(
+        enrollment_request("administrator", clock[0]),
+        "fictional-trace",
+        environment="development",
+        confirmation="BOOTSTRAP-FIRST-DEVELOPMENT-ADMINISTRATOR",
+    )
+    handler = PostgresStaffSessionService(
+        staff_db,
+        verifier=StaffCredentialVerifier(passwords, authenticator),
+        signing_key=KEY,
+        refresh_pepper=PEPPER,
+        issuer="https://api.synthetic.example",
+        now=lambda: clock[0],
+    )
+
+    def sign_in():
+        return handler.create(
+            StaffSessionRequest(
+                username="fictional.enrollment",
+                password=PASSWORD,
+                secondFactorCode=pyotp.TOTP(SEED).at(clock[0]),
+                installationId=uuid4(),
+                platform="web",
+            )
+        )
+
+    with pytest.raises(MemberSessionFailure) as error:
+        await sign_in()
+    assert error.value.status == 401
+    clock[0] += timedelta(seconds=30)
+    signed_in = await sign_in()
+    assert signed_in.user.id == result.id and signed_in.user.role == "administrator"
+    assert signed_in.user.preferred_language == "en"
+
+
+@pytest.mark.anyio
+async def test_enrolled_contributor_creation_uses_current_administrator_session(staff_db):
+    _, staff_service, login_request, clock, passwords, authenticator = await account(
+        staff_db, role="administrator", enabled=True
+    )
+    clock[0] = datetime.now(UTC)
+    session = await staff_service().create(login_request(secondFactorCode=pyotp.TOTP(SEED).at(clock[0])))
+    member = Mock()
+    member._claims.side_effect = MemberSessionFailure(
+        status=401, code="AUTHENTICATION_FAILED", title="Denied"
+    )
+    staff_controls = PostgresStaffSessionControls(
+        staff_db,
+        signing_key=KEY,
+        refresh_pepper=PEPPER,
+        issuer="https://api.synthetic.example",
+        now=lambda: clock[0],
+    )
+    authorization = SessionAuthorization(staff_db, member, staff_controls, now=lambda: clock[0])
+    enrollment = PostgresStaffEnrollment(
+        staff_db, authorization, passwords, authenticator, now=lambda: clock[0]
+    )
+    created = await enrollment.create_contributor(
+        session.access_token, enrollment_request("contributor", clock[0]), "fictional-trace"
+    )
+    contributor_session = await staff_service().create(
+        StaffSessionRequest(
+            username="fictional.enrollment", password=PASSWORD, installationId=uuid4(), platform="ios"
+        )
+    )
+    assert contributor_session.user.id == created.id and contributor_session.user.role == "contributor"
+    with pytest.raises(MemberSessionFailure) as error:
+        await enrollment.create_contributor(
+            contributor_session.access_token,
+            enrollment_request("contributor", clock[0], username="fictional.second"),
+            "fictional-trace",
+        )
+    assert error.value.status == 403
+    with pytest.raises(MemberSessionFailure) as error:
+        await enrollment.create_contributor(
+            session.access_token, enrollment_request("contributor", clock[0]), "fictional-trace"
+        )
+    assert error.value.status == 409
+    async with staff_db.acquire() as connection:
+        assert (
+            await connection.fetchval(
+                "SELECT count(*) FROM engagement_app.app_users WHERE role='contributor'"
+            )
+            == 1
+        )
 
 
 @pytest.mark.anyio
