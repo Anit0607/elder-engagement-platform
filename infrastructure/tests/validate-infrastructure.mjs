@@ -307,10 +307,12 @@ execFileSync(
   ['-NoProfile', '-File', join(root, 'tests', 'test-database-migration-runner.ps1')],
   { stdio: 'inherit' }
 );
-execFileSync(
-  'pwsh',
-  ['-NoProfile', '-File', join(root, 'tests', 'test-week2-database-update.ps1')],
-  { stdio: 'inherit' }
-);
+for (const timezone of ['UTC', 'Asia/Kolkata']) {
+  execFileSync(
+    'pwsh',
+    ['-NoProfile', '-File', join(root, 'tests', 'test-week2-database-update.ps1')],
+    { stdio: 'inherit', env: { ...process.env, TZ: timezone } }
+  );
+}
 
 console.log(`Infrastructure safety validation passed for ${files.length} Terraform files and 3 environment examples.`);
