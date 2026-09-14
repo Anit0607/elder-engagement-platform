@@ -15,7 +15,7 @@ foreach ($name in @('Get-PlanEnvironmentMap', 'Test-ExecutionLogEntry')) {
     }, $true)
     . ([scriptblock]::Create($definition[0].Extent.Text))
 }
-foreach ($name in @('Assert-UpdatePlan', 'Assert-BackupRecord', 'Assert-SuccessRecord')) {
+foreach ($name in @('Assert-UpdatePlan', 'Assert-BackupRecord', 'Assert-SuccessRecord', 'Convert-EmptyJobDefaults')) {
     $definition = $ast.FindAll({ param($node)
         $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name
     }, $true)
@@ -57,6 +57,39 @@ function Check-Plan { param($Value)
     Assert-UpdatePlan -Plan $Value -Image $newImage -Revision $newRevision -PreviousImage $oldImage -PreviousRevision $oldRevision
 }
 $null = Check-Plan $plan
+$cases++
+${defaultJob} = Copy-Object $before
+${defaultJob}.template[0] | Add-Member annotations ([pscustomobject]@{})
+${defaultJob}.template[0] | Add-Member labels ([pscustomobject]@{})
+${defaultJob}.template[0].template[0] | Add-Member encryption_key ''
+${defaultJob}.template[0].template[0] | Add-Member gpu_zonal_redundancy_disabled $false
+${defaultJob}.template[0].template[0].containers[0] | Add-Member working_dir ''
+${defaultJob}.template[0].template[0].containers[0] | Add-Member name ''
+${defaultJob}.template[0].template[0].containers[0] | Add-Member depends_on @()
+${normalizedJob} = Convert-EmptyJobDefaults ${defaultJob}
+if ($null -ne ${normalizedJob}.template[0].annotations -or $null -ne ${normalizedJob}.template[0].labels -or
+    $null -ne ${normalizedJob}.template[0].template[0].encryption_key -or
+    $null -ne ${normalizedJob}.template[0].template[0].gpu_zonal_redundancy_disabled -or
+    $null -ne ${normalizedJob}.template[0].template[0].containers[0].working_dir -or
+    $null -ne ${normalizedJob}.template[0].template[0].containers[0].name -or
+    $null -ne ${normalizedJob}.template[0].template[0].containers[0].depends_on) { throw 'Empty defaults were not normalized.' }
+if (${defaultJob}.template[0].template[0].containers[0].working_dir -cne '') { throw 'Normalization modified the input.' }
+$cases++
+${defaultJob}.template[0].template[0].containers[0].working_dir = '/unexpected'
+${defaultJob}.template[0].template[0].containers[0].name = 'custom-container'
+${defaultJob}.template[0].template[0].containers[0].depends_on = @('custom-container')
+${defaultJob}.template[0].template[0].encryption_key = 'custom-key'
+${defaultJob}.template[0].template[0].gpu_zonal_redundancy_disabled = $true
+${defaultJob}.template[0].annotations = [pscustomobject]@{ unexpected = 'setting' }
+${defaultJob}.template[0].labels = [pscustomobject]@{ unexpected = 'setting' }
+${normalizedJob} = Convert-EmptyJobDefaults ${defaultJob}
+if (${normalizedJob}.template[0].template[0].containers[0].working_dir -cne '/unexpected' -or
+    ${normalizedJob}.template[0].template[0].containers[0].name -cne 'custom-container' -or
+    ${normalizedJob}.template[0].template[0].containers[0].depends_on[0] -cne 'custom-container' -or
+    ${normalizedJob}.template[0].template[0].encryption_key -cne 'custom-key' -or
+    ${normalizedJob}.template[0].template[0].gpu_zonal_redundancy_disabled -ne $true -or
+    ${normalizedJob}.template[0].annotations.unexpected -cne 'setting' -or
+    ${normalizedJob}.template[0].labels.unexpected -cne 'setting') { throw 'A real override was hidden.' }
 $cases++
 foreach ($action in @('create', 'delete', 'delete,create')) {
     $bad = Copy-Object $plan
