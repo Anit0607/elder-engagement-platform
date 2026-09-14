@@ -4,6 +4,7 @@ No iOS technical contact has been supplied and no handoff is claimed.
 
 | Date | Contract version/checksum | Recipient | Change summary | Receipt/questions | Status |
 |---|---|---|---|---|---|
+| 14 September 2026 | `0.2.2`; SHA-256 `de822162141ceda358d766c7a257bf733a2133a834b122e0e9b0c719678607e2` | Client-nominated iOS developer pending | Administrator-only account suspension, restoration and role changes; existing sessions cannot retain removed permissions | Interface review pending; no direct handoff sent | Source candidate; not deployed |
 | 14 September 2026 | `0.2.1`; SHA-256 `ffb371c62056764423e405819027fbf78e565c4e1e151c7b153cdf0c4684a90f` | Client-nominated iOS developer pending | English profile/session-summary preference added; age label 55+ is not an age restriction | Closed client language lists must add English; no direct handoff sent | Published candidate; handoff deferred |
 | 12 September 2026 | `0.2.0`; SHA-256 `ebc5b3ec7aa662afa02146a50e176daaf4a1cfd6a3002889a02eb8a78bf00faa` | Client-nominated iOS developer pending | Member self-registration, immediate access and incomplete-profile routing | Direct handoff deferred by client until the secure REST API is ready | Published; handoff deferred |
 | 10 September 2026 | `a7e0345`; SHA-256 `c38c986ecf9652b88f6a3926e5b26c3fcb8b55337237fa7c89293ee983f32c59` | Client-nominated iOS developer pending | Initial Week 2 controlled draft published to the project repository | Not sent | Waiting for CA-25 |

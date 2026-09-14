@@ -298,6 +298,12 @@ variable "enable_profiles" {
   default     = false
 }
 
+variable "enable_account_controls" {
+  description = "Enable reviewed Administrator-only account controls after connected staff sign-in is ready."
+  type        = bool
+  default     = false
+}
+
 variable "member_session_secret_versions" {
   description = "Numeric Secret Manager versions for session-signing-key and refresh-token-pepper. No secret values."
   type        = map(string)

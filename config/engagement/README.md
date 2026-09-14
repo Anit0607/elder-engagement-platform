@@ -32,6 +32,11 @@ Secret reference values use `projects/<project>/secrets/<name>/versions/<version
 
 ## Validation rules
 
+Account controls are off by default (`EE_ACCOUNT_CONTROLS_ENABLED=false`) and
+require connected staff authentication. Turning the switch on never grants a
+Member/Contributor Administrator permissions; current server-side authorization
+and invitation/enrollment boundaries still apply on every request.
+
 Profiles are off by default (`EE_PROFILE_ENABLED=false`). Enabling them requires
 connected identity and the V0004 English preference migration at runtime startup.
 This flag is not a production acceptance switch and does not complete the photo

@@ -60,12 +60,24 @@ class SessionAuthorization:
     @asynccontextmanager
     async def transaction(self, token, permission, *, target=None):
         user_id, session_id, role, version = self._proof(token)
+        # Early denial uses verified claims; repeat against current account
+        # state before yielding any protected database work.
+        require_permission(Principal(user_id, session_id, role), permission, target)
         now = self._now()
         if now.utcoffset() is None:
             raise ValueError("Authorization clock must be timezone-aware")
         now = now.astimezone(UTC)
         try:
             async with self._pool.acquire() as connection, connection.transaction():
+                if permission in {
+                    Permission.CREATE_STAFF,
+                    Permission.ACCOUNT_STATUS,
+                    Permission.ACCOUNT_ROLE,
+                }:
+                    # Serialize cross-account mutations before either user row
+                    # is locked; prevents administrator A/B lock inversions and
+                    # concurrent removals of the last usable administrator.
+                    await connection.execute("SELECT pg_advisory_xact_lock(704193041901::bigint)")
                 if role == "member":
                     user = await connection.fetchrow(
                         """SELECT role::text, status::text FROM engagement_app.app_users

@@ -27,6 +27,23 @@ The development container is deployed to private Cloud Run, and database migrati
 
 ## Staff sign-in (EE-010, disabled implementation candidate)
 
+### Administrator account-control candidate (EE-014, not deployed)
+
+Status and role PATCH handlers require connected staff authentication and
+`EE_ACCOUNT_CONTROLS_ENABLED=true` (default false). Only a currently authenticated
+Administrator may use them. Cross-account mutations share a transaction lock
+before user-row locks, preventing reversed Administrator locks and concurrent
+removal of the last usable active Administrator. Suspension revokes sessions;
+reactivation does not resurrect them. Reasons and from/to values are recorded in
+the private audit table in the same transaction, never ordinary request logs.
+
+Invitation activation is separate. Member-to-Contributor changes create an
+invited account requiring staff credential setup. Administrator promotion requires
+an enrolled authenticator with a confirmed code. Staff-to-Member conversion needs
+existing Google phone identity and removes staff credentials before changing role.
+Role changes revoke old sessions. Staff creation/enrollment and the Administrator
+console remain separate work; these source handlers do not claim live acceptance.
+
 ### Own-profile implementation candidate (EE-013, not deployed)
 
 `EE_PROFILE_ENABLED=false` is the default. Enabled profiles require connected

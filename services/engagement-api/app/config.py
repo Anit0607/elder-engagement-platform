@@ -50,6 +50,7 @@ class Settings(BaseModel):
     member_session_enabled: bool = False
     staff_session_enabled: bool = False
     profile_enabled: bool = False
+    account_controls_enabled: bool = False
     staff_authenticator_key_secret_ref: str = ""
     database_iam_user: str = ""
 
@@ -105,7 +106,7 @@ class Settings(BaseModel):
             raise ValueError("upload signer must be a service-account email")
         return value
 
-    @field_validator("staff_session_enabled", "profile_enabled", mode="before")
+    @field_validator("staff_session_enabled", "profile_enabled", "account_controls_enabled", mode="before")
     @classmethod
     def strict_staff_switch(cls, value):
         if type(value) is bool or (isinstance(value, str) and value in {"true", "false"}):
@@ -158,6 +159,8 @@ class Settings(BaseModel):
                 raise ValueError("Staff authenticator requires a separate pinned secret")
         if self.profile_enabled and not self.member_session_enabled:
             raise ValueError("Profiles require the connected identity runtime")
+        if self.account_controls_enabled and not self.staff_session_enabled:
+            raise ValueError("Account controls require the connected staff runtime")
         if self.fcm_enabled and not self.fcm_project_id:
             raise ValueError("enabled FCM requires FCM_PROJECT_ID")
         if self.youtube_enabled and not self.youtube_api_key_secret_ref:

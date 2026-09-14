@@ -19,6 +19,12 @@ from pydantic import BaseModel, ConfigDict
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import __version__
+from app.account_controls import (
+    AccountSummary,
+    RoleChangeRequest,
+    StatusChangeRequest,
+    UnconfiguredAccountControls,
+)
 from app.config import Settings, load_settings
 from app.logging_config import configure_logging, request_id_context, trace_id_context
 from app.member_auth import (
@@ -92,6 +98,7 @@ def create_app(
     staff_session_handler: StaffSessionHandler | None = None,
     session_controls_handler: SessionControls | None = None,
     profile_service=None,
+    account_controls=None,
     member_runtime_factory=member_runtime,
     probe_timeout_seconds: float = 2.0,
     max_request_body_bytes: int = 1_048_576,
@@ -130,6 +137,10 @@ def create_app(
                     application.state.profile_service = getattr(
                         handler, "profile_service", UnconfiguredProfileService()
                     )
+                if config.account_controls_enabled and account_controls is None:
+                    application.state.account_controls = getattr(
+                        handler, "account_controls", UnconfiguredAccountControls()
+                    )
                 try:
                     yield
                 finally:
@@ -139,6 +150,8 @@ def create_app(
                         application.state.staff_session_handler = UnconfiguredStaffSessionService()
                     if profile_service is None:
                         application.state.profile_service = UnconfiguredProfileService()
+                    if account_controls is None:
+                        application.state.account_controls = UnconfiguredAccountControls()
         else:
             yield
 
@@ -156,6 +169,7 @@ def create_app(
     app.state.staff_session_handler = staff_session_handler or UnconfiguredStaffSessionService()
     app.state.session_controls = session_controls_handler or UnconfiguredSessionControls()
     app.state.profile_service = profile_service or UnconfiguredProfileService()
+    app.state.account_controls = account_controls or UnconfiguredAccountControls()
 
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=config.trusted_host_list)
     if config.cors_origin_list:
@@ -317,6 +331,24 @@ def create_app(
         try:
             return await app.state.profile_service.update(
                 bearer_token(request), payload, request.state.trace_id
+            )
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.patch("/v1/admin/users/{userId}/status", tags=["Administration"], response_model=AccountSummary)
+    async def change_account_status(request: Request, userId: uuid.UUID, payload: StatusChangeRequest):
+        try:
+            return await app.state.account_controls.status(
+                bearer_token(request), userId, payload, request.state.trace_id
+            )
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.patch("/v1/admin/users/{userId}/role", tags=["Administration"], response_model=AccountSummary)
+    async def change_account_role(request: Request, userId: uuid.UUID, payload: RoleChangeRequest):
+        try:
+            return await app.state.account_controls.role(
+                bearer_token(request), userId, payload, request.state.trace_id
             )
         except MemberSessionFailure as exc:
             return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
