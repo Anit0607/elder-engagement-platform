@@ -307,5 +307,10 @@ execFileSync(
   ['-NoProfile', '-File', join(root, 'tests', 'test-database-migration-runner.ps1')],
   { stdio: 'inherit' }
 );
+execFileSync(
+  'pwsh',
+  ['-NoProfile', '-File', join(root, 'tests', 'test-week2-database-update.ps1')],
+  { stdio: 'inherit' }
+);
 
 console.log(`Infrastructure safety validation passed for ${files.length} Terraform files and 3 environment examples.`);
