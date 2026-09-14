@@ -373,4 +373,16 @@ Google identity service and private Cloud SQL. Both Android and iOS request shap
 returned one Member account. This is backend evidence, not an Android device test
 or production acceptance.
 
+## Live development profile trial
+
+`python -m tools.test_development_profiles --project approved-development-project
+--region approved-region --confirm TEST-EE-013-development` (one line) verifies
+approved profile fields and English/Bengali/Hindi persistence through the shared
+REST interface. It uses the second configured fictional phone identity, sends no
+real text message, refuses to overwrite a non-fixture profile and signs out its
+test session. Clearly labelled synthetic profile data is retained. The test checks
+that age labels do not restrict access; this is not proof of a person's age or an
+implemented future age-verification policy. Photos are not tested or declared
+complete. Automated development evidence does not replace client acceptance.
+
 Do not copy `config/engagement/.env.example` into a staging or production deployment. It contains explicit non-operational development identifiers which secure-environment validation rejects.

@@ -20,7 +20,7 @@ from tools.test_development_member_login import (
 )
 
 
-def fictional_proof(project):
+def fictional_proof(project, *, identity_index=0):
     operator = cloud_cli("auth", "print-access-token")
     status, config = request_json(
         "GET", f"https://identitytoolkit.googleapis.com/admin/v2/projects/{project}/config",
@@ -29,7 +29,7 @@ def fictional_proof(project):
     )
     if status != 200:
         raise SafeTestFailure("Cannot read the development fictional-identity configuration")
-    phone, code = select_fictional_identity(config)
+    phone, code = select_fictional_identity(config, identity_index=identity_index)
     api_key = config.get("client", {}).get("apiKey")
     if not api_key:
         raise SafeTestFailure("Google phone configuration is missing")
