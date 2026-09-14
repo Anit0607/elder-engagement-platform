@@ -53,7 +53,8 @@ class PhoneLoginActivity : Activity() {
     }
 
     override fun attachBaseContext(base: Context) {
-        val language = base.getSharedPreferences("amiko_ui", MODE_PRIVATE).getString("language", "bn")!!
+        val language = UiLanguages.selected(
+            base.getSharedPreferences("amiko_ui", MODE_PRIVATE).getString("language", null))
         super.attachBaseContext(base.createConfigurationContext(Configuration(base.resources.configuration).apply {
             setLocale(Locale.forLanguageTag(language))
         }))
@@ -76,9 +77,11 @@ class PhoneLoginActivity : Activity() {
         root.addView(TextView(this).apply { text = "Amiko"; textSize = 32f })
         root.addView(TextView(this).apply { setText(R.string.sign_in); textSize = 24f })
         val languages = LinearLayout(this)
-        for ((label, language) in listOf("বাংলা" to "bn", "हिन्दी" to "hi")) {
+        for ((label, language) in UiLanguages.options) {
             languages.addView(Button(this).apply {
-                text = label; minHeight = dp(56)
+                text = label; textSize = 16f; minHeight = dp(56)
+                minWidth = 0; minimumWidth = 0
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 setOnClickListener {
                     if (!busy && verificationId == null && policy.canRequest()) {
                         getSharedPreferences("amiko_ui", MODE_PRIVATE).edit().putString("language", language).apply()

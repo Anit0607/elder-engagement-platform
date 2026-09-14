@@ -22,7 +22,7 @@ EE-010-dependent staff-session coverage are accepted.
 - List own devices and confirm removal. Removing this device signs it out;
   removing another device retains the current sign-in. The backend enforces
   ownership, and an unavailable target cannot be removed.
-- Bengali/Hindi controls; no credentials in logs, screenshots, backups or Git.
+- Bengali/Hindi/English controls; no credentials in logs, screenshots, backups or Git.
 
 Encryption uses the existing app-bound key and authenticated encryption, following
 [Android's Keystore guidance](https://developer.android.com/privacy-and-security/keystore).
@@ -43,7 +43,8 @@ platform headers, and never sends the operator credential to the phone.
 1. Open after the update: an existing valid sign-in should be restored without a
    new code. If it expired, use a fictional Google test identity and sign in.
 2. Close/reopen Amiko, then force-stop/reopen: no new phone code should be needed
-   while the saved session remains valid. Check both Bengali and Hindi controls.
+   while the saved session remains valid. Check Bengali, Hindi and English controls;
+   the selected language should survive reopening without signing the Member out.
 3. Wait over ten minutes with the valid sign-in, then check/reopen. Renewal should
    happen once without another phone code; the backend Member identifier stays
    unchanged. Do not record phone numbers, codes or tokens as evidence.

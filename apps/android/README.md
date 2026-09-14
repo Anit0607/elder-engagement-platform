@@ -4,6 +4,9 @@ Native Kotlin Android application, permanent package `com.eldercaresaathi.amiko`
 This build implements phone sign-in and saved Member-session controls, not the
 complete platform. It is a small native test harness for EE-009 and EE-011
 backend/device acceptance checks.
+The interface offers Bengali, Hindi and English. The selected language survives
+reopening and does not change the saved Member sign-in. English uses the existing
+default string resources; this does not translate uploaded content or generate audio.
 The tracker still plans the complete React Native Android shell under EE-028;
 this harness does not approve a change to that delivery stack or complete
 EE-028/EE-029. Final app-screen integration remains in those planned items.

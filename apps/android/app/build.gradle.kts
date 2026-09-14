@@ -16,8 +16,8 @@ android {
         applicationId = "com.eldercaresaathi.amiko"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.2.0-ee011"
+        versionCode = 3
+        versionName = "0.2.1-ee011"
         buildConfigField("String", "FIREBASE_API_KEY", quoted(setting("AMIKO_FIREBASE_API_KEY")))
         buildConfigField("String", "FIREBASE_APP_ID", quoted(setting("AMIKO_FIREBASE_APP_ID")))
         buildConfigField("String", "FIREBASE_PROJECT", quoted(setting("AMIKO_FIREBASE_PROJECT")))
