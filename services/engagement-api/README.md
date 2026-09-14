@@ -50,6 +50,45 @@ activation and client acceptance are required before enabling the real adapter.
 There is no staff console in this interface change; console work remains in its
 planned sprint. No iOS application is developed here.
 
+### Credential verification candidate (not enabled)
+
+`app/staff_credentials.py` implements actual salted Argon2id password hashing and
+verification, encrypted account-bound authenticator seeds and six-digit,
+30-second TOTP verification. The Argon2id policy uses 19 MiB, two iterations and
+one lane, following the minimum in
+[OWASP password-storage guidance](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html).
+Stored hash parameters cannot select arbitrary work or memory costs. A
+process-wide two-worker bound remains held until the hashing thread finishes,
+even if its awaiting request is cancelled. Hashing is moved off the event loop.
+Cloud worker performance still needs measurement before release.
+
+Authenticator verification uses pinned PyOTP and
+[RFC 6238](https://www.rfc-editor.org/rfc/rfc6238), with a one-step clock-drift
+window. The checker rejects steps at or below the supplied last accepted step.
+It returns a step number, never a sign-in token. The real database adapter **must
+persist that step and failed attempts under account/credential locks in the same
+transaction as session issuance**; these unit checks alone do not implement
+durable replay prevention or failed-attempt counting. Seeds use account-bound
+[AES-GCM authenticated encryption](https://cryptography.io/en/latest/hazmat/primitives/aead/#cryptography.hazmat.primitives.ciphers.aead.AESGCM).
+Its dedicated 32-byte key must be securely injected and kept separate from
+session signing/refresh keys when runtime is connected.
+
+The credential policy rejects unknown/non-staff/inactive accounts, wrong
+passwords and codes; suspended accounts and current locks are respected.
+Administrator access never falls back to password-only if authenticator setup
+is missing or damaged. Secret setup values are not in ordinary record
+representations. Wrong keys and corrupted ciphertext fail closed.
+The log redactor also masks staff password hashes, second-factor codes, encrypted
+seeds and authenticator setup URLs in structured context and diagnostic text.
+
+This increment does not activate staff users, enroll authenticators, update the
+live database, issue staff sessions or enable the staff route. Database-backed
+atomic verification/issuance, durable counters, enrollment/recovery, staff
+refresh/logout/device controls and client acceptance remain required. Keep the
+default unavailable adapter until those are ready. Any database update must use
+a new recorded migration and a verified usable backup; do not edit the applied
+baseline or relax the private database boundary.
+
 ## Local verification
 
 The service is independently installable and does not use the inherited `backend/.venv`. From a PowerShell prompt:
