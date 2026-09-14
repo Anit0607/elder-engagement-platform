@@ -25,6 +25,15 @@ $live=Clone @{name="projects/$project/locations/$region/jobs/ee-development-fict
 $job=@{template=@(@{template=@(@{containers=@(@{image=$image;env=$wantedEnv})})})}
 Assert-SetupJob $live $job $project $region $image $revision
 $script:cases++
+$short=Clone $live
+$short.template.template.vpcAccess.networkInterfaces[0].network='ee-development-network'
+$short.template.template.vpcAccess.networkInterfaces[0].subnetwork='ee-development-serverless'
+Assert-SetupJob $short $job $project $region $image $revision
+$script:cases++
+$bad=Clone $live; $bad.template.template.vpcAccess.networkInterfaces[0].network="projects/other-project/global/networks/ee-development-network"
+Must-Reject {Assert-SetupJob $bad $job $project $region $image $revision}
+$bad=Clone $live; $bad.template.template.vpcAccess.networkInterfaces[0].subnetwork="projects/$project/regions/other-region/subnetworks/ee-development-serverless"
+Must-Reject {Assert-SetupJob $bad $job $project $region $image $revision}
 foreach ($field in @('maxRetries','timeout','executionEnvironment','serviceAccount')) {
     $bad=Clone $live; $bad.template.template.$field='unexpected'
     Must-Reject {Assert-SetupJob $bad $job $project $region $image $revision}
