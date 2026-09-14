@@ -144,8 +144,14 @@ Production apply is forbidden until the client approves the environment project,
 batch after the dormant job has been updated through a reviewed saved Terraform
 plan. That plan must change only the job image and source revision; task settings,
 identities, database and private network must remain unchanged. Build and test the
-immutable image from the same reviewed main revision, and check its GitHub build
-evidence before supplying the image pin. No password or new organisation role is
+immutable image from the reviewed migration revision, and check its GitHub build
+evidence before supplying the image pin. `ExpectedRevision` identifies the current
+reviewed controller on clean main. If a controller-only correction is made after
+the image build, explicitly supply `ExpectedMigrationRevision`; it must be an
+ancestor of main and every tracked database file must be unchanged since that
+build. Any database change requires a new image. Empty provider defaults are
+normalized only in a comparison copy; real overrides remain forbidden.
+No password or new organisation role is
 needed for this update.
 
 `Plan` reads and validates only. `Start` also requires a successful on-demand

@@ -8,6 +8,7 @@ param(
     [Parameter(Mandatory)] [string]$ReviewedPlan,
     [Parameter(Mandatory)] [ValidatePattern('^[0-9a-f]{64}$')] [string]$ExpectedPlanSha256,
     [Parameter(Mandatory)] [ValidatePattern('^[0-9a-f]{40}$')] [string]$ExpectedRevision,
+    [ValidatePattern('^[0-9a-f]{40}$')] [string]$ExpectedMigrationRevision,
     [Parameter(Mandatory)] [string]$ExpectedImage,
     [string]$ConfirmUpdate
 )
@@ -25,6 +26,7 @@ $jobAddress = 'google_cloud_run_v2_job.database_migration[0]'
 $baselineRevision = '632b248fb2a9d91cd0e34ec9673a17c2a577e438'
 $baselineDigest = '22a90388f73d6d9f6f946b4b42e8366edb8aa8e0075e51c6adf2c4e3d3d70b37'
 $pendingIds = @('V0002', 'V0003', 'V0004')
+$migrationRevision = if ($ExpectedMigrationRevision) { $ExpectedMigrationRevision } else { $ExpectedRevision }
 
 # Import reviewed pure helpers only; never execute the original one-time runner.
 $tokens = $null
@@ -94,6 +96,34 @@ function Assert-BackupRecord {
     } | Sort-Object endTime -Descending)
     if ($valid.Count -eq 0) { throw 'A successful on-demand backup from the last four hours is required.' }
     return $valid[0]
+}
+
+function Convert-EmptyJobDefaults {
+    param([object]$Job)
+    # Terraform's refreshed update plan represents absent options with empty
+    # strings/maps/lists or false. Preserve any real override so the strict
+    # baseline helper still rejects it. Never alter the saved plan or live job.
+    $copy = $Job | ConvertTo-Json -Depth 100 | ConvertFrom-Json -Depth 100
+    foreach ($execution in @($copy.template)) {
+        foreach ($field in @('annotations', 'labels')) {
+            if ($null -ne $execution.$field -and @($execution.$field.PSObject.Properties).Count -eq 0) {
+                $execution.$field = $null
+            }
+        }
+        foreach ($task in @($execution.template)) {
+            if ($task.encryption_key -ceq '') { $task.encryption_key = $null }
+            if ($task.gpu_zonal_redundancy_disabled -eq $false) { $task.gpu_zonal_redundancy_disabled = $null }
+            foreach ($container in @($task.containers)) {
+                foreach ($field in @('working_dir', 'name')) {
+                    if ($container.$field -ceq '') { $container.$field = $null }
+                }
+                if ($null -ne $container.depends_on -and @($container.depends_on).Count -eq 0) {
+                    $container.depends_on = $null
+                }
+            }
+        }
+    }
+    return $copy
 }
 
 function Invoke-SqlRead {
@@ -183,17 +213,22 @@ try {
         @(& git -C $repositoryRoot status --porcelain --untracked-files=all).Count -ne 0) {
         throw 'Use only the clean, reviewed and tested origin/main revision.'
     }
+    & git -C $repositoryRoot merge-base --is-ancestor $migrationRevision HEAD
+    if ($LASTEXITCODE -ne 0) { throw 'The image source is not a reviewed ancestor of current main.' }
+    & git -C $repositoryRoot diff --quiet $migrationRevision HEAD -- database
+    if ($LASTEXITCODE -ne 0) { throw 'Database source changed after the image was built. Rebuild before execution.' }
     $manifest = Get-Content (Join-Path $repositoryRoot 'database\migrations\manifest.json') -Raw | ConvertFrom-Json
     if ((@($manifest.migrations.id) -join ',') -cne 'V0001,V0002,V0003,V0004') { throw 'This runner is only for the agreed Week 2 migration batch.' }
     $plan = Invoke-TerraformJson -Arguments @($tfDirectory, 'show', '-json', $resolvedPlan) -FailureMessage 'The saved plan could not be read.'
-    $expectedJob = Assert-UpdatePlan -Plan $plan -Image $ExpectedImage -Revision $ExpectedRevision `
+    $expectedJob = Assert-UpdatePlan -Plan $plan -Image $ExpectedImage -Revision $migrationRevision `
         -PreviousImage "$prefix$baselineDigest" -PreviousRevision $baselineRevision
+    $expectedJob = Convert-EmptyJobDefaults -Job $expectedJob
     $migrationUser = Read-StateOutput $state 'database_migration_iam_user'
     $runtimeUser = Read-StateOutput $state 'database_runtime_iam_user'
     $expectedEnvironment = @{
         MIGRATION_MODE = 'production'; INSTANCE_CONNECTION_NAME = "$projectId`:$region`:$databaseInstance"
         DB_NAME = 'engagement'; DB_MIGRATION_IAM_USER = $migrationUser; DB_RUNTIME_IAM_USER = $runtimeUser
-        APP_SCHEMA = 'engagement_app'; MIGRATION_SCHEMA = 'engagement_migrations'; SOURCE_REVISION = $ExpectedRevision
+        APP_SCHEMA = 'engagement_app'; MIGRATION_SCHEMA = 'engagement_migrations'; SOURCE_REVISION = $migrationRevision
     }
     if ($migrationUser -cne "ee-development-migration@$projectId.iam" -or
         $runtimeUser -cne "ee-development-runtime@$projectId.iam" -or
@@ -227,6 +262,7 @@ try {
         $marker = Get-Content $markerPath -Raw | ConvertFrom-Json
         if ($marker.projectId -cne $projectId -or $marker.region -cne $region -or $marker.jobName -cne $jobName -or
             $marker.revision -cne $ExpectedRevision -or $marker.image -cne $ExpectedImage -or
+            $marker.migrationRevision -cne $migrationRevision -or
             $marker.planSha256 -cne $ExpectedPlanSha256) { throw 'The update-start record identifies a different release.' }
         $new = @($history | Where-Object { $_.metadata.name -cne $marker.previousExecution })
         if ($history.Count -ne 2 -or $new.Count -ne 1) { throw 'The one additional execution cannot be isolated. Do not restart.' }
@@ -282,7 +318,8 @@ try {
         -ExpectedSubnetwork (Read-StateOutput $state 'serverless_subnetwork_name')
     Write-RecoveryMarker -Marker @{
         projectId = $projectId; region = $region; jobName = $jobName
-        revision = $ExpectedRevision; image = $ExpectedImage; planSha256 = $ExpectedPlanSha256
+        revision = $ExpectedRevision; migrationRevision = $migrationRevision
+        image = $ExpectedImage; planSha256 = $ExpectedPlanSha256
         previousExecution = [string]$history[0].metadata.name; backupId = [string]$backup.id
         createdAtUtc = [datetimeoffset]::UtcNow.ToString('o')
     }
