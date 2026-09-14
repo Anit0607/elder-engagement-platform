@@ -149,6 +149,9 @@ async def test_runtime_metadata_gate_with_application_permissions_and_no_ledger(
 @pytest.mark.anyio
 async def test_shared_endpoint_adapter_preserves_staff_role_and_logout(staff_db):
     _, service, request, clock, _, _ = await account(staff_db)
+    # This scenario also verifies real JWT expiry; unlike the TOTP replay
+    # fixtures above, its issuance clock must match the verifier's wall clock.
+    clock[0] = datetime.now(UTC)
     result = await service().create(request())
     options = dict(
         signing_key=KEY, refresh_pepper=PEPPER, issuer="https://api.synthetic.example", now=lambda: clock[0]
