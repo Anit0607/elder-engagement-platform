@@ -155,16 +155,19 @@ class PostgresStaffEnrollment:
             raise MemberSessionFailure(
                 status=403, code="FORBIDDEN", title="Use a separate Administrator setup"
             )
-        try:
-            async with self._authorization.transaction(token, Permission.CREATE_STAFF) as (
-                connection,
-                principal,
-            ):
+        async with self._authorization.transaction(token, Permission.CREATE_STAFF) as (
+            connection,
+            principal,
+        ):
+            try:
                 return await self._insert(
                     connection, request, actor=principal.user_id, action="contributor.created", trace=trace
                 )
-        except asyncpg.UniqueViolationError as exc:
-            raise conflict() from exc
+            except asyncpg.UniqueViolationError as exc:
+                # Translate before the authorization context maps database
+                # exceptions to an unavailable-service response. Raising here
+                # still rolls back the protected transaction completely.
+                raise conflict() from exc
 
     async def bootstrap_development_administrator(
         self, request: StaffEnrollmentRequest, trace, *, environment, confirmation
