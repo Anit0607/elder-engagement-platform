@@ -4,6 +4,19 @@ The contract remains a controlled Sprint 2 draft and no listed operation is clai
 
 ## Staff sign-in interface candidate — 14 September 2026
 
+### Profile implementation and language extension — 0.2.1 draft
+
+- Added approved English profile preference alongside Bengali/Hindi to profile,
+  staff creation and session-summary schemas. Existing fields/paths unchanged;
+  clients with closed language lists must add English before using this choice.
+- Added disabled-by-default own-profile GET/PATCH implementation with current
+  session/owner checks, omission versus explicit-null rules, notification-window
+  validation and atomic minimal audit records. Creation requires name/language.
+- The age label is `55+`, not an age restriction; younger users are not blocked.
+  Future age gating requires an agreed age input/verification policy and rollout.
+- V0004 extends only profile language; released V0001–V0003 bytes stay unchanged.
+  Live migration/deployment, photo workflow and client acceptance remain pending.
+
 ### Shared runtime implementation candidate (not deployed)
 
 - Connected the existing staff sign-in handler and shared refresh, logout and

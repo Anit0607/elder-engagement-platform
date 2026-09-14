@@ -38,7 +38,7 @@ class StaffUserSummary(BaseModel):
     role: Literal["contributor", "administrator"]
     status: Literal["active"]
     display_name: str | None = Field(default=None, alias="displayName", min_length=1, max_length=120)
-    preferred_language: Literal["bn", "hi"] | None = Field(default=None, alias="preferredLanguage")
+    preferred_language: Literal["bn", "hi", "en"] | None = Field(default=None, alias="preferredLanguage")
     profile_complete: bool = Field(alias="profileComplete")
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")

@@ -27,9 +27,7 @@ class UserSummary(BaseModel):
     role: Literal["member"]
     status: Literal["active"]
     display_name: str | None = Field(default=None, alias="displayName", min_length=1, max_length=120)
-    preferred_language: Literal["bn", "hi"] | None = Field(
-        default=None, alias="preferredLanguage"
-    )
+    preferred_language: Literal["bn", "hi", "en"] | None = Field(default=None, alias="preferredLanguage")
     profile_complete: bool = Field(alias="profileComplete")
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")
@@ -75,9 +73,7 @@ class PhoneIdentityVerifier(Protocol):
 
 
 class MemberRepository(Protocol):
-    async def get_or_create_verified_member(
-        self, phone_e164: str, provider_subject: str
-    ) -> MemberRecord: ...
+    async def get_or_create_verified_member(self, phone_e164: str, provider_subject: str) -> MemberRecord: ...
 
 
 class SessionIssuer(Protocol):

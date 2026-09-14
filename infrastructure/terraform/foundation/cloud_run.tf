@@ -120,6 +120,10 @@ resource "google_cloud_run_v2_service" "api" {
 
   lifecycle {
     precondition {
+      condition     = !var.enable_profiles || var.enable_member_session
+      error_message = "Profiles require the connected identity runtime; the profile database migration is checked at startup."
+    }
+    precondition {
       condition     = !var.enable_staff_session || (var.enable_member_session && var.staff_authenticator_secret_version != null)
       error_message = "Staff login requires the connected Member runtime and a separate pinned authenticator secret. Database readiness is also checked at application startup."
     }

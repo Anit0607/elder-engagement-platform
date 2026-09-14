@@ -6,6 +6,11 @@ Status: Sprint 1 baseline approved, checksum-locked and applied once to the priv
 
 ## Included boundaries
 
+Week 2 candidate V0004 adds approved English to profile-language choices without
+rewriting released V0001–V0003 or changing saved profiles. Bengali/Hindi remain
+valid. The `55+` age label is not an enforced minimum age. V0004 is not yet applied
+to the client database; migration execution and live verification remain required.
+
 - Member, Contributor, and Administrator identities, detailed profiles, sessions, and account controls.
 - Predefined circles and unique active membership history.
 - Video, audio, PDF, YouTube reference, and broadcast-replay content.

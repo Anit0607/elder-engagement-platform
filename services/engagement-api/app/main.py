@@ -29,7 +29,9 @@ from app.member_auth import (
     UnconfiguredMemberSessionService,
 )
 from app.member_runtime import member_runtime
+from app.postgres_profiles import UnconfiguredProfileService
 from app.problems import problem_response
+from app.profiles import Profile, ProfileUpdate
 from app.readiness import REQUIRED_DEPENDENCIES, DependencyProbe, NotConfiguredProbe
 from app.request_limits import RequestBodyLimitMiddleware
 from app.session_controls import SessionControls, SessionSummary, UnconfiguredSessionControls, denied
@@ -89,6 +91,7 @@ def create_app(
     member_session_handler: MemberSessionHandler | None = None,
     staff_session_handler: StaffSessionHandler | None = None,
     session_controls_handler: SessionControls | None = None,
+    profile_service=None,
     member_runtime_factory=member_runtime,
     probe_timeout_seconds: float = 2.0,
     max_request_body_bytes: int = 1_048_576,
@@ -123,6 +126,10 @@ def create_app(
                         "staff_session_handler",
                         UnconfiguredStaffSessionService(),
                     )
+                if config.profile_enabled and profile_service is None:
+                    application.state.profile_service = getattr(
+                        handler, "profile_service", UnconfiguredProfileService()
+                    )
                 try:
                     yield
                 finally:
@@ -130,6 +137,8 @@ def create_app(
                     application.state.session_controls = UnconfiguredSessionControls()
                     if staff_session_handler is None:
                         application.state.staff_session_handler = UnconfiguredStaffSessionService()
+                    if profile_service is None:
+                        application.state.profile_service = UnconfiguredProfileService()
         else:
             yield
 
@@ -146,6 +155,7 @@ def create_app(
     app.state.member_session_handler = member_session_handler or UnconfiguredMemberSessionService()
     app.state.staff_session_handler = staff_session_handler or UnconfiguredStaffSessionService()
     app.state.session_controls = session_controls_handler or UnconfiguredSessionControls()
+    app.state.profile_service = profile_service or UnconfiguredProfileService()
 
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=config.trusted_host_list)
     if config.cors_origin_list:
@@ -153,7 +163,7 @@ def create_app(
             CORSMiddleware,
             allow_origins=config.cors_origin_list,
             allow_credentials=False,
-            allow_methods=["GET", "POST", "DELETE"],
+            allow_methods=["GET", "POST", "PATCH", "DELETE"],
             allow_headers=["Authorization", "Content-Type", "X-Request-Id", "traceparent"],
             expose_headers=["X-Request-Id", "traceparent"],
         )
@@ -294,6 +304,22 @@ def create_app(
     )
     async def revoke_my_session(request: Request, sessionId: uuid.UUID):
         return await session_operation(request, "revoke", sessionId)
+
+    @app.get("/v1/me/profile", tags=["Profile"], response_model=Profile, response_model_exclude_none=True)
+    async def get_my_profile(request: Request):
+        try:
+            return await app.state.profile_service.get(bearer_token(request))
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.patch("/v1/me/profile", tags=["Profile"], response_model=Profile, response_model_exclude_none=True)
+    async def update_my_profile(request: Request, payload: ProfileUpdate):
+        try:
+            return await app.state.profile_service.update(
+                bearer_token(request), payload, request.state.trace_id
+            )
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
 
     @app.get("/ready", tags=["Operations"], response_model=HealthResponse)
     async def ready(request: Request) -> JSONResponse:

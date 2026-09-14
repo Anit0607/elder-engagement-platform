@@ -21,6 +21,13 @@
       "file": "V0003__role_change_session_revocation.sql",
       "sha256": "a4b5cabe24d641e061ab02a54963878e16faf3de8ba4962ebb2788433206f588",
       "requires_empty": false
+    },
+    {
+      "id": "V0004",
+      "name": "english_profile_language",
+      "file": "V0004__english_profile_language.sql",
+      "sha256": "fe3dc1acded46f68fd1af1934e6d922895fb3ee64ee90bdb32096118ae312f11",
+      "requires_empty": false
     }
   ]
 }

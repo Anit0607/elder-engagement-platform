@@ -58,6 +58,14 @@ const expectInvalid = (label, schemaName, value) => {
   if (validate(value)) failures.push(`${label} unexpectedly validated as ${schemaName}.`);
 };
 
+for (const schemaName of ["ProfileUpdate", "AdminCreateUserRequest"]) {
+  const value = schemaName === "ProfileUpdate"
+    ? { preferredLanguage: "en", ageGroup: "55+" }
+    : { ...contract.components.examples.SyntheticAdminCreateContributor.value, preferredLanguage: "en" };
+  if (!compile(schemaName)(value)) failures.push(`${schemaName} rejected approved English preference.`);
+}
+expectInvalid("Unapproved profile language", "ProfileUpdate", { preferredLanguage: "fr" });
+
 expectInvalid("Profile unknown field", "Profile", {
   ...contract.components.examples.SyntheticProfile.value,
   unexpected: true,

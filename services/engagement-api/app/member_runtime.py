@@ -11,10 +11,12 @@ from contextlib import asynccontextmanager
 import asyncpg
 from google.cloud.sql.connector import Connector, IPTypes
 
+from app.authorization import SessionAuthorization
 from app.config import ConfigurationError, Settings
 from app.google_phone_identity import GooglePhoneIdentityVerifier
 from app.member_auth import MemberSessionService
 from app.postgres_member_repository import PostgresMemberRepository
+from app.postgres_profiles import PostgresProfileService, verify_profile_schema
 from app.postgres_staff_session import PostgresStaffSessionService
 from app.session_refresh import PostgresSessionRefresh
 from app.shared_session_controls import SharedSessionControls
@@ -100,6 +102,7 @@ async def member_runtime(
                     sessions,
                     session_controls=sessions,
                 )
+                staff_controls = None
                 if settings.staff_session_enabled:
                     await verify_staff_schema(pool)
                     options = dict(
@@ -122,6 +125,11 @@ async def member_runtime(
                         sessions,
                         staff_controls,
                         refresh_pepper,
+                    )
+                if settings.profile_enabled:
+                    await verify_profile_schema(pool)
+                    handler.profile_service = PostgresProfileService(
+                        SessionAuthorization(pool, sessions, staff_controls)
                     )
                 yield handler
     finally:

@@ -32,6 +32,12 @@ Secret reference values use `projects/<project>/secrets/<name>/versions/<version
 
 ## Validation rules
 
+Profiles are off by default (`EE_PROFILE_ENABLED=false`). Enabling them requires
+connected identity and the V0004 English preference migration at runtime startup.
+This flag is not a production acceptance switch and does not complete the photo
+workflow. English/Bengali/Hindi profile choices and a non-blocking `55+` age label
+are approved; age-based exclusion is not enabled.
+
 Staff login is off by default (`EE_STAFF_SESSION_ENABLED=false`). Turning it on
 requires the connected Member runtime and a dedicated, numeric
 `EE_STAFF_AUTHENTICATOR_KEY_SECRET_REF`, distinct from session and field-encryption

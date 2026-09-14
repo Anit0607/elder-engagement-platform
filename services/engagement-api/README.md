@@ -27,6 +27,25 @@ The development container is deployed to private Cloud Run, and database migrati
 
 ## Staff sign-in (EE-010, disabled implementation candidate)
 
+### Own-profile implementation candidate (EE-013, not deployed)
+
+`EE_PROFILE_ENABLED=false` is the default. Enabled profiles require connected
+identity and V0004 English preference support at startup. `GET/PATCH
+/v1/me/profile` use server-verified current sessions and owner-bound transaction
+locks. First creation requires display name and preferred language. Subsequent
+updates preserve omitted fields; explicit null clears only age/broad location;
+interest arrays and notification objects replace their previous contents.
+Time-zone existence is checked against PostgreSQL's supported time-zone names.
+Window times are local; a later start represents a midnight-crossing window.
+
+English/Bengali/Hindi and the `55+` profile label are approved. Younger users are
+not blocked. Future minimum-age enforcement is a separate extension requiring
+an agreed age input, consent/verification and policy rollout, not just a label.
+Profile audits store changed field names, not names/location/interest values.
+Photo authorization/validation/attachment is still pending; private object keys
+are never returned and this candidate returns no photo address. Source and
+database checks do not substitute for cloud/client acceptance.
+
 ### Week 2 permission foundation (EE-012, not yet routed or deployed)
 
 `app/authorization.py` defines own-profile/own-account permissions for active

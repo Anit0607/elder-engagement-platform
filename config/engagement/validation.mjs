@@ -15,6 +15,7 @@ const allowedKeys = new Set([
   "EE_ACCESS_TOKEN_MINUTES", "EE_REFRESH_TOKEN_DAYS",
   "EE_MEMBER_SESSION_ENABLED", "EE_DATABASE_IAM_USER",
   "EE_STAFF_SESSION_ENABLED", "EE_STAFF_AUTHENTICATOR_KEY_SECRET_REF",
+  "EE_PROFILE_ENABLED",
 ]);
 
 const alwaysRequired = [
@@ -62,6 +63,12 @@ function boundedInteger(values, errors, key, minimum, maximum) {
 
 export function validateConfig(values) {
   const errors = [];
+  if (Object.hasOwn(values, "EE_PROFILE_ENABLED") && !["true", "false"].includes(values.EE_PROFILE_ENABLED)) {
+    errors.push("EE_PROFILE_ENABLED must be true or false");
+  }
+  if (values.EE_PROFILE_ENABLED === "true" && values.EE_MEMBER_SESSION_ENABLED !== "true") {
+    errors.push("Profiles require the connected identity runtime");
+  }
   for (const key of Object.keys(values)) {
     if (!allowedKeys.has(key)) errors.push(`unknown key: ${key}`);
   }

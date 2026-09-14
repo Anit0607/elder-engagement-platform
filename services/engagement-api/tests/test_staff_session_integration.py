@@ -8,7 +8,7 @@ import os
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 from urllib.parse import urlsplit
 from uuid import uuid4
 
@@ -20,7 +20,9 @@ import pytest
 from app.authorization import Permission, SessionAuthorization
 from app.config import ConfigurationError
 from app.member_auth import MemberSessionFailure
+from app.postgres_profiles import PostgresProfileService
 from app.postgres_staff_session import PostgresStaffSessionService
+from app.profiles import ProfileUpdate
 from app.session_refresh import PostgresSessionRefresh
 from app.shared_session_controls import SharedSessionControls
 from app.staff_auth import StaffSessionRequest
@@ -57,6 +59,7 @@ async def staff_db(anyio_backend):
             "V0001__engagement_baseline.sql",
             "V0002__staff_authentication.sql",
             "V0003__role_change_session_revocation.sql",
+            "V0004__english_profile_language.sql",
         ):
             await setup.execute((MIGRATIONS / filename).read_text(encoding="utf-8"))
     finally:
@@ -216,6 +219,71 @@ async def test_authorization_holds_account_lock_until_protected_work_finishes(st
         async with auth.transaction(result.access_token, Permission.OWN_PROFILE, target=owner):
             pytest.fail("Suspended staff entered protected work")
     assert error.value.code == "ACCOUNT_SUSPENDED"
+
+
+@pytest.mark.anyio
+async def test_profile_english_partial_edits_and_uncertain_update_rollback(staff_db):
+    owner, service, request, clock, _, _ = await account(staff_db)
+    clock[0] = datetime.now(UTC)
+    result = await service().create(request())
+    member = Mock()
+    member._claims.side_effect = MemberSessionFailure(
+        status=401, code="AUTHENTICATION_FAILED", title="Denied"
+    )
+    staff = PostgresStaffSessionControls(
+        staff_db,
+        signing_key=KEY,
+        refresh_pepper=PEPPER,
+        issuer="https://api.synthetic.example",
+        now=lambda: clock[0],
+    )
+    profiles = PostgresProfileService(SessionAuthorization(staff_db, member, staff, now=lambda: clock[0]))
+    created = await profiles.update(
+        result.access_token,
+        ProfileUpdate(
+            displayName="Synthetic profile",
+            preferredLanguage="en",
+            ageGroup="55+",
+            interests=["music"],
+            broadLocation={"countryCode": "IN", "city": "Synthetic city"},
+            notificationWindow={
+                "enabled": True,
+                "timeZone": "Asia/Kolkata",
+                "startLocalTime": "22:00",
+                "endLocalTime": "06:00",
+            },
+        ),
+        "synthetic-trace",
+    )
+    assert created.preferred_language == "en" and created.notification_window.end_local_time == "06:00"
+    edited = await profiles.update(result.access_token, ProfileUpdate(ageGroup=None), "synthetic-trace")
+    assert edited.age_group is None and edited.broad_location.city == "Synthetic city"
+    assert edited.interests == ["music"]
+    async with staff_db.acquire() as connection:
+        audits = await connection.fetchval(
+            "SELECT count(*) FROM engagement_app.audit_events WHERE actor_user_id=$1", owner
+        )
+        assert audits == 2
+    profiles._read = AsyncMock(
+        side_effect=MemberSessionFailure(status=503, code="DEPENDENCY_UNAVAILABLE", title="Synthetic failure")
+    )
+    with pytest.raises(MemberSessionFailure):
+        await profiles.update(
+            result.access_token, ProfileUpdate(displayName="Uncommitted synthetic name"), "synthetic-trace"
+        )
+    async with staff_db.acquire() as connection:
+        assert (
+            await connection.fetchval(
+                "SELECT display_name FROM engagement_app.user_profiles WHERE user_id=$1", owner
+            )
+            == "Synthetic profile"
+        )
+        assert (
+            await connection.fetchval(
+                "SELECT count(*) FROM engagement_app.audit_events WHERE actor_user_id=$1", owner
+            )
+            == audits
+        )
 
 
 @pytest.mark.anyio
