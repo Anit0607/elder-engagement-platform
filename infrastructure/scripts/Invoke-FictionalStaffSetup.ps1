@@ -123,6 +123,28 @@ function Assert-SetupCompletion {
     if ($found.Count -ne 1) { throw 'The exact fictional setup completion record is not proven. Verify again; never restart.' }
 }
 
+function Assert-SetupImageMembership {
+    param([byte[]]$RawIndex, [string]$ParentImage, [string]$ExecutionImage)
+    $hash=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($RawIndex)).ToLowerInvariant()
+    if (($ParentImage -split '@sha256:')[-1] -cne $hash) { throw 'Registry index bytes differ from the approved immutable image.' }
+    $index=[Text.Encoding]::UTF8.GetString($RawIndex) | ConvertFrom-Json
+    $linux=@($index.manifests | Where-Object { $_.platform.os -ceq 'linux' -and $_.platform.architecture -ceq 'amd64' })
+    if ($index.mediaType -cnotin @('application/vnd.oci.image.index.v1+json','application/vnd.docker.distribution.manifest.list.v2+json') -or
+        $linux.Count -ne 1 -or $linux[0].digest -cnotmatch '^sha256:[0-9a-f]{64}$') { throw 'Approved index must contain exactly one Linux AMD64 image.' }
+    $leaf=($ParentImage -split '@')[0]+'@'+$linux[0].digest
+    if ($ExecutionImage -cne $ParentImage -and $ExecutionImage -cne $leaf) { throw 'Executed image is not the approved index or its verified Linux image.' }
+}
+
+function Get-SetupExecutionNetwork {
+    param($V1, $V2, [string]$Execution)
+    if ($V1.metadata.uid -cne $V2.uid -or -not $V2.uid -or $V1.metadata.name -cne $Execution -or
+        $V1.metadata.annotations.'run.googleapis.com/vpc-access-egress' -cne 'private-ranges-only' -or
+        $V1.metadata.annotations.'run.googleapis.com/execution-environment' -cne 'gen2') { throw 'Executed private-network identity is not proven.' }
+    $interfaces=@($V1.metadata.annotations.'run.googleapis.com/network-interfaces' | ConvertFrom-Json)
+    if ($interfaces.Count -ne 1) { throw 'Executed network must contain one approved interface.' }
+    return @{egress='PRIVATE_RANGES_ONLY';networkInterfaces=$interfaces}
+}
+
 try {
     if ($root -notmatch '^[Dd]:\\') { throw 'Project execution files must remain on the D drive.' }
     $resolvedPlan = (Resolve-Path -LiteralPath $ReviewedPlan).Path
@@ -202,6 +224,29 @@ try {
         $executedJob.template.template = $executions[0].template
         $executedJob.template.parallelism = $executions[0].parallelism
         $executedJob.template.taskCount = $executions[0].taskCount
+        # Cloud Run selects the Linux image from the digest-pinned OCI index.
+        # Prove that exact relationship using registry bytes, never an arbitrary
+        # accepted digest list or the current container tag.
+        $indexDigest=($ExpectedImage -split '@')[-1]
+        $basic=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('oauth2accesstoken:'+$accessToken))
+        try {
+            $indexResponse=Invoke-WebRequest -Uri "https://$Region-docker.pkg.dev/v2/$Project/ee-development-containers/engagement-api/manifests/$indexDigest" `
+                -Headers @{Authorization="Basic $basic";Accept='application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json'} -TimeoutSec 30 -MaximumRedirection 0
+        } catch { throw 'Approved image index could not be verified. Do not restart setup.' }
+        finally { $basic=$null }
+        $indexBytes=if ($indexResponse.Content -is [byte[]]) { $indexResponse.Content } else { [Text.Encoding]::UTF8.GetBytes($indexResponse.Content) }
+        Assert-SetupImageMembership $indexBytes $ExpectedImage $executions[0].template.containers[0].image
+        # The execution v2 response omits VPC settings. Read the same execution
+        # through v1, check its UID, and preserve its recorded network annotations.
+        $v1Json=& $gcloud run jobs executions describe $execution "--project=$Project" "--region=$Region" --format=json --quiet 2>$null
+        if ($LASTEXITCODE -ne 0) { throw 'Executed network record could not be read. Do not restart.' }
+        $executedNetwork=Get-SetupExecutionNetwork ($v1Json | ConvertFrom-Json -Depth 100) $executions[0] $execution
+        if (-not $executedJob.template.template.vpcAccess) {
+            $executedJob.template.template | Add-Member -NotePropertyName vpcAccess -NotePropertyValue $executedNetwork
+        }
+        # Comparison-only normalization after index/leaf proof; nothing is
+        # written to the live job, actual execution, saved plan or start marker.
+        $executedJob.template.template.containers[0].image=$ExpectedImage
         Assert-SetupJob $executedJob $expectedJob $Project $Region $ExpectedImage $ImageSourceRevision
         $request = @{ resourceNames=@("projects/$Project"); pageSize=100; orderBy='timestamp desc'
             filter='resource.type="cloud_run_job" AND resource.labels.job_name="' + $jobName + '" AND resource.labels.location="' + $Region + '" AND labels."run.googleapis.com/execution_name"="' + $execution + '"' }
