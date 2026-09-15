@@ -212,10 +212,10 @@ state or identity configuration, including password-hashing settings.
 | Part | Status |
 |---|---|
 | Architecture and release sequence | Versioned in the protected public repository; Cloud Run build and deployment steps executed using an immutable digest |
-| Current engagement schema | Checksum-locked baseline; static checks and both staff-role race directions pass on PostgreSQL 16; applied once and verified in development |
-| Week 2 REST contract | Local draft package independently reviewed; runtime implementation remains pending |
+| Current engagement schema | Checksum-locked V0001–V0005 history; static and PostgreSQL 16 checks pass; each development update was applied through a recorded one-time job and verified |
+| Week 2 REST contract | Controlled package independently reviewed; the authentication, session, profile/photo and account-control subset is implemented and verified in private development |
 | GitHub repository | Public repository under the Project Manager account; protected `main`, required checks and pull-request merges are active |
 | GitHub verification pipeline | Boundary, contract, backend, security, dependency, container-build and private deployment-health checks have passed |
 | Google Cloud resources | Development foundation active: private Cloud Run, private PostgreSQL, private storage, service identities, secret containers, remote state and budget alerts. Staging and production are not created |
-| PostgreSQL migration execution | `V0001` completed once: one successful task, zero failures, post-checks passed and temporary execution access removed |
-| Cloud smoke test, monitoring and rollback | Authenticated private `/health` passed; Google Monitoring also receives successful health responses; uptime and error policies plus budget alerts exist. Alert-email delivery, dependency readiness and rollback rehearsal remain pending |
+| PostgreSQL migration execution | `V0001`–`V0005` completed through three recorded successful executions with zero task failures and database post-checks passed |
+| Cloud smoke test, monitoring and rollback | Authenticated private `/health` and the Week 2 synthetic profile/photo journey passed; Google Monitoring receives successful health responses; uptime, error and budget policies exist. Production restore/rollback rehearsal remains pending |
