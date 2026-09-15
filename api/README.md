@@ -1,6 +1,6 @@
 # Elder Engagement REST API v1
 
-Status: Sprint 2 controlled contract with a verified private development subset
+Status: Sprint 2 controlled contract with a verified and client-accepted private development subset
 Tracker ownership: EE-051 for the initial contract and EE-023 for the Week 4 production-ready integration package.
 
 ## Current source of truth

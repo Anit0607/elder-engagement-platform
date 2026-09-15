@@ -32,7 +32,7 @@ of an authenticator app. The job, pinned secret versions, immutable image and
 controlled execution are **not provisioned by this source change**. Never run
 it against another environment or expose it through a public route.
 
-Status: Sprint 1 foundation and the agreed Week 2 backend are deployed and verified in the private development environment. This remains a development release, not production readiness or final client acceptance. The top-level `backend/` directory is an inherited booking implementation and is not imported, renamed or extended here.
+Status: Sprint 1 foundation and the agreed Week 2 backend are deployed, verified and client-accepted in the private development environment. This remains a development release, not production readiness or final product acceptance. The acceptance boundary and evidence are recorded in [WEEK-2-ACCEPTANCE.md](WEEK-2-ACCEPTANCE.md). The top-level `backend/` directory is an inherited booking implementation and is not imported, renamed or extended here.
 
 Implemented now:
 
