@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -88,7 +89,7 @@ async def test_real_postgres_circle_suggestions_membership_limit_and_administrat
                    (user_id,display_name,preferred_language,interests,profile_complete)
                    VALUES($1,'Synthetic Circle Member','bn',$2,true)""",
                 member,
-                ["Music"],
+                json.dumps(["Music"]),
             )
         service = PostgresCircleService(
             DirectAuthorization(
