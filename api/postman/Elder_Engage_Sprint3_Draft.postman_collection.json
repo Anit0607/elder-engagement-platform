@@ -45,6 +45,11 @@
       "key": "circleId",
       "value": "66666666-6666-4666-8666-666666666666",
       "type": "string"
+    },
+    {
+      "key": "contentItemId",
+      "value": "77777777-7777-4777-8777-777777777777",
+      "type": "string"
     }
   ],
   "item": [
@@ -699,6 +704,111 @@
     {
       "name": "Administration",
       "item": [
+        {
+          "name": "List pending content",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/content-moderation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "content-moderation"
+              ]
+            },
+            "description": "Contract-only request. It is not claimed callable until the matching backend is deployed and verified."
+          }
+        },
+        {
+          "name": "Preview pending content",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/content-moderation/{{contentItemId}}/preview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "content-moderation",
+                "{{contentItemId}}",
+                "preview"
+              ]
+            },
+            "description": "Contract-only request. It is not claimed callable until the matching backend is deployed and verified."
+          }
+        },
+        {
+          "name": "Approve pending content",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outcome\": \"approved\",\n  \"reasonCode\": \"approved\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/content-moderation/{{contentItemId}}/decision",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "content-moderation",
+                "{{contentItemId}}",
+                "decision"
+              ]
+            },
+            "description": "Records the Administrator decision but does not publish the content."
+          }
+        },
         {
           "name": "List users",
           "request": {

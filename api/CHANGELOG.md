@@ -2,6 +2,14 @@
 
 The contract remains controlled. Only operations named in a matching verified deployment record are claimed callable; contract-only operations remain unavailable.
 
+## Administrator content moderation — 0.3.3 candidate — 16 September 2026
+
+- Added an Administrator-only pending queue, two-minute private previews, and final approve/reject decisions.
+- Rejection uses the approved reason list; `other` requires an explanation. Every decision records the Administrator, time, reason and audit event.
+- Approval does not publish content. Audience selection and Member feed publication remain EE-020.
+- Added checksum-locked V0008 and a separate read-only preview identity restricted to the private content-quarantine area.
+- Deployment and live synthetic-file proof are still required; this source candidate is not a production release.
+
 ## Contributor uploads — 0.3.2 — 16 September 2026
 
 - Added Contributor-only start/complete operations for private MP4, MP3/M4A and PDF uploads.

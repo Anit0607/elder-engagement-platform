@@ -49,6 +49,13 @@
       "file": "V0007__contributor_content_uploads.sql",
       "sha256": "4a8dd6e337d0abba08c2dfce78ccbdecdc30afecb709ea62279132eb1ce9947b",
       "requires_empty": false
+    },
+    {
+      "id": "V0008",
+      "name": "content_moderation_reasons",
+      "file": "V0008__content_moderation_reasons.sql",
+      "sha256": "fc48e9d48e5222b3e26c4cf04b0817a87f121e7665d5f32af499ec784218b2b2",
+      "requires_empty": false
     }
   ]
 }

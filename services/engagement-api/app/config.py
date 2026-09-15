@@ -52,6 +52,7 @@ class Settings(BaseModel):
     profile_enabled: bool = False
     profile_photo_enabled: bool = False
     content_upload_enabled: bool = False
+    content_moderation_enabled: bool = False
     account_controls_enabled: bool = False
     staff_authenticator_key_secret_ref: str = ""
     database_iam_user: str = ""
@@ -59,6 +60,7 @@ class Settings(BaseModel):
     uploads_bucket: str = Field(min_length=1)
     approved_media_bucket: str = Field(min_length=1)
     upload_signer_service_account: str = Field(min_length=1)
+    moderation_signer_service_account: str = ""
     upload_max_bytes: int = Field(ge=32_768, le=1_073_741_824)
     upload_allowed_mime_types: str = Field(min_length=1)
     upload_authorization_seconds: int = Field(ge=60, le=900)
@@ -105,7 +107,14 @@ class Settings(BaseModel):
     @classmethod
     def validate_signer(cls, value: str) -> str:
         if not SERVICE_ACCOUNT_PATTERN.fullmatch(value):
-            raise ValueError("upload signer must be a service-account email")
+            raise ValueError("storage signer must be a service-account email")
+        return value
+
+    @field_validator("moderation_signer_service_account")
+    @classmethod
+    def validate_optional_moderation_signer(cls, value: str) -> str:
+        if value and not SERVICE_ACCOUNT_PATTERN.fullmatch(value):
+            raise ValueError("moderation signer must be a service-account email")
         return value
 
     @field_validator(
@@ -113,6 +122,7 @@ class Settings(BaseModel):
         "profile_enabled",
         "profile_photo_enabled",
         "content_upload_enabled",
+        "content_moderation_enabled",
         "account_controls_enabled",
         mode="before",
     )
@@ -172,6 +182,10 @@ class Settings(BaseModel):
             raise ValueError("Profile photos require connected profiles")
         if self.content_upload_enabled and not self.staff_session_enabled:
             raise ValueError("Contributor content uploads require the connected staff runtime")
+        if self.content_moderation_enabled and not (
+            self.content_upload_enabled and self.moderation_signer_service_account
+        ):
+            raise ValueError("Content moderation requires uploads and its read-only signer")
         if self.account_controls_enabled and not self.staff_session_enabled:
             raise ValueError("Account controls require the connected staff runtime")
         if self.fcm_enabled and not self.fcm_project_id:

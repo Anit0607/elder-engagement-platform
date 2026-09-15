@@ -30,6 +30,28 @@ test("content uploads reject unsafe or disconnected activation", () => {
   }
 });
 
+test("content moderation requires private uploads and a dedicated signer", () => {
+  const missing = validateConfig({
+    ...baseline,
+    EE_CONTENT_MODERATION_ENABLED: "true",
+  });
+  assert(missing.some((error) => error.includes("moderation requires uploads")));
+  const valid = validateConfig({
+    ...baseline,
+    EE_STAFF_SESSION_ENABLED: "true",
+    EE_MEMBER_SESSION_ENABLED: "true",
+    EE_MEMBER_IDENTITY_PROVIDER: "identity_platform",
+    EE_FIREBASE_PROJECT_ID: baseline.EE_GCP_PROJECT_ID,
+    EE_MEMBER_TOKEN_AUDIENCE: baseline.EE_GCP_PROJECT_ID,
+    EE_DATABASE_IAM_USER: "application@example-development-project.iam",
+    EE_STAFF_AUTHENTICATOR_KEY_SECRET_REF: "projects/example-development-project/secrets/staff-authenticator/versions/1",
+    EE_CONTENT_UPLOAD_ENABLED: "true",
+    EE_CONTENT_MODERATION_ENABLED: "true",
+    EE_MODERATION_SIGNER_SERVICE_ACCOUNT: "ee-moderation@example-development-project.iam.gserviceaccount.com",
+  });
+  assert.equal(valid.length, 0);
+});
+
 test("staff runtime requires connected member runtime and a dedicated pinned secret", () => {
   const project = baseline.EE_GCP_PROJECT_ID;
   const staff = {

@@ -28,6 +28,8 @@ class Permission(StrEnum):
     MANAGE_CIRCLES = "manage-circles"
     MANAGE_CIRCLE_MEMBERSHIPS = "manage-circle-memberships"
     UPLOAD_CONTENT = "upload-content"
+    VIEW_CONTENT_MODERATION = "view-content-moderation"
+    DECIDE_CONTENT_MODERATION = "decide-content-moderation"
     CREATE_STAFF = "create-staff"
     ACCOUNT_STATUS = "account-status"
     ACCOUNT_ROLE = "account-role"
@@ -56,7 +58,13 @@ def require_permission(principal: Principal, permission: Permission, target: UUI
         allowed = principal.role == "administrator"
     elif permission == Permission.UPLOAD_CONTENT:
         allowed = principal.role == "contributor" and target == principal.user_id
-    elif permission in {Permission.CREATE_STAFF, Permission.ACCOUNT_STATUS, Permission.ACCOUNT_ROLE}:
+    elif permission in {
+        Permission.CREATE_STAFF,
+        Permission.ACCOUNT_STATUS,
+        Permission.ACCOUNT_ROLE,
+        Permission.VIEW_CONTENT_MODERATION,
+        Permission.DECIDE_CONTENT_MODERATION,
+    }:
         allowed = principal.role == "administrator"
     if principal.role not in {"member", "contributor", "administrator"} or not allowed:
         raise MemberSessionFailure(status=403, code="FORBIDDEN", title="Permission denied")
@@ -93,6 +101,7 @@ class SessionAuthorization:
                     Permission.ACCOUNT_ROLE,
                     Permission.MANAGE_CIRCLES,
                     Permission.MANAGE_CIRCLE_MEMBERSHIPS,
+                    Permission.DECIDE_CONTENT_MODERATION,
                 }:
                     # Serialize cross-account mutations before either user row
                     # is locked; prevents administrator A/B lock inversions and

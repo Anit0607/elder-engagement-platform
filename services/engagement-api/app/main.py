@@ -27,6 +27,13 @@ from app.account_controls import (
 )
 from app.circles import CircleCreate, CircleSettings, CircleSettingsUpdate, CircleSummary, CircleUpdate
 from app.config import Settings, load_settings
+from app.content_moderation import (
+    ModerationDecisionReceipt,
+    ModerationDecisionRequest,
+    ModerationPreview,
+    ModerationQueueItem,
+    UnconfiguredContentModerationService,
+)
 from app.content_uploads import (
     ContentUploadAuthorisation,
     ContentUploadReceipt,
@@ -117,6 +124,7 @@ def create_app(
     notification_preferences_service=None,
     circle_service=None,
     content_upload_service=None,
+    content_moderation_service=None,
     account_controls=None,
     member_runtime_factory=member_runtime,
     probe_timeout_seconds: float = 2.0,
@@ -174,6 +182,12 @@ def create_app(
                     application.state.content_upload_service = getattr(
                         handler, "content_upload_service", UnconfiguredContentUploadService()
                     )
+                if config.content_moderation_enabled and content_moderation_service is None:
+                    application.state.content_moderation_service = getattr(
+                        handler,
+                        "content_moderation_service",
+                        UnconfiguredContentModerationService(),
+                    )
                 if config.account_controls_enabled and account_controls is None:
                     application.state.account_controls = getattr(
                         handler, "account_controls", UnconfiguredAccountControls()
@@ -197,6 +211,10 @@ def create_app(
                         application.state.profile_photo_service = UnconfiguredProfilePhotoService()
                     if content_upload_service is None:
                         application.state.content_upload_service = UnconfiguredContentUploadService()
+                    if content_moderation_service is None:
+                        application.state.content_moderation_service = (
+                            UnconfiguredContentModerationService()
+                        )
                     if account_controls is None:
                         application.state.account_controls = UnconfiguredAccountControls()
         else:
@@ -218,6 +236,9 @@ def create_app(
     app.state.profile_service = profile_service or UnconfiguredProfileService()
     app.state.profile_photo_service = profile_photo_service or UnconfiguredProfilePhotoService()
     app.state.content_upload_service = content_upload_service or UnconfiguredContentUploadService()
+    app.state.content_moderation_service = (
+        content_moderation_service or UnconfiguredContentModerationService()
+    )
     app.state.notification_preferences_service = (
         notification_preferences_service or UnconfiguredNotificationPreferencesService()
     )
@@ -439,6 +460,47 @@ def create_app(
         try:
             return await app.state.content_upload_service.complete(
                 bearer_token(request), uploadId, request.state.trace_id
+            )
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.get(
+        "/v1/admin/content-moderation",
+        tags=["Administration"],
+        response_model=list[ModerationQueueItem],
+    )
+    async def list_content_moderation_queue(request: Request):
+        try:
+            return await app.state.content_moderation_service.queue(bearer_token(request))
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.get(
+        "/v1/admin/content-moderation/{contentItemId}/preview",
+        tags=["Administration"],
+        response_model=ModerationPreview,
+    )
+    async def preview_content_for_moderation(request: Request, contentItemId: uuid.UUID):
+        try:
+            return await app.state.content_moderation_service.preview(
+                bearer_token(request), contentItemId
+            )
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.post(
+        "/v1/admin/content-moderation/{contentItemId}/decision",
+        tags=["Administration"],
+        response_model=ModerationDecisionReceipt,
+    )
+    async def decide_content_moderation(
+        request: Request,
+        contentItemId: uuid.UUID,
+        payload: ModerationDecisionRequest,
+    ):
+        try:
+            return await app.state.content_moderation_service.decide(
+                bearer_token(request), contentItemId, payload, request.state.trace_id
             )
         except MemberSessionFailure as exc:
             return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)

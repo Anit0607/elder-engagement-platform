@@ -64,6 +64,7 @@ const collection = {
     { key: "sessionId", value: "44444444-4444-4444-8444-444444444444", type: "string" },
     { key: "uploadId", value: "55555555-5555-4555-8555-555555555555", type: "string" },
     { key: "circleId", value: "66666666-6666-4666-8666-666666666666", type: "string" },
+    { key: "contentItemId", value: "77777777-7777-4777-8777-777777777777", type: "string" },
   ],
   item: [
     {
@@ -204,6 +205,21 @@ const collection = {
     {
       name: "Administration",
       item: [
+        request("List pending content", "GET", "/v1/admin/content-moderation"),
+        request(
+          "Preview pending content",
+          "GET",
+          "/v1/admin/content-moderation/{{contentItemId}}/preview",
+        ),
+        request(
+          "Approve pending content",
+          "POST",
+          "/v1/admin/content-moderation/{{contentItemId}}/decision",
+          {
+            body: { outcome: "approved", reasonCode: "approved" },
+            description: "Records the Administrator decision but does not publish the content.",
+          },
+        ),
         request("List users", "GET", "/v1/admin/users?limit=25"),
         request("Create Member profile", "POST", "/v1/admin/users", {
           body: {
