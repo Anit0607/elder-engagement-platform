@@ -93,6 +93,11 @@ output "moderation_signer_service_account" {
   value       = google_service_account.moderation_viewer.email
 }
 
+output "content_delivery_signer_service_account" {
+  description = "Dedicated read-only identity used for short-lived approved-content delivery."
+  value       = google_service_account.content_delivery.email
+}
+
 output "secret_containers" {
   description = "Created secret containers. Values must be inserted out of band."
   value       = { for name, secret in google_secret_manager_secret.application : name => secret.id }

@@ -110,3 +110,23 @@ resource "google_storage_bucket_iam_member" "moderation_viewer_reads_content_qua
     expression = "resource.name.startsWith('projects/_/buckets/${google_storage_bucket.uploads.name}/objects/content-quarantine/')"
   }
 }
+
+resource "google_storage_bucket_iam_member" "runtime_manages_approved_content" {
+  bucket = google_storage_bucket.approved_media.name
+  role   = "roles/storage.objectUser"
+  member = "serviceAccount:${google_service_account.runtime.email}"
+  condition {
+    title      = "approved-content-only"
+    expression = "resource.name.startsWith('projects/_/buckets/${google_storage_bucket.approved_media.name}/objects/content/')"
+  }
+}
+
+resource "google_storage_bucket_iam_member" "content_delivery_reads_approved_content" {
+  bucket = google_storage_bucket.approved_media.name
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${google_service_account.content_delivery.email}"
+  condition {
+    title      = "approved-content-delivery-only"
+    expression = "resource.name.startsWith('projects/_/buckets/${google_storage_bucket.approved_media.name}/objects/content/')"
+  }
+}

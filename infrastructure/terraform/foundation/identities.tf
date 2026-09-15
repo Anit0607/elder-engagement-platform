@@ -28,6 +28,12 @@ resource "google_service_account" "moderation_viewer" {
   display_name = "Elder Engage ${var.environment} moderation preview signer"
 }
 
+resource "google_service_account" "content_delivery" {
+  project      = var.project_id
+  account_id   = "${local.name_prefix}-delivery"
+  display_name = "Elder Engage ${var.environment} content delivery signer"
+}
+
 resource "google_project_iam_member" "runtime" {
   for_each = local.runtime_project_roles
 
@@ -69,6 +75,12 @@ resource "google_service_account_iam_member" "runtime_uses_upload_signer" {
 
 resource "google_service_account_iam_member" "runtime_uses_moderation_viewer" {
   service_account_id = google_service_account.moderation_viewer.name
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:${google_service_account.runtime.email}"
+}
+
+resource "google_service_account_iam_member" "runtime_uses_content_delivery" {
+  service_account_id = google_service_account.content_delivery.name
   role               = "roles/iam.serviceAccountTokenCreator"
   member             = "serviceAccount:${google_service_account.runtime.email}"
 }

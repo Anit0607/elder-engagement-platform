@@ -1,6 +1,6 @@
 # Elder Engagement REST API v1
 
-Status: Sprint 3 controlled contract with verified private development through EE-019
+Status: Sprint 3 controlled contract with verified private development through EE-019 and an EE-020 source candidate
 Tracker ownership: EE-051 for the initial contract and EE-023 for the Week 4 production-ready integration package.
 
 ## Current source of truth
@@ -23,7 +23,7 @@ cd ..\..
 node tools\generate_engagement_postman.mjs
 ```
 
-The contract defines the Week 2 foundation plus Sprint 3 notification-preference, predefined-circle, private Contributor-upload and Administrator-moderation interfaces. The private development deployment verifies authentication, sessions, own profiles, profile photos, status/role controls, notification preferences, circles, Contributor uploads and Administrator moderation. V0008, the restricted preview identity and live synthetic-file proof passed. Administrator user creation/listing remains contract-only until its planned Administrator workflow is implemented. Feed, events and later broadcast operations will be added under their approved milestones. No staging or production availability is claimed.
+The contract defines the Week 2 foundation plus Sprint 3 notification-preference, predefined-circle, private Contributor-upload, Administrator-moderation and circle-filtered Member-feed interfaces. The private development deployment verifies authentication, sessions, own profiles, profile photos, status/role controls, notification preferences, circles, Contributor uploads and Administrator moderation. The feed remains a source candidate until its separate delivery identity, approved-file promotion and live audience-isolation proof pass. Administrator user creation/listing remains contract-only until its planned Administrator workflow is implemented. Events and later broadcast operations will be added under their approved milestones. No staging or production availability is claimed.
 
 ## Version and server rules
 

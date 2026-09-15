@@ -18,6 +18,7 @@ const allowedKeys = new Set([
   "EE_PROFILE_ENABLED",
   "EE_CONTENT_UPLOAD_ENABLED",
   "EE_CONTENT_MODERATION_ENABLED", "EE_MODERATION_SIGNER_SERVICE_ACCOUNT",
+  "EE_CONTENT_FEED_ENABLED", "EE_CONTENT_DELIVERY_SIGNER_SERVICE_ACCOUNT",
   "EE_ACCOUNT_CONTROLS_ENABLED",
 ]);
 
@@ -66,6 +67,13 @@ function boundedInteger(values, errors, key, minimum, maximum) {
 
 export function validateConfig(values) {
   const errors = [];
+  if (Object.hasOwn(values, "EE_CONTENT_FEED_ENABLED") && !["true", "false"].includes(values.EE_CONTENT_FEED_ENABLED)) {
+    errors.push("EE_CONTENT_FEED_ENABLED must be true or false");
+  }
+  if (values.EE_CONTENT_FEED_ENABLED === "true" &&
+      (values.EE_CONTENT_MODERATION_ENABLED !== "true" || !values.EE_CONTENT_DELIVERY_SIGNER_SERVICE_ACCOUNT)) {
+    errors.push("Content feed requires moderation and its read-only delivery signer");
+  }
   if (Object.hasOwn(values, "EE_CONTENT_MODERATION_ENABLED") && !["true", "false"].includes(values.EE_CONTENT_MODERATION_ENABLED)) {
     errors.push("EE_CONTENT_MODERATION_ENABLED must be true or false");
   }
@@ -131,6 +139,9 @@ export function validateConfig(values) {
   }
   if (values.EE_MODERATION_SIGNER_SERVICE_ACCOUNT && !serviceAccountPattern.test(values.EE_MODERATION_SIGNER_SERVICE_ACCOUNT)) {
     errors.push("EE_MODERATION_SIGNER_SERVICE_ACCOUNT must be a service-account email");
+  }
+  if (values.EE_CONTENT_DELIVERY_SIGNER_SERVICE_ACCOUNT && !serviceAccountPattern.test(values.EE_CONTENT_DELIVERY_SIGNER_SERVICE_ACCOUNT)) {
+    errors.push("EE_CONTENT_DELIVERY_SIGNER_SERVICE_ACCOUNT must be a service-account email");
   }
   if (values.EE_UPLOADS_BUCKET && values.EE_UPLOADS_BUCKET === values.EE_APPROVED_MEDIA_BUCKET) {
     errors.push("quarantine and approved-media buckets must be distinct");

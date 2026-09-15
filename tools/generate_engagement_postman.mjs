@@ -203,6 +203,24 @@ const collection = {
       ],
     },
     {
+      name: "Member content feed",
+      item: [
+        request("List my visible content", "GET", "/v1/feed?limit=20", {
+          description:
+            "Member only. Returns approved and published items allowed for all Members or one of the Member's active circles.",
+        }),
+        request(
+          "Open visible content media",
+          "GET",
+          "/v1/feed/{{contentItemId}}/media",
+          {
+            description:
+              "Rechecks current circle access and returns a sensitive five-minute private media link. Do not log or retain it.",
+          },
+        ),
+      ],
+    },
+    {
       name: "Administration",
       item: [
         request("List pending content", "GET", "/v1/admin/content-moderation"),
@@ -218,6 +236,16 @@ const collection = {
           {
             body: { outcome: "approved", reasonCode: "approved" },
             description: "Records the Administrator decision but does not publish the content.",
+          },
+        ),
+        request(
+          "Publish approved content to one circle",
+          "POST",
+          "/v1/admin/content/{{contentItemId}}/publication",
+          {
+            body: { audience: "circles", circleIds: ["{{circleId}}"] },
+            description:
+              "Moves one approved clean file from quarantine to private approved storage and records the controlled audience.",
           },
         ),
         request("List users", "GET", "/v1/admin/users?limit=25"),

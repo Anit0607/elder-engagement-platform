@@ -14,6 +14,11 @@ from google.cloud.sql.connector import Connector, IPTypes
 from app.account_controls import PostgresAccountControls
 from app.authorization import SessionAuthorization
 from app.config import ConfigurationError, Settings
+from app.content_feed import (
+    GoogleContentFeedStorage,
+    PostgresContentFeedService,
+    verify_content_feed_schema,
+)
 from app.content_moderation import (
     GoogleModerationPreviewStorage,
     PostgresContentModerationService,
@@ -188,6 +193,17 @@ async def member_runtime(
                     handler.content_moderation_service = PostgresContentModerationService(
                         authorization,
                         GoogleModerationPreviewStorage(moderation_storage),
+                    )
+                if settings.content_feed_enabled:
+                    await verify_content_feed_schema(pool)
+                    delivery_storage = GooglePhotoStorage(
+                        settings.gcp_project_id,
+                        settings.content_delivery_signer_service_account,
+                        settings.uploads_bucket,
+                        settings.approved_media_bucket,
+                    )
+                    handler.content_feed_service = PostgresContentFeedService(
+                        authorization, GoogleContentFeedStorage(delivery_storage)
                     )
                 if settings.account_controls_enabled:
                     handler.account_controls = PostgresAccountControls(

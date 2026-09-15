@@ -27,6 +27,13 @@ from app.account_controls import (
 )
 from app.circles import CircleCreate, CircleSettings, CircleSettingsUpdate, CircleSummary, CircleUpdate
 from app.config import Settings, load_settings
+from app.content_feed import (
+    ContentPublicationReceipt,
+    ContentPublicationRequest,
+    FeedMedia,
+    FeedPage,
+    UnconfiguredContentFeedService,
+)
 from app.content_moderation import (
     ModerationDecisionReceipt,
     ModerationDecisionRequest,
@@ -125,6 +132,7 @@ def create_app(
     circle_service=None,
     content_upload_service=None,
     content_moderation_service=None,
+    content_feed_service=None,
     account_controls=None,
     member_runtime_factory=member_runtime,
     probe_timeout_seconds: float = 2.0,
@@ -188,6 +196,10 @@ def create_app(
                         "content_moderation_service",
                         UnconfiguredContentModerationService(),
                     )
+                if config.content_feed_enabled and content_feed_service is None:
+                    application.state.content_feed_service = getattr(
+                        handler, "content_feed_service", UnconfiguredContentFeedService()
+                    )
                 if config.account_controls_enabled and account_controls is None:
                     application.state.account_controls = getattr(
                         handler, "account_controls", UnconfiguredAccountControls()
@@ -215,6 +227,8 @@ def create_app(
                         application.state.content_moderation_service = (
                             UnconfiguredContentModerationService()
                         )
+                    if content_feed_service is None:
+                        application.state.content_feed_service = UnconfiguredContentFeedService()
                     if account_controls is None:
                         application.state.account_controls = UnconfiguredAccountControls()
         else:
@@ -239,6 +253,7 @@ def create_app(
     app.state.content_moderation_service = (
         content_moderation_service or UnconfiguredContentModerationService()
     )
+    app.state.content_feed_service = content_feed_service or UnconfiguredContentFeedService()
     app.state.notification_preferences_service = (
         notification_preferences_service or UnconfiguredNotificationPreferencesService()
     )
@@ -501,6 +516,43 @@ def create_app(
         try:
             return await app.state.content_moderation_service.decide(
                 bearer_token(request), contentItemId, payload, request.state.trace_id
+            )
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.post(
+        "/v1/admin/content/{contentItemId}/publication",
+        tags=["Administration"],
+        response_model=ContentPublicationReceipt,
+    )
+    async def publish_content(
+        request: Request,
+        contentItemId: uuid.UUID,
+        payload: ContentPublicationRequest,
+    ):
+        try:
+            return await app.state.content_feed_service.publish(
+                bearer_token(request), contentItemId, payload, request.state.trace_id
+            )
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.get("/v1/feed", tags=["Content"], response_model=FeedPage)
+    async def get_content_feed(request: Request, limit: int = 20, cursor: str | None = None):
+        if not 1 <= limit <= 50:
+            return _problem(request, 400, "VALIDATION_FAILED", "Request validation failed")
+        try:
+            return await app.state.content_feed_service.feed(
+                bearer_token(request), limit, cursor
+            )
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.get("/v1/feed/{contentItemId}/media", tags=["Content"], response_model=FeedMedia)
+    async def get_content_media(request: Request, contentItemId: uuid.UUID):
+        try:
+            return await app.state.content_feed_service.media(
+                bearer_token(request), contentItemId
             )
         except MemberSessionFailure as exc:
             return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)

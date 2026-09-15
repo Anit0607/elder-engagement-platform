@@ -48,6 +48,13 @@ require connected staff authentication. Enabling the switch also requires the
 V0007 upload record and the restricted `content-quarantine/` storage permission;
 it does not enable Administrator approval or publish any object.
 
+The Member feed is off by default (`EE_CONTENT_FEED_ENABLED=false`). It requires
+the reviewed moderation workflow and a dedicated
+`EE_CONTENT_DELIVERY_SIGNER_SERVICE_ACCOUNT`. That identity can read only the
+private approved `content/` area; it cannot upload, change or delete media.
+Enabling the feed does not publish an item by itself—an Administrator must select
+the audience for each approved item.
+
 Staff login is off by default (`EE_STAFF_SESSION_ENABLED=false`). Turning it on
 requires the connected Member runtime and a dedicated, numeric
 `EE_STAFF_AUTHENTICATOR_KEY_SECRET_REF`, distinct from session and field-encryption
@@ -81,6 +88,7 @@ These are proposed deploy-time identities, not created accounts. Apply roles to 
 | `ee-runtime-api@<project>` | Cloud Run REST API | Cloud SQL Client; Secret Accessor on database/session/refresh/encryption secrets only; Logging Writer; Monitoring Metric Writer; permission to mint upload grants through the dedicated signer | Project-wide Secret Accessor, bucket admin, IAM admin, provider-admin roles |
 | `ee-upload-signer@<project>` | Authority represented by short-lived quarantine upload grants | Storage Object Creator on the quarantine bucket only; API runtime gets Service Account Token Creator on this identity only | Read/list/delete objects, approved-media access, downloadable key |
 | `ee-moderation-worker@<project>` | Inspect quarantine objects and publish approved assets | Cloud SQL Client; database secret access; object read/delete in quarantine and object create in approved bucket, preferably a custom bucket-scoped role | IAM changes, unrelated secrets, project-wide Storage Admin |
+| `ee-content-delivery@<project>` | Sign short-lived Member links for approved content | Read approved `content/` objects only; runtime may request signatures | Upload, change, delete, quarantine access, project-wide Storage Admin |
 | `ee-notification-worker@<project>` | Dispatch approved FCM reminders | Cloud SQL Client; database secret access; Firebase Cloud Messaging send role in the environment project | Firebase project administration, user management, service-account key |
 | `ee-broadcast-worker@<project>` | Agora control and recording orchestration | Cloud SQL Client; database and Agora secret access; bucket-scoped recording object creator when recording is approved | Other provider secrets, bucket admin, project editor |
 | `ee-schema-migrator@<project>` | Run reviewed immutable migrations as a one-shot job | Cloud SQL Client; migration database secret only; Logging Writer | Runtime traffic, bucket/provider access, database-owner use after migration |

@@ -2,18 +2,18 @@
   "openapi": "3.1.1",
   "info": {
     "title": "Elder Engagement REST API",
-    "version": "0.3.3",
+    "version": "0.3.4",
     "summary": "Controlled Sprint 3 contract draft for Android, iOS, Contributor and Administrator clients",
-    "description": "This draft covers the verified Week 2 foundation plus the Week 3 notification-preference, predefined-circle, private Contributor-upload and Administrator moderation interfaces. It contains no production hostname, credential or personal data. Feed and events will be added to the same v1 contract before the Week 4 interface freeze."
+    "description": "This draft covers the verified Week 2 foundation plus the Week 3 notification-preference, predefined-circle, private Contributor-upload, Administrator moderation and circle-filtered Member-feed interfaces. It contains no production hostname, credential or personal data. Events will be added to the same v1 contract before the Week 4 interface freeze."
   },
   "x-contract-status": "sprint-3-draft",
   "x-implementation-status": "Contract-only draft. No listed operation is claimed callable until the matching backend commit is deployed and its smoke-test evidence is recorded.",
   "x-planned-expansions": [
     {
-      "trackerItems": ["EE-020", "EE-021", "EE-023"],
+      "trackerItems": ["EE-021", "EE-023"],
       "target": "Week 4",
       "status": "Not available in this draft",
-      "capabilities": ["feed", "events"]
+      "capabilities": ["events"]
     },
     {
       "trackerItems": ["EE-040", "EE-041", "EE-042"],
@@ -32,7 +32,8 @@
     "MFA_REQUIRED": "Prompt the authorised staff user for the configured second factor and retry once.",
     "RATE_LIMITED": "Wait for the Retry-After duration before retrying.",
     "CIRCLE_LIMIT_REACHED": "Explain the current membership limit and let the Member leave another circle before trying again.",
-    "UPLOAD_MISMATCH": "Do not retry completion. Ask the Contributor to select the correct file and start a new upload."
+    "UPLOAD_MISMATCH": "Do not retry completion. Ask the Contributor to select the correct file and start a new upload.",
+    "INVALID_CURSOR": "Discard the saved cursor and reload the first feed page."
   },
   "x-http-status-by-error-code": {
     "INVALID_REQUEST": 400,
@@ -50,6 +51,7 @@
     "CONFLICT": 409,
     "CIRCLE_LIMIT_REACHED": 409,
     "UPLOAD_MISMATCH": 409,
+    "INVALID_CURSOR": 400,
     "RATE_LIMITED": 429,
     "DEPENDENCY_UNAVAILABLE": 503,
     "INTERNAL_ERROR": 500,
@@ -454,6 +456,61 @@
           "403": { "$ref": "#/components/responses/Forbidden" },
           "404": { "$ref": "#/components/responses/NotFound" },
           "409": { "$ref": "#/components/responses/Conflict" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/v1/admin/content/{contentItemId}/publication": {
+      "post": {
+        "tags": ["Administration"],
+        "operationId": "publishApprovedContent",
+        "summary": "Publish an approved item to all Members or selected circles",
+        "description": "Administrator only. The item must be approved, unpublished and backed by a clean reviewed file. Publication moves the file from quarantine to private approved storage and records the selected audience atomically.",
+        "parameters": [{ "name": "contentItemId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ContentPublicationRequest" } } } },
+        "responses": {
+          "200": { "description": "Content published to its controlled audience", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ContentPublicationReceipt" } } } },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/v1/feed": {
+      "get": {
+        "tags": ["Content"],
+        "operationId": "getMyContentFeed",
+        "summary": "List approved content visible to the signed-in Member",
+        "description": "Member only. Every page rechecks current active-circle membership. Unapproved, unpublished and quarantined items are excluded.",
+        "parameters": [
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 } },
+          { "name": "cursor", "in": "query", "schema": { "type": "string", "minLength": 8, "maxLength": 256 } }
+        ],
+        "responses": {
+          "200": { "description": "Visible content page", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FeedPage" } } } },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/v1/feed/{contentItemId}/media": {
+      "get": {
+        "tags": ["Content"],
+        "operationId": "openVisibleContentMedia",
+        "summary": "Create a short-lived private link for one visible feed item",
+        "description": "Member only. Circle visibility is rechecked before issuing the five-minute media link. The link is sensitive and must not be logged or retained.",
+        "parameters": [{ "name": "contentItemId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "Private media access authorised", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FeedMedia" } } } },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
           "503": { "$ref": "#/components/responses/ServiceUnavailable" }
         }
       }
@@ -1543,6 +1600,64 @@
           "published": { "type": "boolean", "const": false }
         }
       },
+      "ContentPublicationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["audience"],
+        "properties": {
+          "audience": { "type": "string", "enum": ["all_members", "circles"] },
+          "circleIds": { "type": "array", "maxItems": 20, "uniqueItems": true, "items": { "type": "string", "format": "uuid" }, "default": [] }
+        },
+        "oneOf": [
+          { "properties": { "audience": { "const": "all_members" }, "circleIds": { "maxItems": 0 } } },
+          { "required": ["circleIds"], "properties": { "audience": { "const": "circles" }, "circleIds": { "minItems": 1, "maxItems": 20 } } }
+        ]
+      },
+      "ContentPublicationReceipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["contentItemId", "audience", "circleIds", "publishedAt"],
+        "properties": {
+          "contentItemId": { "type": "string", "format": "uuid" },
+          "audience": { "type": "string", "enum": ["all_members", "circles"] },
+          "circleIds": { "type": "array", "maxItems": 20, "uniqueItems": true, "items": { "type": "string", "format": "uuid" } },
+          "publishedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "FeedItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["contentItemId", "kind", "title", "description", "language", "contributorDisplayName", "publishedAt"],
+        "properties": {
+          "contentItemId": { "type": "string", "format": "uuid" },
+          "kind": { "type": "string", "enum": ["video", "audio", "pdf", "youtube", "broadcast_replay"] },
+          "title": { "type": "string", "minLength": 2, "maxLength": 200 },
+          "description": { "type": ["string", "null"], "maxLength": 4000 },
+          "language": { "type": ["string", "null"], "enum": ["en", "bn", "hi", null] },
+          "contributorDisplayName": { "type": ["string", "null"], "maxLength": 120 },
+          "publishedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "FeedPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "nextCursor"],
+        "properties": {
+          "items": { "type": "array", "maxItems": 50, "items": { "$ref": "#/components/schemas/FeedItem" } },
+          "nextCursor": { "type": ["string", "null"], "minLength": 8, "maxLength": 256 }
+        }
+      },
+      "FeedMedia": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["contentItemId", "mediaUrl", "contentType", "expiresAt"],
+        "properties": {
+          "contentItemId": { "type": "string", "format": "uuid" },
+          "mediaUrl": { "type": "string", "format": "uri", "description": "Sensitive five-minute private value that must not be logged or retained." },
+          "contentType": { "type": "string", "enum": ["video/mp4", "audio/mpeg", "audio/mp4", "audio/x-m4a", "application/pdf"] },
+          "expiresAt": { "type": "string", "format": "date-time" }
+        }
+      },
       "Problem": {
         "type": "object",
         "additionalProperties": false,
@@ -1588,6 +1703,7 @@
           "CONFLICT",
           "CIRCLE_LIMIT_REACHED",
           "UPLOAD_MISMATCH",
+          "INVALID_CURSOR",
           "RATE_LIMITED",
           "DEPENDENCY_UNAVAILABLE",
           "INTERNAL_ERROR",

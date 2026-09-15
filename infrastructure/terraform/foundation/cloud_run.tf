@@ -50,6 +50,10 @@ resource "google_cloud_run_v2_service" "api" {
           var.enable_content_moderation ? {
             EE_CONTENT_MODERATION_ENABLED        = "true"
             EE_MODERATION_SIGNER_SERVICE_ACCOUNT = google_service_account.moderation_viewer.email
+          } : {},
+          var.enable_content_feed ? {
+            EE_CONTENT_FEED_ENABLED                    = "true"
+            EE_CONTENT_DELIVERY_SIGNER_SERVICE_ACCOUNT = google_service_account.content_delivery.email
           } : {}
         )
         content {
@@ -130,6 +134,10 @@ resource "google_cloud_run_v2_service" "api" {
     precondition {
       condition     = !var.enable_content_moderation || var.enable_content_uploads
       error_message = "Content moderation requires private Contributor uploads."
+    }
+    precondition {
+      condition     = !var.enable_content_feed || var.enable_content_moderation
+      error_message = "Content feed requires the reviewed moderation workflow."
     }
     precondition {
       condition     = !var.enable_account_controls || var.enable_staff_session
