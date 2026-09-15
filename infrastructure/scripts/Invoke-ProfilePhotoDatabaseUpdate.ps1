@@ -202,6 +202,59 @@ function Assert-UpdateMarker {
     return [string]$Marker.revision
 }
 
+function Assert-ImageMembership {
+    param([byte[]]$RawIndex, [string]$ParentImage, [string]$ExecutionImage)
+    $hash = [Convert]::ToHexString(
+        [Security.Cryptography.SHA256]::HashData($RawIndex)
+    ).ToLowerInvariant()
+    if (($ParentImage -split '@sha256:')[-1] -cne $hash) {
+        throw 'Registry index bytes differ from the approved immutable image.'
+    }
+    $index = [Text.Encoding]::UTF8.GetString($RawIndex) | ConvertFrom-Json
+    $linux = @($index.manifests | Where-Object {
+        $_.platform.os -ceq 'linux' -and $_.platform.architecture -ceq 'amd64'
+    })
+    if ($index.mediaType -cnotin @(
+            'application/vnd.oci.image.index.v1+json',
+            'application/vnd.docker.distribution.manifest.list.v2+json'
+        ) -or $linux.Count -ne 1 -or $linux[0].digest -cnotmatch '^sha256:[0-9a-f]{64}$') {
+        throw 'Approved index must contain exactly one Linux AMD64 image.'
+    }
+    $leaf = ($ParentImage -split '@')[0] + '@' + $linux[0].digest
+    if ($ExecutionImage -cne $ParentImage -and $ExecutionImage -cne $leaf) {
+        throw 'Executed image is not the approved index or its verified Linux image.'
+    }
+}
+
+function Assert-RegistryImageMembership {
+    param([string]$ParentImage, [string]$ExecutionImage)
+    $pattern = '^(?<region>[a-z]+-[a-z]+[0-9])-docker[.]pkg[.]dev/(?<project>[a-z][a-z0-9-]{4,28}[a-z0-9])/' +
+        '(?<repository>[a-z][a-z0-9-]{0,61}[a-z0-9])/(?<image>[a-z][a-z0-9-]{0,127})@(?<digest>sha256:[0-9a-f]{64})$'
+    if ($ParentImage -cnotmatch $pattern -or $Matches.region -cne $script:region -or
+        $Matches.project -cne $script:projectId -or $Matches.repository -cne $script:artifactRepository -or
+        $Matches.image -cne 'engagement-migration') {
+        throw 'Approved migration image address is invalid.'
+    }
+    $registryUri = "https://$($Matches.region)-docker.pkg.dev/v2/$($Matches.project)/" +
+        "$($Matches.repository)/$($Matches.image)/manifests/$($Matches.digest)"
+    $basic = [Convert]::ToBase64String(
+        [Text.Encoding]::UTF8.GetBytes('oauth2accesstoken:' + $script:accessToken)
+    )
+    try {
+        $response = Invoke-WebRequest -Uri $registryUri -Headers @{
+            Authorization = "Basic $basic"
+            Accept = 'application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json'
+        } -TimeoutSec 30 -MaximumRedirection 0
+    }
+    catch { throw 'Approved migration image index could not be verified.' }
+    finally { $basic = $null }
+    $bytes = if ($response.Content -is [byte[]]) {
+        $response.Content
+    }
+    else { [Text.Encoding]::UTF8.GetBytes($response.Content) }
+    Assert-ImageMembership $bytes $ParentImage $ExecutionImage
+}
+
 $resolvedBackend = Resolve-IgnoredInputFile -Path $BackendConfig -Label 'BackendConfig'
 $resolvedPlan = Resolve-IgnoredInputFile -Path $ReviewedPlan -Label 'ReviewedPlan'
 if ((Get-FileHash -LiteralPath $resolvedPlan -Algorithm SHA256).Hash.ToLowerInvariant() -cne $ExpectedPlanSha256) {
@@ -327,6 +380,8 @@ try {
             @($execution.spec.template.spec.containers).Count -ne 1) {
             throw 'The recorded execution differs from the approved task. Do not restart.'
         }
+        Assert-RegistryImageMembership -ParentImage $ExpectedImage `
+            -ExecutionImage $execution.spec.template.spec.containers[0].image
         $completed = @($execution.status.conditions | Where-Object { $_.type -ceq 'Completed' -and $_.status -ceq 'True' })
         if ($completed.Count -ne 1 -or [int]$execution.status.succeededCount -ne 1 -or [int]$execution.status.failedCount -ne 0) {
             throw 'Successful completion is not yet proven. Verify again; never restart the update.'
@@ -360,8 +415,9 @@ try {
             -FailureMessage 'A prior database execution could not be verified.'
         $environmentMap = Get-EnvironmentMap -Entries $execution.spec.template.spec.containers[0].env
         if ($environmentMap.SOURCE_REVISION -ceq $previousRevision -and
-            $environmentMap.DB_NAME -ceq 'engagement' -and
-            $execution.spec.template.spec.containers[0].image -ceq "$prefix$previousDigest") {
+            $environmentMap.DB_NAME -ceq 'engagement') {
+            Assert-RegistryImageMembership -ParentImage "$prefix$previousDigest" `
+                -ExecutionImage $execution.spec.template.spec.containers[0].image
             $priorUpdate += $execution
         }
     }

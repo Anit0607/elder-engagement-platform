@@ -16,7 +16,7 @@ foreach ($name in @('Get-PlanEnvironmentMap', 'Test-ExecutionLogEntry', 'Get-Exe
     . ([scriptblock]::Create($definition[0].Extent.Text))
 }
 foreach ($name in @('Assert-UpdatePlan', 'Assert-BackupRecord', 'Assert-SuccessRecord', 'Convert-EmptyJobDefaults',
-    'Get-CompletionLogRequest', 'Assert-UpdateMarker')) {
+    'Get-CompletionLogRequest', 'Assert-UpdateMarker', 'Assert-ImageMembership')) {
     $definition = $ast.FindAll({ param($node)
         $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name
     }, $true)
@@ -199,4 +199,21 @@ foreach ($field in @('projectId', 'region', 'jobName', 'revision', 'migrationRev
     $bad.$field = 'different-release'
     Expect-Rejected { Check-Marker $bad }
 }
+$index = @{
+    mediaType = 'application/vnd.oci.image.index.v1+json'
+    manifests = @(
+        @{ digest = 'sha256:' + ('1' * 64); platform = @{ os = 'linux'; architecture = 'amd64' } },
+        @{ digest = 'sha256:' + ('2' * 64); platform = @{ os = 'unknown'; architecture = 'unknown' } }
+    )
+} | ConvertTo-Json -Depth 10 -Compress
+$indexBytes = [Text.Encoding]::UTF8.GetBytes($index)
+$indexDigest = [Convert]::ToHexString(
+    [Security.Cryptography.SHA256]::HashData($indexBytes)
+).ToLowerInvariant()
+$parent = 'registry.invalid/migration@sha256:' + $indexDigest
+$leaf = 'registry.invalid/migration@sha256:' + ('1' * 64)
+Assert-ImageMembership $indexBytes $parent $leaf
+$cases++
+Expect-Rejected { Assert-ImageMembership $indexBytes ($parent + '0') $leaf }
+Expect-Rejected { Assert-ImageMembership $indexBytes $parent ('registry.invalid/migration@sha256:' + ('3' * 64)) }
 Write-Output "Profile-photo update safeguards passed: $cases cases; no cloud access or mutation."
