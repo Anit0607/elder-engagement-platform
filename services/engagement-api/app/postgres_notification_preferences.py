@@ -107,7 +107,7 @@ class PostgresNotificationPreferencesService:
                 """INSERT INTO engagement_app.audit_events
                    (actor_user_id,action,entity_type,entity_id,trace_id,metadata)
                    VALUES($1,'notification.preferences.replaced','notification_preferences',
-                          $2,$3,jsonb_build_object('windowEnabled',$4))""",
+                          $2,$3,jsonb_build_object('windowEnabled',$4::boolean))""",
                 owner,
                 str(owner),
                 trace_id,
