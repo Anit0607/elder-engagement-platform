@@ -22,7 +22,7 @@ The contract remains controlled. Only operations named in a matching verified de
 
 - Added Contributor-only start/complete operations for private MP4, MP3/M4A and PDF uploads.
 - Added mandatory ownership/permission confirmation and separate 250 MiB video, 50 MiB audio and 25 MiB PDF limits.
-- Completion verifies the stored content type, exact size, SHA-256 fingerprint and file signature before recording pending scan/moderation state. It never publishes the upload.
+- Completion verifies the stored content type, exact size, SHA-256 fingerprint and file signature before recording that the current file checks passed and placing the item in pending Administrator moderation. It never publishes the upload. This status does not claim advanced malware or artificial-intelligence screening.
 - Added checksum-locked V0007, a restricted `content-quarantine/` storage permission, Android/iOS examples and synthetic-media generation recipe.
 - Explicitly type the rights-statement audit value so PostgreSQL can commit a valid upload authorisation.
 - V0007, the private Cloud Run deployment, authenticated health check and live fictional MP4/MP3/PDF proof passed. Production acceptance remains part of the later release gate.

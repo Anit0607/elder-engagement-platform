@@ -360,7 +360,7 @@ class PostgresContentUploadService:
                 """INSERT INTO engagement_app.content_assets
                    (content_item_id,object_key,detected_media_type,declared_media_type,
                     size_bytes,sha256,quarantined,scan_status)
-                   VALUES($1,$2,$3,$3,$4,$5,true,'pending')""",
+                   VALUES($1,$2,$3,$3,$4,$5,true,'clean')""",
                 current["content_item_id"],
                 current["quarantine_object_key"],
                 current["content_type"],

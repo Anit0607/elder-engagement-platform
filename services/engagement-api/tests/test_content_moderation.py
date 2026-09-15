@@ -152,6 +152,7 @@ def test_decision_is_final_audited_and_does_not_publish():
     [
         (None, "approved", 404),
         ({"status": "approved", "contributor_id": CONTRIBUTOR, "scan_status": "clean"}, "approved", 409),
+        ({"status": "pending", "contributor_id": CONTRIBUTOR, "scan_status": "pending"}, "approved", 409),
         ({"status": "pending", "contributor_id": CONTRIBUTOR, "scan_status": "failed"}, "approved", 409),
         ({"status": "pending", "contributor_id": CONTRIBUTOR, "scan_status": "rejected"}, "approved", 409),
         ({"status": "pending", "contributor_id": ADMIN, "scan_status": "clean"}, "approved", 403),
