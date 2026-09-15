@@ -266,7 +266,7 @@ class PostgresContentUploadService:
                 """INSERT INTO engagement_app.audit_events
                    (actor_user_id,action,entity_type,entity_id,trace_id,metadata)
                    VALUES($1,'content.upload.authorised','content_item',$2,$3,
-                     jsonb_build_object('rightsStatementVersion',$4))""",
+                     jsonb_build_object('rightsStatementVersion',$4::text))""",
                 owner,
                 str(content_item_id),
                 trace_id,
