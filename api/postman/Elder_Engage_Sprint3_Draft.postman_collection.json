@@ -771,8 +771,94 @@
       ]
     },
     {
+      "name": "Events",
+      "item": [
+        {
+          "name": "List my upcoming events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/events?period=upcoming&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "upcoming"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Member only. Returns information-only events allowed for all Members or one of the Member's active circles."
+          }
+        }
+      ]
+    },
+    {
       "name": "Administration",
       "item": [
+        {
+          "name": "Create circle event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Synthetic music gathering\",\n  \"description\": \"Fictional event used only for contract testing\",\n  \"startsAt\": \"2026-10-10T10:00:00+05:30\",\n  \"endsAt\": \"2026-10-10T11:00:00+05:30\",\n  \"audience\": \"circles\",\n  \"circleIds\": [\n    \"{{circleId}}\"\n  ],\n  \"reminderMinutesBefore\": [\n    1440,\n    60\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "events"
+              ]
+            },
+            "description": "Administrator only. Records the event and reminder schedule; Meet/telephone joining and reminder delivery are separate milestones."
+          }
+        },
         {
           "name": "List pending content",
           "request": {

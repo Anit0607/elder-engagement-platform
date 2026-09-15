@@ -54,7 +54,8 @@ resource "google_cloud_run_v2_service" "api" {
           var.enable_content_feed ? {
             EE_CONTENT_FEED_ENABLED                    = "true"
             EE_CONTENT_DELIVERY_SIGNER_SERVICE_ACCOUNT = google_service_account.content_delivery.email
-          } : {}
+          } : {},
+          var.enable_event_service ? { EE_EVENT_SERVICE_ENABLED = "true" } : {}
         )
         content {
           name  = env.key
@@ -138,6 +139,10 @@ resource "google_cloud_run_v2_service" "api" {
     precondition {
       condition     = !var.enable_content_feed || var.enable_content_moderation
       error_message = "Content feed requires the reviewed moderation workflow."
+    }
+    precondition {
+      condition     = !var.enable_event_service || var.enable_profiles
+      error_message = "Events require the connected profile and circle runtime."
     }
     precondition {
       condition     = !var.enable_account_controls || var.enable_staff_session

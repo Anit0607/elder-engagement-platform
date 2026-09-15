@@ -41,6 +41,8 @@ const examples = {
   SyntheticProfileUpdate: "ProfileUpdate",
   SyntheticNotificationPreferencesUpdate: "NotificationPreferencesUpdate",
   SyntheticNotificationPreferences: "NotificationPreferences",
+  SyntheticEventCreate: "EventCreate",
+  SyntheticEventSummary: "EventSummary",
   SyntheticAdminCreateMember: "AdminCreateUserRequest",
   SyntheticAdminCreateContributor: "AdminCreateUserRequest",
   SyntheticProfile: "Profile",
@@ -124,6 +126,18 @@ expectInvalid("All-Member publication with a circle", "ContentPublicationRequest
 expectInvalid("Circle publication without a circle", "ContentPublicationRequest", {
   audience: "circles",
   circleIds: [],
+});
+expectInvalid("All-Member event with a circle", "EventCreate", {
+  ...contract.components.examples.SyntheticEventCreate.value,
+  audience: "all_members",
+});
+expectInvalid("Circle event without a circle", "EventCreate", {
+  ...contract.components.examples.SyntheticEventCreate.value,
+  circleIds: [],
+});
+expectInvalid("Event reminder outside the approved range", "EventCreate", {
+  ...contract.components.examples.SyntheticEventCreate.value,
+  reminderMinutesBefore: [10081],
 });
 
 for (const field of ["accessToken", "refreshToken"]) {

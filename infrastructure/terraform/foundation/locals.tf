@@ -80,6 +80,7 @@ locals {
     EE_APPROVED_MEDIA_BUCKET                   = google_storage_bucket.approved_media.name
     EE_UPLOAD_SIGNER_SERVICE_ACCOUNT           = google_service_account.upload_signer.email
     EE_CONTENT_FEED_ENABLED                    = "false"
+    EE_EVENT_SERVICE_ENABLED                   = "false"
     EE_CONTENT_DELIVERY_SIGNER_SERVICE_ACCOUNT = ""
     EE_UPLOAD_MAX_BYTES                        = "10485760"
     EE_UPLOAD_ALLOWED_MIME_TYPES               = "video/mp4,audio/mpeg,application/pdf"

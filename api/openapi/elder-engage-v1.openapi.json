@@ -2,19 +2,13 @@
   "openapi": "3.1.1",
   "info": {
     "title": "Elder Engagement REST API",
-    "version": "0.3.4",
+    "version": "0.3.5",
     "summary": "Controlled Sprint 3 contract draft for Android, iOS, Contributor and Administrator clients",
-    "description": "This draft covers the verified Week 2 foundation plus the Week 3 notification-preference, predefined-circle, private Contributor-upload, Administrator moderation and circle-filtered Member-feed interfaces. It contains no production hostname, credential or personal data. Events will be added to the same v1 contract before the Week 4 interface freeze."
+    "description": "This draft covers the verified Week 2 foundation plus the Sprint 3 notification-preference, predefined-circle, private Contributor-upload, Administrator moderation, circle-filtered Member-feed and basic event interfaces. It contains no production hostname, credential or personal data."
   },
   "x-contract-status": "sprint-3-draft",
   "x-implementation-status": "Contract-only draft. No listed operation is claimed callable until the matching backend commit is deployed and its smoke-test evidence is recorded.",
   "x-planned-expansions": [
-    {
-      "trackerItems": ["EE-021", "EE-023"],
-      "target": "Week 4",
-      "status": "Not available in this draft",
-      "capabilities": ["events"]
-    },
     {
       "trackerItems": ["EE-040", "EE-041", "EE-042"],
       "target": "Week 12",
@@ -71,6 +65,7 @@
     { "name": "Notifications" },
     { "name": "Circles" },
     { "name": "Content" },
+    { "name": "Events" },
     { "name": "Administration" }
   ],
   "paths": {
@@ -511,6 +506,46 @@
           "401": { "$ref": "#/components/responses/Unauthorised" },
           "403": { "$ref": "#/components/responses/Forbidden" },
           "404": { "$ref": "#/components/responses/NotFound" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/v1/admin/events": {
+      "post": {
+        "tags": ["Administration"],
+        "operationId": "createEvent",
+        "summary": "Create a basic Member event",
+        "description": "Administrator only. The event is information-only in EE-021; Google Meet and telephone joining are separate later integrations. Audience circles must be active. Reminder timings are recorded but delivery is handled separately.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EventCreate" } } }
+        },
+        "responses": {
+          "201": { "description": "Event created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EventSummary" } } } },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/v1/events": {
+      "get": {
+        "tags": ["Events"],
+        "operationId": "getMyEvents",
+        "summary": "List events visible to the signed-in Member",
+        "description": "Member only. Every page rechecks current active-circle membership. Upcoming events are oldest-first and past events are newest-first.",
+        "parameters": [
+          { "name": "period", "in": "query", "schema": { "type": "string", "enum": ["upcoming", "past"], "default": "upcoming" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 } },
+          { "name": "cursor", "in": "query", "schema": { "type": "string", "minLength": 8, "maxLength": 256 } }
+        ],
+        "responses": {
+          "200": { "description": "Visible event page", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EventPage" } } } },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
           "503": { "$ref": "#/components/responses/ServiceUnavailable" }
         }
       }
@@ -1658,6 +1693,50 @@
           "expiresAt": { "type": "string", "format": "date-time" }
         }
       },
+      "EventCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "startsAt", "audience", "reminderMinutesBefore"],
+        "properties": {
+          "title": { "type": "string", "minLength": 2, "maxLength": 200 },
+          "description": { "type": ["string", "null"], "maxLength": 4000 },
+          "startsAt": { "type": "string", "format": "date-time", "description": "Must include an offset and be in the future." },
+          "endsAt": { "type": ["string", "null"], "format": "date-time", "description": "When supplied, must be after startsAt." },
+          "audience": { "type": "string", "enum": ["all_members", "circles"] },
+          "circleIds": { "type": "array", "maxItems": 20, "uniqueItems": true, "items": { "type": "string", "format": "uuid" }, "default": [] },
+          "reminderMinutesBefore": { "type": "array", "maxItems": 5, "uniqueItems": true, "items": { "type": "integer", "minimum": 5, "maximum": 10080 } }
+        },
+        "oneOf": [
+          { "properties": { "audience": { "const": "all_members" }, "circleIds": { "maxItems": 0 } } },
+          { "required": ["circleIds"], "properties": { "audience": { "const": "circles" }, "circleIds": { "minItems": 1, "maxItems": 20 } } }
+        ]
+      },
+      "EventSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "description", "startsAt", "endsAt", "audience", "circleIds", "reminderMinutesBefore", "joinKind", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "title": { "type": "string", "minLength": 2, "maxLength": 200 },
+          "description": { "type": ["string", "null"], "maxLength": 4000 },
+          "startsAt": { "type": "string", "format": "date-time" },
+          "endsAt": { "type": ["string", "null"], "format": "date-time" },
+          "audience": { "type": "string", "enum": ["all_members", "circles"] },
+          "circleIds": { "type": "array", "maxItems": 20, "uniqueItems": true, "items": { "type": "string", "format": "uuid" } },
+          "reminderMinutesBefore": { "type": "array", "maxItems": 5, "uniqueItems": true, "items": { "type": "integer", "minimum": 5, "maximum": 10080 } },
+          "joinKind": { "type": "string", "const": "information_only", "description": "EE-021 does not yet provide Google Meet or telephone joining." },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "EventPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "nextCursor"],
+        "properties": {
+          "items": { "type": "array", "maxItems": 50, "items": { "$ref": "#/components/schemas/EventSummary" } },
+          "nextCursor": { "type": ["string", "null"], "minLength": 8, "maxLength": 256 }
+        }
+      },
       "Problem": {
         "type": "object",
         "additionalProperties": false,
@@ -1823,6 +1902,33 @@
             "timeZone": "Asia/Kolkata"
           },
           "updatedAt": "2026-09-15T12:00:00Z"
+        }
+      },
+      "SyntheticEventCreate": {
+        "summary": "Create a fictional circle event with two reminder times",
+        "value": {
+          "title": "Synthetic music gathering",
+          "description": "Fictional event used only for contract testing",
+          "startsAt": "2026-10-10T10:00:00+05:30",
+          "endsAt": "2026-10-10T11:00:00+05:30",
+          "audience": "circles",
+          "circleIds": ["66666666-6666-4666-8666-666666666666"],
+          "reminderMinutesBefore": [1440, 60]
+        }
+      },
+      "SyntheticEventSummary": {
+        "summary": "Saved fictional information-only event",
+        "value": {
+          "id": "77777777-7777-4777-8777-777777777777",
+          "title": "Synthetic music gathering",
+          "description": "Fictional event used only for contract testing",
+          "startsAt": "2026-10-10T04:30:00Z",
+          "endsAt": "2026-10-10T05:30:00Z",
+          "audience": "circles",
+          "circleIds": ["66666666-6666-4666-8666-666666666666"],
+          "reminderMinutesBefore": [1440, 60],
+          "joinKind": "information_only",
+          "createdAt": "2026-09-16T12:00:00Z"
         }
       },
       "SyntheticAdminCreateMember": {

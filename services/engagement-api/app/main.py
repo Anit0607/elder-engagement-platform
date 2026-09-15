@@ -47,6 +47,7 @@ from app.content_uploads import (
     ContentUploadRequest,
     UnconfiguredContentUploadService,
 )
+from app.events import EventCreate, EventPage, EventSummary, UnconfiguredEventService
 from app.logging_config import configure_logging, request_id_context, trace_id_context
 from app.member_auth import (
     MemberSessionFailure,
@@ -133,6 +134,7 @@ def create_app(
     content_upload_service=None,
     content_moderation_service=None,
     content_feed_service=None,
+    event_service=None,
     account_controls=None,
     member_runtime_factory=member_runtime,
     probe_timeout_seconds: float = 2.0,
@@ -200,6 +202,10 @@ def create_app(
                     application.state.content_feed_service = getattr(
                         handler, "content_feed_service", UnconfiguredContentFeedService()
                     )
+                if config.event_service_enabled and event_service is None:
+                    application.state.event_service = getattr(
+                        handler, "event_service", UnconfiguredEventService()
+                    )
                 if config.account_controls_enabled and account_controls is None:
                     application.state.account_controls = getattr(
                         handler, "account_controls", UnconfiguredAccountControls()
@@ -229,6 +235,8 @@ def create_app(
                         )
                     if content_feed_service is None:
                         application.state.content_feed_service = UnconfiguredContentFeedService()
+                    if event_service is None:
+                        application.state.event_service = UnconfiguredEventService()
                     if account_controls is None:
                         application.state.account_controls = UnconfiguredAccountControls()
         else:
@@ -254,6 +262,7 @@ def create_app(
         content_moderation_service or UnconfiguredContentModerationService()
     )
     app.state.content_feed_service = content_feed_service or UnconfiguredContentFeedService()
+    app.state.event_service = event_service or UnconfiguredEventService()
     app.state.notification_preferences_service = (
         notification_preferences_service or UnconfiguredNotificationPreferencesService()
     )
@@ -553,6 +562,36 @@ def create_app(
         try:
             return await app.state.content_feed_service.media(
                 bearer_token(request), contentItemId
+            )
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.post(
+        "/v1/admin/events",
+        tags=["Administration"],
+        response_model=EventSummary,
+        status_code=201,
+    )
+    async def create_event(request: Request, payload: EventCreate):
+        try:
+            return await app.state.event_service.create(
+                bearer_token(request), payload, request.state.trace_id
+            )
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.get("/v1/events", tags=["Events"], response_model=EventPage)
+    async def list_events(
+        request: Request,
+        period: Literal["upcoming", "past"] = "upcoming",
+        limit: int = 20,
+        cursor: str | None = None,
+    ):
+        if not 1 <= limit <= 50:
+            return _problem(request, 400, "VALIDATION_FAILED", "Request validation failed")
+        try:
+            return await app.state.event_service.list_visible(
+                bearer_token(request), period, limit, cursor
             )
         except MemberSessionFailure as exc:
             return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)

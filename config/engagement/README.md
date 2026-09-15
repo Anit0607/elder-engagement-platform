@@ -55,6 +55,11 @@ private approved `content/` area; it cannot upload, change or delete media.
 Enabling the feed does not publish an item by itself—an Administrator must select
 the audience for each approved item.
 
+Basic events are off by default (`EE_EVENT_SERVICE_ENABLED=false`). Enabling
+them requires the connected profile/circle runtime and V0009. The switch allows
+event creation and visibility only; it does not enable Google Meet, telephone
+joining, Firebase notification delivery or any external provider.
+
 Staff login is off by default (`EE_STAFF_SESSION_ENABLED=false`). Turning it on
 requires the connected Member runtime and a dedicated, numeric
 `EE_STAFF_AUTHENTICATOR_KEY_SECRET_REF`, distinct from session and field-encryption
