@@ -200,4 +200,3 @@ foreach ($field in @('projectId', 'region', 'jobName', 'revision', 'migrationRev
     Expect-Rejected { Check-Marker $bad }
 }
 Write-Output "Profile-photo update safeguards passed: $cases cases; no cloud access or mutation."
-
