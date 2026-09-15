@@ -59,9 +59,9 @@ Implemented now:
 - detailed English/Bengali/Hindi profiles with the non-restrictive `55+` label;
 - private, short-lived profile-photo upload/view links and metadata-stripping image processing;
 - Member-controlled event-reminder and content-update choices with an optional local delivery window;
-- a versioned Sprint 3 REST contract containing the verified foundation, circles, private Contributor uploads, Administrator moderation, circle-filtered feed and a basic-event candidate.
+- a versioned Sprint 3 REST contract containing the verified foundation, circles, private Contributor uploads, Administrator moderation, circle-filtered feed and basic events.
 
-The development container is deployed to private Cloud Run, and checksum-locked migrations `V0001`–`V0008` are applied to private Cloud SQL. The Member-session service follows the approved immediate-access boundary: the repository atomically finds or creates an active Member for a verified phone identity, and `profileComplete=false` routes a new Member to self-service profile setup. Cloud SQL uses private IP and automatic IAM authentication. Cloud Run loads only pinned Secret Manager versions; missing, weak or equal keys prevent startup. Database commands and certificate requests are time-bounded, and pool, connector and certificate session resources close at shutdown. Contributors remain Administrator-created. Notification preferences, circles, Contributor uploads, Administrator moderation and the circle-filtered feed are deployed and verified. Basic events are a source candidate; media providers remain later work.
+The development container is deployed to private Cloud Run, and checksum-locked migrations `V0001`–`V0009` are applied to private Cloud SQL. The Member-session service follows the approved immediate-access boundary: the repository atomically finds or creates an active Member for a verified phone identity, and `profileComplete=false` routes a new Member to self-service profile setup. Cloud SQL uses private IP and automatic IAM authentication. Cloud Run loads only pinned Secret Manager versions; missing, weak or equal keys prevent startup. Database commands and certificate requests are time-bounded, and pool, connector and certificate session resources close at shutdown. Contributors remain Administrator-created. Notification preferences, circles, Contributor uploads, Administrator moderation, the circle-filtered feed and basic events are deployed and verified. Media providers remain later work.
 
 ## Notification preferences (EE-022, verified in private development)
 
@@ -98,7 +98,7 @@ both recheck current active-circle membership; unapproved, unpublished,
 quarantined and out-of-audience items are excluded. The private deployment,
 authenticated health check and live fictional audience-isolation proof passed.
 
-## Basic events (EE-021, source candidate)
+## Basic events (EE-021, development verified)
 
 An Administrator can create a future information-only event for all Members or
 one-to-twenty active circles, with an optional end time and up to five unique
