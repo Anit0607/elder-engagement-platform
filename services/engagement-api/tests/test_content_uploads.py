@@ -160,7 +160,7 @@ def intent(*, status="authorised", expired=False):
     }
 
 
-def test_complete_stream_validation_records_pending_asset_and_audit():
+def test_complete_stream_validation_records_checked_pending_asset_and_audit():
     connection = Connection(row=intent())
     storage = Mock(validate=AsyncMock(return_value=73))
     service = PostgresContentUploadService(
@@ -168,7 +168,10 @@ def test_complete_stream_validation_records_pending_asset_and_audit():
     )
     receipt = asyncio.run(service.complete("proof", uuid4(), "synthetic-trace"))
     assert receipt.status == "pending" and receipt.kind == "pdf"
-    assert any("content_assets" in query for query, _ in connection.executed)
+    assert any(
+        "content_assets" in query and "'clean'" in query
+        for query, _ in connection.executed
+    )
     assert any("status='pending'" in query for query, _ in connection.executed)
     assert any("content.upload.completed" in query for query, _ in connection.executed)
 

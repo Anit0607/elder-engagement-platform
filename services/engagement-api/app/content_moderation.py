@@ -252,11 +252,11 @@ class PostgresContentModerationService:
                     code="FORBIDDEN",
                     title="Administrators cannot review their own submitted content",
                 )
-            if request.outcome == "approved" and row["scan_status"] in {"rejected", "failed"}:
+            if request.outcome == "approved" and row["scan_status"] != "clean":
                 raise MemberSessionFailure(
                     status=409,
                     code="CONFLICT",
-                    title="Content with a failed safety check cannot be approved",
+                    title="Content must pass the required file checks before approval",
                 )
             reason = REASON_LABELS[request.reason_code]
             if request.note:

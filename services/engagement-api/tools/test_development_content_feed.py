@@ -47,7 +47,16 @@ class FeedProof:
         except SafeTestFailure as error:
             raise SafeTestFailure(f"{method} {safe_path} could not reach the cloud service") from error
         if status != expected or (code and payload.get("code") != code):
-            raise SafeTestFailure(f"{method} {safe_path} returned {status}; expected {expected}")
+            safe_code = payload.get("code")
+            safe_title = payload.get("title")
+            safe_detail = ""
+            if isinstance(safe_code, str) and re.fullmatch(r"[A-Z0-9_]{1,64}", safe_code):
+                safe_detail += f"; code {safe_code}"
+            if isinstance(safe_title, str) and 1 <= len(safe_title) <= 160:
+                safe_detail += f"; reason {safe_title}"
+            raise SafeTestFailure(
+                f"{method} {safe_path} returned {status}; expected {expected}{safe_detail}"
+            )
         return payload
 
     def staff_session(self, role: str) -> str:
