@@ -22,6 +22,7 @@ from app.session_controls import denied
 class Permission(StrEnum):
     OWN_PROFILE = "own-profile"
     OWN_ACCOUNT = "own-account"
+    OWN_NOTIFICATIONS = "own-notifications"
     CREATE_STAFF = "create-staff"
     ACCOUNT_STATUS = "account-status"
     ACCOUNT_ROLE = "account-role"
@@ -36,7 +37,11 @@ class Principal:
 
 def require_permission(principal: Principal, permission: Permission, target: UUID | None = None):
     allowed = False
-    if permission in {Permission.OWN_PROFILE, Permission.OWN_ACCOUNT}:
+    if permission in {
+        Permission.OWN_PROFILE,
+        Permission.OWN_ACCOUNT,
+        Permission.OWN_NOTIFICATIONS,
+    }:
         allowed = target == principal.user_id
     elif permission in {Permission.CREATE_STAFF, Permission.ACCOUNT_STATUS, Permission.ACCOUNT_ROLE}:
         allowed = principal.role == "administrator"

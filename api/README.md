@@ -1,6 +1,6 @@
 # Elder Engagement REST API v1
 
-Status: Sprint 2 controlled contract with a verified and client-accepted private development subset
+Status: Sprint 3 controlled contract with a verified and client-accepted Week 2 subset and an EE-022 source candidate
 Tracker ownership: EE-051 for the initial contract and EE-023 for the Week 4 production-ready integration package.
 
 ## Current source of truth
@@ -9,7 +9,7 @@ Tracker ownership: EE-051 for the initial contract and EE-023 for the Week 4 pro
 - `IOS_REST_API_INTEGRATION_CHECKLIST.md` — receipt, review, test, and acceptance checklist for the client's separate iOS developer.
 - `../tools/validate_engagement_openapi.mjs` — dependency-free contract integrity check.
 - `contract-tests/` — repeatable JSON Schema compilation, example validation, and negative contract tests.
-- `postman/Elder_Engage_Week2_Draft.postman_collection.json` — generated safe, synthetic Week 2 companion collection.
+- `postman/Elder_Engage_Sprint3_Draft.postman_collection.json` — generated safe, synthetic Sprint 3 companion collection.
 - `CHANGELOG.md` and `IOS_CONTRACT_NOTIFICATION_LOG.md` — interface history and iOS receipt evidence.
 
 Run the current check from the project root:
@@ -23,7 +23,7 @@ cd ..\..
 node tools\generate_engagement_postman.mjs
 ```
 
-The contract currently defines the Week 2 foundation: operations, Member identity-provider token exchange, Contributor/Administrator credentials, refresh and revocation, detailed profiles, and account controls. The private development deployment implements and verifies authentication, sessions, own profiles, profile photos, and status/role controls. Administrator user creation/listing remains contract-only until its planned Administrator workflow is implemented. Circles, content upload, moderation, feed, events, notification preferences, and later broadcast operations will be added under their approved milestones. No staging or production availability is claimed.
+The contract defines the Week 2 foundation plus the Sprint 3 notification-preference interface. The private development deployment implements and verifies authentication, sessions, own profiles, profile photos, and status/role controls. Notification preferences are a tested source candidate and are not yet claimed deployed. Administrator user creation/listing remains contract-only until its planned Administrator workflow is implemented. Circles, content upload, moderation, feed, events and later broadcast operations will be added under their approved milestones. No staging or production availability is claimed.
 
 ## Version and server rules
 

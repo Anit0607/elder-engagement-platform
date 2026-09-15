@@ -2,18 +2,18 @@
   "openapi": "3.1.1",
   "info": {
     "title": "Elder Engagement REST API",
-    "version": "0.2.2",
-    "summary": "Controlled Sprint 2 contract draft for Android, iOS, Contributor and Administrator clients",
-    "description": "This draft covers the Week 2 identity, session, profile and account-control foundation. It contains no production hostname, credential or personal data. Circles, content, moderation, feed and events will be added to the same v1 contract before the Week 4 interface freeze."
+    "version": "0.3.0",
+    "summary": "Controlled Sprint 3 contract draft for Android, iOS, Contributor and Administrator clients",
+    "description": "This draft covers the verified Week 2 foundation and the first Week 3 notification-preference interface. It contains no production hostname, credential or personal data. Circles, content, moderation, feed and events will be added to the same v1 contract before the Week 4 interface freeze."
   },
-  "x-contract-status": "sprint-2-draft",
+  "x-contract-status": "sprint-3-draft",
   "x-implementation-status": "Contract-only draft. No listed operation is claimed callable until the matching backend commit is deployed and its smoke-test evidence is recorded.",
   "x-planned-expansions": [
     {
-      "trackerItems": ["EE-017", "EE-018", "EE-019", "EE-020", "EE-021", "EE-022", "EE-023"],
+      "trackerItems": ["EE-017", "EE-018", "EE-019", "EE-020", "EE-021", "EE-023"],
       "target": "Week 4",
       "status": "Not available in this draft",
-      "capabilities": ["circles", "content upload", "moderation", "feed", "events", "notification preferences"]
+      "capabilities": ["circles", "content upload", "moderation", "feed", "events"]
     },
     {
       "trackerItems": ["EE-040", "EE-041", "EE-042"],
@@ -62,6 +62,7 @@
     { "name": "Operations" },
     { "name": "Authentication" },
     { "name": "Profile" },
+    { "name": "Notifications" },
     { "name": "Administration" }
   ],
   "paths": {
@@ -332,6 +333,61 @@
           "401": { "$ref": "#/components/responses/Unauthorised" },
           "404": { "$ref": "#/components/responses/NotFound" },
           "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/v1/me/notification-preferences": {
+      "get": {
+        "tags": ["Notifications"],
+        "operationId": "getMyNotificationPreferences",
+        "summary": "Get my notification choices and delivery window",
+        "description": "Returns only the authenticated account's choices. A missing saved row returns safe defaults without writing data.",
+        "responses": {
+          "200": {
+            "description": "Notification preferences returned",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotificationPreferences" },
+                "examples": {
+                  "synthetic": { "$ref": "#/components/examples/SyntheticNotificationPreferences" }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      },
+      "put": {
+        "tags": ["Notifications"],
+        "operationId": "replaceMyNotificationPreferences",
+        "summary": "Replace my complete notification choices and delivery window",
+        "description": "A complete replacement avoids ambiguous partial updates. The authenticated account can change only its own preferences.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/NotificationPreferencesUpdate" },
+              "examples": {
+                "synthetic": { "$ref": "#/components/examples/SyntheticNotificationPreferencesUpdate" }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Notification preferences replaced and audited",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotificationPreferences" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
         }
       }
     },
@@ -813,6 +869,28 @@
           }
         ]
       },
+      "NotificationPreferencesUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["eventReminders", "contentUpdates", "deliveryWindow"],
+        "description": "Complete replacement of an account's notification choices. deliveryWindow.enabled=false allows delivery at any local time. A window whose start is later than its end crosses midnight.",
+        "properties": {
+          "eventReminders": { "type": "boolean" },
+          "contentUpdates": { "type": "boolean" },
+          "deliveryWindow": { "$ref": "#/components/schemas/NotificationWindow" }
+        }
+      },
+      "NotificationPreferences": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["eventReminders", "contentUpdates", "deliveryWindow", "updatedAt"],
+        "properties": {
+          "eventReminders": { "type": "boolean" },
+          "contentUpdates": { "type": "boolean" },
+          "deliveryWindow": { "$ref": "#/components/schemas/NotificationWindow" },
+          "updatedAt": { "type": "string", "format": "date-time", "readOnly": true }
+        }
+      },
       "ProfileUpdate": {
         "type": "object",
         "additionalProperties": false,
@@ -1073,6 +1151,33 @@
             "endLocalTime": "08:00",
             "timeZone": "Asia/Kolkata"
           }
+        }
+      },
+      "SyntheticNotificationPreferencesUpdate": {
+        "summary": "Receive event reminders but not general content updates, during an overnight window",
+        "value": {
+          "eventReminders": true,
+          "contentUpdates": false,
+          "deliveryWindow": {
+            "enabled": true,
+            "startLocalTime": "22:00",
+            "endLocalTime": "06:00",
+            "timeZone": "Asia/Kolkata"
+          }
+        }
+      },
+      "SyntheticNotificationPreferences": {
+        "summary": "Saved synthetic notification choices",
+        "value": {
+          "eventReminders": true,
+          "contentUpdates": false,
+          "deliveryWindow": {
+            "enabled": true,
+            "startLocalTime": "22:00",
+            "endLocalTime": "06:00",
+            "timeZone": "Asia/Kolkata"
+          },
+          "updatedAt": "2026-09-15T12:00:00Z"
         }
       },
       "SyntheticAdminCreateMember": {

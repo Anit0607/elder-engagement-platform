@@ -16,13 +16,16 @@ from tests.test_staff_session_controls import proof as staff_proof
 @pytest.mark.parametrize("role", ["member", "contributor", "administrator"])
 @pytest.mark.parametrize("permission", list(Permission))
 @pytest.mark.parametrize("owned", [True, False])
-def test_complete_week_two_permission_matrix(role, permission, owned):
+def test_complete_permission_matrix(role, permission, owned):
     owner = uuid4()
     principal = Principal(owner, uuid4(), role)
     target = owner if owned else uuid4()
-    allowed = (
-        owned if permission in {Permission.OWN_PROFILE, Permission.OWN_ACCOUNT} else role == "administrator"
-    )
+    own_permissions = {
+        Permission.OWN_PROFILE,
+        Permission.OWN_ACCOUNT,
+        Permission.OWN_NOTIFICATIONS,
+    }
+    allowed = owned if permission in own_permissions else role == "administrator"
     if allowed:
         require_permission(principal, permission, target)
     else:
