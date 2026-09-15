@@ -13,6 +13,10 @@ The contract remains controlled. Only operations named in a matching verified de
 - The photo trial used a synthetic image and no real text message. It verified a
   restricted upload, WebP conversion, metadata removal, short-lived viewing and
   completed-upload replay rejection without printing tokens or signed links.
+- The client-triggered final acceptance page reported Success on 15 September
+  2026. All four outstanding photo checks passed with a fictional Member and a
+  generated picture; no real text message or personal photo was used. The agreed
+  Week 2 development scope is accepted.
 - Administrator user creation/listing, the production Administrator console,
   real staff invitation/recovery, staging/production release and direct iOS
   handoff remain outstanding. This is not a production release.

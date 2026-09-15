@@ -8,7 +8,7 @@ Public engineering repository for Amiko. It contains the current backend foundat
 
 Sprint 1's development foundation and the agreed Week 2 backend are deployed in the client-owned development Google Cloud project. Private Cloud Run, private PostgreSQL, private storage, service identities, secrets, checksum-locked database updates, logging, uptime monitoring, error alerts and budget alerts are in place and verified.
 
-The development backend now supports Google phone verification and immediate Member access, stable sessions, Contributor password sign-in, Administrator password plus authenticator-app sign-in, role permissions, detailed profiles with private photo handling, and Administrator account controls. These functions have automated and live fictional-account evidence. This is not the final production release: a separate production environment, later-sprint functions and the final client acceptance gate remain outstanding.
+The development backend now supports Google phone verification and immediate Member access, stable sessions, Contributor password sign-in, Administrator password plus authenticator-app sign-in, role permissions, detailed profiles with private photo handling, and Administrator account controls. These functions have automated, live fictional-account and Week 2 client-acceptance evidence. This is not the final production release: a separate production environment, later-sprint functions and final product acceptance remain outstanding.
 
 ## Repository contents
 
