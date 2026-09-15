@@ -59,9 +59,9 @@ Implemented now:
 - detailed English/Bengali/Hindi profiles with the non-restrictive `55+` label;
 - private, short-lived profile-photo upload/view links and metadata-stripping image processing;
 - Member-controlled event-reminder and content-update choices with an optional local delivery window;
-- a versioned Sprint 3 REST contract containing the verified foundation, circles, private Contributor uploads and Administrator-moderation candidate.
+- a versioned Sprint 3 REST contract containing the verified foundation, circles, private Contributor uploads and Administrator moderation.
 
-The development container is deployed to private Cloud Run, and checksum-locked migrations `V0001`–`V0007` are applied to private Cloud SQL. The Member-session service follows the approved immediate-access boundary: the repository atomically finds or creates an active Member for a verified phone identity, and `profileComplete=false` routes a new Member to self-service profile setup. Cloud SQL uses private IP and automatic IAM authentication. Cloud Run loads only pinned Secret Manager versions; missing, weak or equal keys prevent startup. Database commands and certificate requests are time-bounded, and pool, connector and certificate session resources close at shutdown. Contributors remain Administrator-created. Notification preferences, circles and Contributor uploads are deployed and verified. Administrator moderation plus V0008 are under review and not yet deployed. Feeds, events and media providers remain later work.
+The development container is deployed to private Cloud Run, and checksum-locked migrations `V0001`–`V0008` are applied to private Cloud SQL. The Member-session service follows the approved immediate-access boundary: the repository atomically finds or creates an active Member for a verified phone identity, and `profileComplete=false` routes a new Member to self-service profile setup. Cloud SQL uses private IP and automatic IAM authentication. Cloud Run loads only pinned Secret Manager versions; missing, weak or equal keys prevent startup. Database commands and certificate requests are time-bounded, and pool, connector and certificate session resources close at shutdown. Contributors remain Administrator-created. Notification preferences, circles, Contributor uploads and Administrator moderation are deployed and verified. Feeds, events and media providers remain later work.
 
 ## Notification preferences (EE-022, verified in private development)
 
@@ -75,7 +75,7 @@ Members can list active predefined circles, receive recommendations from saved i
 
 Only a currently active Contributor can start or complete a content upload. The request requires a versioned ownership/permission declaration and enforces 250 MiB for MP4 video, 50 MiB for MP3/M4A audio and 25 MiB for PDF. A five-minute signed `PUT` sends the file directly to the private `content-quarantine/` prefix. Completion streams the object to check its declared type, exact size, SHA-256 fingerprint and file signature without loading the whole file into memory. A valid item becomes pending with a pending scan; it is not copied to approved storage or published. The synthetic MP4/MP3/PDF development proof passed. Administrator review and rejection reasons are EE-019; audience selection, promotion and Member delivery remain EE-020.
 
-## Administrator content moderation (EE-019, source candidate)
+## Administrator content moderation (EE-019, verified in private development)
 
 Only a currently authenticated Administrator can list the pending review queue,
 request a two-minute private preview, or make a final decision. Contributors cannot
@@ -84,6 +84,8 @@ reason list; `other` requires a written explanation. Each decision, reason, acto
 and time is committed with an audit event. A separate read-only preview identity
 is restricted to `content-quarantine/`. Approval changes only the review state and
 does not publish or select an audience; those remain EE-020.
+V0008, the restricted preview identity, private deployment, GitHub health check
+and live synthetic MP4/MP3/PDF workflow all passed.
 
 ## Staff sign-in (EE-010, verified in private development)
 

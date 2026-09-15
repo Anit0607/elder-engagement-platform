@@ -1,6 +1,6 @@
 # Engagement database baseline
 
-Status: V0001–V0007 are checksum-locked and applied to the private development PostgreSQL 16 database. V0008 is the reviewed EE-019 source candidate and is not yet applied.
+Status: V0001–V0008 are checksum-locked and applied to the private development PostgreSQL 16 database.
 
 `migrations/V0001__engagement_baseline.sql` is the canonical PostgreSQL 16 baseline for the approved engagement product. Its approved repository bytes are locked by `migrations/manifest.json`. `amiko_v1_schema.sql` belongs to the inherited booking/caregiver scope and is retained only as history.
 
@@ -75,10 +75,12 @@ It keeps the uploaded object in private quarantine and uses the existing pending
 moderation state. It does not approve or publish content. Its backup, migration job,
 private deployment and live synthetic MP4/MP3/PDF verification passed.
 
-## EE-019 additive candidate: V0008
+## EE-019 applied update: V0008
 
 `V0008__content_moderation_reasons.sql` adds the controlled rejection-reason code
 and optional Administrator note to each immutable moderation decision. Existing
 decisions are safely backfilled; any older long free-text reason is shortened only
 in the new note copy, while the original reason remains unchanged. The `other`
 choice requires an explanation. It does not publish, delete or move content.
+Its fresh backup, reviewed migration job, restricted preview identity, private
+deployment and live synthetic MP4/MP3/PDF moderation proof passed.
