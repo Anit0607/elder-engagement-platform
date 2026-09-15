@@ -100,3 +100,13 @@ resource "google_storage_bucket_iam_member" "upload_signer_reads_approved_profil
     expression = "resource.name.startsWith('projects/_/buckets/${google_storage_bucket.approved_media.name}/objects/profile-photos/')"
   }
 }
+
+resource "google_storage_bucket_iam_member" "moderation_viewer_reads_content_quarantine" {
+  bucket = google_storage_bucket.uploads.name
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${google_service_account.moderation_viewer.email}"
+  condition {
+    title      = "content-quarantine-preview-only"
+    expression = "resource.name.startsWith('projects/_/buckets/${google_storage_bucket.uploads.name}/objects/content-quarantine/')"
+  }
+}

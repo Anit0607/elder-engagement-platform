@@ -46,7 +46,11 @@ resource "google_cloud_run_v2_service" "api" {
         for_each = merge(
           local.cloud_run_environment,
           { EE_PROFILE_PHOTO_ENABLED = tostring(var.enable_profile_photos) },
-          var.enable_content_uploads ? { EE_CONTENT_UPLOAD_ENABLED = "true" } : {}
+          var.enable_content_uploads ? { EE_CONTENT_UPLOAD_ENABLED = "true" } : {},
+          var.enable_content_moderation ? {
+            EE_CONTENT_MODERATION_ENABLED        = "true"
+            EE_MODERATION_SIGNER_SERVICE_ACCOUNT = google_service_account.moderation_viewer.email
+          } : {}
         )
         content {
           name  = env.key
@@ -123,6 +127,10 @@ resource "google_cloud_run_v2_service" "api" {
   }
 
   lifecycle {
+    precondition {
+      condition     = !var.enable_content_moderation || var.enable_content_uploads
+      error_message = "Content moderation requires private Contributor uploads."
+    }
     precondition {
       condition     = !var.enable_account_controls || var.enable_staff_session
       error_message = "Account controls require connected staff authentication and its database readiness gates."

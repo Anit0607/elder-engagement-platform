@@ -203,7 +203,7 @@ def _expect_migration_error(action, contains: str) -> None:
 def test_empty_apply_and_rerun() -> None:
     with database_fixture() as fixture:
         assert _run(fixture) == [
-            "V0001", "V0002", "V0003", "V0004", "V0005", "V0006", "V0007"
+            "V0001", "V0002", "V0003", "V0004", "V0005", "V0006", "V0007", "V0008"
         ]
         assert _run(fixture) == []
         with psycopg.connect(fixture.migration_url) as connection:
@@ -265,7 +265,7 @@ def test_baseline_upgrade_preserves_existing_accounts_and_sessions() -> None:
                 ).format(sql.Identifier(fixture.app_schema)),
                 (owner, uuid.uuid4(), uuid.uuid4()),
             ).fetchone()[0]
-        assert _run(fixture) == ["V0002", "V0003", "V0004", "V0005", "V0006", "V0007"]
+        assert _run(fixture) == ["V0002", "V0003", "V0004", "V0005", "V0006", "V0007", "V0008"]
         assert _run(fixture) == []
         with psycopg.connect(fixture.runtime_url) as connection:
             credential = connection.execute(
@@ -331,7 +331,7 @@ def test_v0002_upgrade_revokes_sessions_with_runtime_permissions() -> None:
                 ).format(sql.Identifier(fixture.app_schema)),
                 (owner, uuid.uuid4(), uuid.uuid4()),
             )
-        assert _run(fixture) == ["V0003", "V0004", "V0005", "V0006", "V0007"]
+        assert _run(fixture) == ["V0003", "V0004", "V0005", "V0006", "V0007", "V0008"]
         assert _run(fixture) == []
         with psycopg.connect(fixture.runtime_url) as connection:
             connection.execute(
@@ -378,7 +378,7 @@ def test_v0003_upgrade_adds_english_without_changing_existing_profiles() -> None
                 ).format(sql.Identifier(fixture.app_schema)),
                 (owner,),
             )
-        assert _run(fixture) == ["V0004", "V0005", "V0006", "V0007"]
+        assert _run(fixture) == ["V0004", "V0005", "V0006", "V0007", "V0008"]
         assert _run(fixture) == []
         with psycopg.connect(fixture.runtime_url) as connection:
             assert connection.execute(
@@ -555,6 +555,7 @@ def test_pg8000_apply_rerun_and_rollback() -> None:
             "V0005",
             "V0006",
             "V0007",
+            "V0008",
         ]
         assert _run_pg8000(fixture) == []
 

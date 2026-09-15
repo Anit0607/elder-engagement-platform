@@ -350,6 +350,12 @@ variable "enable_content_uploads" {
   default     = false
 }
 
+variable "enable_content_moderation" {
+  description = "Enable Administrator review of private Contributor uploads after its migration and preview permissions pass."
+  type        = bool
+  default     = false
+}
+
 variable "enable_account_controls" {
   description = "Enable reviewed Administrator-only account controls after connected staff sign-in is ready."
   type        = bool

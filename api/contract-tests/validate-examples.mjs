@@ -160,7 +160,8 @@ for (const item of flattenPostman(postman.item)) {
     .replaceAll("{{sessionId}}", "{sessionId}")
     .replaceAll("{{userId}}", "{userId}")
     .replaceAll("{{uploadId}}", "{uploadId}")
-    .replaceAll("{{circleId}}", "{circleId}");
+    .replaceAll("{{circleId}}", "{circleId}")
+    .replaceAll("{{contentItemId}}", "{contentItemId}");
   postmanRequests.add(`${item.request.method} ${route}`);
 }
 for (const operation of openApiRequests) {

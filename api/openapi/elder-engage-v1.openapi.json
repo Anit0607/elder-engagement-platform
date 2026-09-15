@@ -2,18 +2,18 @@
   "openapi": "3.1.1",
   "info": {
     "title": "Elder Engagement REST API",
-    "version": "0.3.2",
+    "version": "0.3.3",
     "summary": "Controlled Sprint 3 contract draft for Android, iOS, Contributor and Administrator clients",
-    "description": "This draft covers the verified Week 2 foundation plus the Week 3 notification-preference, predefined-circle and private Contributor-upload interfaces. It contains no production hostname, credential or personal data. Moderation, feed and events will be added to the same v1 contract before the Week 4 interface freeze."
+    "description": "This draft covers the verified Week 2 foundation plus the Week 3 notification-preference, predefined-circle, private Contributor-upload and Administrator moderation interfaces. It contains no production hostname, credential or personal data. Feed and events will be added to the same v1 contract before the Week 4 interface freeze."
   },
   "x-contract-status": "sprint-3-draft",
   "x-implementation-status": "Contract-only draft. No listed operation is claimed callable until the matching backend commit is deployed and its smoke-test evidence is recorded.",
   "x-planned-expansions": [
     {
-      "trackerItems": ["EE-019", "EE-020", "EE-021", "EE-023"],
+      "trackerItems": ["EE-020", "EE-021", "EE-023"],
       "target": "Week 4",
       "status": "Not available in this draft",
-      "capabilities": ["moderation", "feed", "events"]
+      "capabilities": ["feed", "events"]
     },
     {
       "trackerItems": ["EE-040", "EE-041", "EE-042"],
@@ -397,6 +397,58 @@
               }
             }
           },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/v1/admin/content-moderation": {
+      "get": {
+        "tags": ["Administration"],
+        "operationId": "listContentModerationQueue",
+        "summary": "List private Contributor content waiting for review",
+        "description": "Administrator only. Returns at most 100 pending items and metadata; it does not expose a permanent file address.",
+        "responses": {
+          "200": {
+            "description": "Pending review queue",
+            "content": { "application/json": { "schema": { "type": "array", "maxItems": 100, "items": { "$ref": "#/components/schemas/ModerationQueueItem" } } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/v1/admin/content-moderation/{contentItemId}/preview": {
+      "get": {
+        "tags": ["Administration"],
+        "operationId": "previewContentForModeration",
+        "summary": "Create a short-lived private preview for one pending item",
+        "parameters": [{ "name": "contentItemId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "Private preview authorised", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ModerationPreview" } } } },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/v1/admin/content-moderation/{contentItemId}/decision": {
+      "post": {
+        "tags": ["Administration"],
+        "operationId": "decideContentModeration",
+        "summary": "Approve or reject one pending item with a controlled reason",
+        "description": "Administrator only. The decision is final and audited. Approval does not publish the item; audience selection and publication belong to EE-020.",
+        "parameters": [{ "name": "contentItemId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ModerationDecisionRequest" } } } },
+        "responses": {
+          "200": { "description": "Final private moderation decision recorded", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ModerationDecisionReceipt" } } } },
           "400": { "$ref": "#/components/responses/InvalidRequest" },
           "401": { "$ref": "#/components/responses/Unauthorised" },
           "403": { "$ref": "#/components/responses/Forbidden" },
@@ -1432,6 +1484,63 @@
           "uploadId": { "type": "string", "format": "uuid" },
           "status": { "type": "string", "const": "pending" },
           "kind": { "type": "string", "enum": ["video", "audio", "pdf"] }
+        }
+      },
+      "ModerationQueueItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["contentItemId", "contributorId", "contributorDisplayName", "kind", "title", "description", "language", "contentType", "sizeBytes", "scanStatus", "rightsConfirmedAt", "submittedAt"],
+        "properties": {
+          "contentItemId": { "type": "string", "format": "uuid" },
+          "contributorId": { "type": "string", "format": "uuid" },
+          "contributorDisplayName": { "type": ["string", "null"], "maxLength": 120 },
+          "kind": { "type": "string", "enum": ["video", "audio", "pdf"] },
+          "title": { "type": "string", "minLength": 2, "maxLength": 200 },
+          "description": { "type": ["string", "null"], "maxLength": 4000 },
+          "language": { "type": "string", "enum": ["en", "bn", "hi"] },
+          "contentType": { "type": "string", "enum": ["video/mp4", "audio/mpeg", "audio/mp4", "audio/x-m4a", "application/pdf"] },
+          "sizeBytes": { "type": "integer", "minimum": 1, "maximum": 262144000 },
+          "scanStatus": { "type": "string", "enum": ["pending", "clean", "rejected", "failed"] },
+          "rightsConfirmedAt": { "type": "string", "format": "date-time" },
+          "submittedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ModerationPreview": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["contentItemId", "previewUrl", "expiresAt"],
+        "properties": {
+          "contentItemId": { "type": "string", "format": "uuid" },
+          "previewUrl": { "type": "string", "format": "uri", "description": "Sensitive short-lived private value that must not be logged or retained." },
+          "expiresAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ModerationDecisionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["outcome", "reasonCode"],
+        "properties": {
+          "outcome": { "type": "string", "enum": ["approved", "rejected"] },
+          "reasonCode": { "type": "string", "enum": ["approved", "copyright_permission", "unsafe_inappropriate", "misleading", "poor_quality", "duplicate", "other"] },
+          "note": { "type": ["string", "null"], "maxLength": 900 }
+        },
+        "oneOf": [
+          { "properties": { "outcome": { "const": "approved" }, "reasonCode": { "const": "approved" } } },
+          { "properties": { "outcome": { "const": "rejected" }, "reasonCode": { "enum": ["copyright_permission", "unsafe_inappropriate", "misleading", "poor_quality", "duplicate"] } } },
+          { "required": ["note"], "properties": { "outcome": { "const": "rejected" }, "reasonCode": { "const": "other" }, "note": { "type": "string", "minLength": 1, "maxLength": 900, "pattern": ".*\\S.*" } } }
+        ]
+      },
+      "ModerationDecisionReceipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["contentItemId", "status", "reasonCode", "note", "decidedAt", "published"],
+        "properties": {
+          "contentItemId": { "type": "string", "format": "uuid" },
+          "status": { "type": "string", "enum": ["approved", "rejected"] },
+          "reasonCode": { "type": "string" },
+          "note": { "type": ["string", "null"] },
+          "decidedAt": { "type": "string", "format": "date-time" },
+          "published": { "type": "boolean", "const": false }
         }
       },
       "Problem": {

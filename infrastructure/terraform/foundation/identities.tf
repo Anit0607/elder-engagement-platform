@@ -22,6 +22,12 @@ resource "google_service_account" "upload_signer" {
   display_name = "Elder Engage ${var.environment} upload signer"
 }
 
+resource "google_service_account" "moderation_viewer" {
+  project      = var.project_id
+  account_id   = "${local.name_prefix}-moderation"
+  display_name = "Elder Engage ${var.environment} moderation preview signer"
+}
+
 resource "google_project_iam_member" "runtime" {
   for_each = local.runtime_project_roles
 
@@ -57,6 +63,12 @@ resource "google_service_account_iam_member" "github_uses_runtime" {
 
 resource "google_service_account_iam_member" "runtime_uses_upload_signer" {
   service_account_id = google_service_account.upload_signer.name
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:${google_service_account.runtime.email}"
+}
+
+resource "google_service_account_iam_member" "runtime_uses_moderation_viewer" {
+  service_account_id = google_service_account.moderation_viewer.name
   role               = "roles/iam.serviceAccountTokenCreator"
   member             = "serviceAccount:${google_service_account.runtime.email}"
 }
