@@ -2,13 +2,13 @@
 
 The contract remains controlled. Only operations named in a matching verified deployment record are claimed callable; contract-only operations remain unavailable.
 
-## Circle-filtered Member feed — 0.3.4 candidate — 16 September 2026
+## Circle-filtered Member feed — 0.3.4 — 16 September 2026
 
 - Added Administrator publication of an approved, clean item to either all Members or one-to-twenty active circles.
 - Added a bounded, cursor-paginated Member feed that rechecks current active-circle membership on every page and every media request.
 - Publication promotes the exact reviewed file from quarantine into private approved storage. Member media links expire after five minutes and use a dedicated read-only signer.
 - Unapproved, unpublished, quarantined and out-of-audience items are never returned. Publication and audience choice are audited.
-- Deployment and live fictional Member/circle proof are still required; this source candidate is not a production release.
+- The locked package, private Cloud Run deployment, authenticated health check and live fictional Member/circle audience-isolation proof passed. Production acceptance remains part of the later release gate.
 
 ## Administrator content moderation — 0.3.3 — 16 September 2026
 
