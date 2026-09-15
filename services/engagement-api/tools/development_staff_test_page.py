@@ -32,10 +32,80 @@ class StaffTrial:
             headers["Authorization"] = "Bearer " + self.session["accessToken"]
         return request_json(method, self.origin + path, headers=headers, json=body)
 
+    def verify_account_controls(self):
+        if not self.session or self.session.get("user", {}).get("role") != "administrator":
+            return 403, {"message": "Sign in as the fictional Administrator first"}
+        administrator_id = self.session["user"]["id"]
+        contributor = StaffTrial(self.origin, self.inputs)
+        status, _ = contributor.perform({"action": "login", "role": "contributor"})
+        if status != 200:
+            return 503, {"message": "Fictional Contributor preparation did not complete"}
+        contributor_id = contributor.session["user"]["id"]
+        suspended = False
+        checks = []
+        try:
+            status, result = self.call(
+                "PATCH",
+                f"/v1/admin/users/{contributor_id}/status",
+                {"status": "suspended", "reason": "Client Week 2 fictional verification"},
+            )
+            if status != 200 or result.get("status") != "suspended":
+                return 503, {"message": "Contributor suspension was not confirmed"}
+            suspended = True
+            status, _ = contributor.call("GET", "/v1/me/profile")
+            if status != 403:
+                return 503, {"message": "Suspended Contributor access was not blocked"}
+            checks.append("suspension")
+
+            denied_trial = StaffTrial(self.origin, self.inputs)
+            status, _ = denied_trial.perform({"action": "login", "role": "contributor"})
+            if status != 403:
+                return 503, {"message": "Suspended Contributor sign-in was not blocked"}
+            checks.append("blocked sign-in")
+        finally:
+            if suspended:
+                status, result = self.call(
+                    "PATCH",
+                    f"/v1/admin/users/{contributor_id}/status",
+                    {"status": "active", "reason": "Restore fictional account after client test"},
+                )
+                if status != 200 or result.get("status") != "active":
+                    raise SafeTestFailure("Fictional Contributor safety restoration was not confirmed")
+
+        restored = StaffTrial(self.origin, self.inputs)
+        status, _ = restored.perform({"action": "login", "role": "contributor"})
+        if status != 200:
+            return 503, {"message": "Restored Contributor sign-in was not confirmed"}
+        status, _ = restored.call(
+            "PATCH",
+            f"/v1/admin/users/{administrator_id}/status",
+            {"status": "suspended", "reason": "Expected client permission-denial test"},
+        )
+        restored.perform({"action": "logout"})
+        if status != 403:
+            return 503, {"message": "Contributor permission protection was not confirmed"}
+        checks.append("permission protection")
+        status, _ = self.call(
+            "PATCH",
+            f"/v1/admin/users/{administrator_id}/status",
+            {"status": "suspended", "reason": "Expected last-Administrator protection test"},
+        )
+        if status != 409:
+            return 503, {"message": "Last-Administrator protection was not confirmed"}
+        checks.append("Administrator protection")
+        return 200, {
+            "message": "Account-control test succeeded; fictional Contributor restored to active",
+            "role": "administrator",
+            "language": self.session["user"].get("preferredLanguage"),
+            "checks": len(checks),
+        }
+
     def perform(self, payload):
         if not isinstance(payload, dict) or set(payload) - {"action", "role", "code"}:
             return 400, {"message": "Invalid test request"}
         action = payload.get("action")
+        if action == "verify-controls":
+            return self.verify_account_controls()
         if action == "login":
             role, code = payload.get("role"), payload.get("code", "")
             if role not in {"administrator", "contributor"} or not isinstance(code, str):
@@ -171,6 +241,7 @@ For Contributor: leave it empty.</p>
 <input id="code" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="Changing code">
 <button data-action="login">Sign in</button><button data-action="check">Check profile access</button>
 <button data-action="refresh">Check saved login</button><button data-action="logout">Sign out</button>
+<button data-action="verify-controls">Verify Administrator account controls</button>
 <pre id="result">Ready for your test.</pre>
 <p>Do not share passwords, setup keys or changing codes in chat or screenshots.</p>
 <script nonce="__CSRF__">

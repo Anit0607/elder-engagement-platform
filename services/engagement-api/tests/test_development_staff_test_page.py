@@ -116,6 +116,50 @@ def test_refresh_profile_and_signout_return_only_safe_status():
     assert handler.perform({"action": "logout"})[0] == 200 and handler.session is None
 
 
+def test_account_control_trial_requires_administrator():
+    handler = trial()
+    assert handler.perform({"action": "verify-controls"})[0] == 403
+    handler.session = session("contributor")
+    assert handler.perform({"action": "verify-controls"})[0] == 403
+
+
+def test_account_control_trial_restores_fixture_and_returns_no_identifiers(monkeypatch):
+    handler = trial()
+    handler.session = session("administrator", identity="fictional-administrator")
+    fixture_session = session("contributor", identity="fictional-contributor")
+    fixture = Mock(session=fixture_session)
+    fixture.perform.side_effect = [(200, {}), (403, {}), (200, {}), (200, {})]
+    fixture.call.return_value = (403, {})
+    monkeypatch.setattr(page, "StaffTrial", Mock(return_value=fixture))
+    handler.call = Mock(
+        side_effect=[
+            (200, {"status": "suspended"}),
+            (200, {"status": "active"}),
+            (409, {}),
+        ]
+    )
+
+    status, result = handler.perform({"action": "verify-controls"})
+
+    assert status == 200 and result["checks"] == 4
+    assert "fictional-contributor" not in json.dumps(result)
+    assert handler.call.call_args_list[1].args[2]["status"] == "active"
+    assert fixture.call.call_count == 2
+
+
+def test_account_control_trial_stops_when_restoration_is_not_confirmed(monkeypatch):
+    handler = trial()
+    handler.session = session("administrator")
+    fixture = Mock(session=session("contributor"))
+    fixture.perform.side_effect = [(200, {}), (403, {})]
+    fixture.call.return_value = (403, {})
+    monkeypatch.setattr(page, "StaffTrial", Mock(return_value=fixture))
+    handler.call = Mock(side_effect=[(200, {"status": "suspended"}), (503, {})])
+
+    with pytest.raises(SafeTestFailure, match="restoration"):
+        handler.perform({"action": "verify-controls"})
+
+
 def request_handler(headers=None, *, address="127.0.0.1", path="/test"):
     handler = object.__new__(page.TrialPage)
     handler.headers = {
@@ -183,3 +227,4 @@ def test_page_contains_nonce_and_no_password_input_or_remote_resources():
     assert 'nonce="fictional-csrf"' in html and "__CSRF__" not in html
     assert "https://" not in html and 'type="password"' not in html
     assert ".join('\\n')" in html
+    assert 'data-action="verify-controls"' in html
