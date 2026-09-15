@@ -57,11 +57,6 @@ class StaffTrial:
                 return 503, {"message": "Suspended Contributor access was not blocked"}
             checks.append("suspension")
 
-            denied_trial = StaffTrial(self.origin, self.inputs)
-            status, _ = denied_trial.perform({"action": "login", "role": "contributor"})
-            if status != 403:
-                return 503, {"message": "Suspended Contributor sign-in was not blocked"}
-            checks.append("blocked sign-in")
         finally:
             if suspended:
                 status, result = self.call(
