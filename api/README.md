@@ -1,6 +1,6 @@
 # Elder Engagement REST API v1
 
-Status: Sprint 3 controlled contract with verified private development through EE-020 and an EE-021 source candidate
+Status: Sprint 3 controlled contract with verified private development through EE-021
 Tracker ownership: EE-051 for the initial contract and EE-023 for the Week 4 production-ready integration package.
 
 ## Current source of truth
@@ -23,7 +23,7 @@ cd ..\..
 node tools\generate_engagement_postman.mjs
 ```
 
-The contract defines the Week 2 foundation plus Sprint 3 notification-preference, predefined-circle, private Contributor-upload, Administrator-moderation, circle-filtered Member-feed and basic event interfaces. The private development deployment verifies all listed capabilities through the feed; basic events remain a source candidate until V0009, deployment and live audience-isolation proof pass. EE-021 events are information-only and record reminder timing; Google Meet/telephone joining and reminder delivery remain later milestones. Administrator user creation/listing remains contract-only until its planned Administrator workflow is implemented. No staging or production availability is claimed.
+The contract defines the Week 2 foundation plus Sprint 3 notification-preference, predefined-circle, private Contributor-upload, Administrator-moderation, circle-filtered Member-feed and basic event interfaces. The private development deployment verifies all listed capabilities through basic events. EE-021 events are information-only and record reminder timing; Google Meet/telephone joining and reminder delivery remain later milestones. Administrator user creation/listing remains contract-only until its planned Administrator workflow is implemented. No staging or production availability is claimed.
 
 ## Version and server rules
 
