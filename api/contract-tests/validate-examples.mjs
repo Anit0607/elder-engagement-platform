@@ -10,7 +10,7 @@ const contract = JSON.parse(
 );
 const postman = JSON.parse(
   await readFile(
-    path.resolve(here, "..", "postman", "Elder_Engage_Week2_Draft.postman_collection.json"),
+    path.resolve(here, "..", "postman", "Elder_Engage_Sprint3_Draft.postman_collection.json"),
     "utf8",
   ),
 );
@@ -39,6 +39,8 @@ const examples = {
   SyntheticSessionResponse: "SessionResponse",
   SyntheticNewMemberSessionResponse: "SessionResponse",
   SyntheticProfileUpdate: "ProfileUpdate",
+  SyntheticNotificationPreferencesUpdate: "NotificationPreferencesUpdate",
+  SyntheticNotificationPreferences: "NotificationPreferences",
   SyntheticAdminCreateMember: "AdminCreateUserRequest",
   SyntheticAdminCreateContributor: "AdminCreateUserRequest",
   SyntheticProfile: "Profile",
@@ -98,6 +100,14 @@ expectInvalid("Disabled window with active times", "NotificationWindow", {
 expectInvalid("Unsupported time-zone shape", "NotificationWindow", {
   enabled: false,
   timeZone: "Kolkata",
+});
+expectInvalid("Incomplete notification preference replacement", "NotificationPreferencesUpdate", {
+  eventReminders: true,
+  contentUpdates: false,
+});
+expectInvalid("Unknown notification preference", "NotificationPreferencesUpdate", {
+  ...contract.components.examples.SyntheticNotificationPreferencesUpdate.value,
+  unknown: true,
 });
 
 for (const field of ["accessToken", "refreshToken"]) {

@@ -35,6 +35,8 @@ from app.member_auth import (
     UnconfiguredMemberSessionService,
 )
 from app.member_runtime import member_runtime
+from app.notification_preferences import NotificationPreferences, NotificationPreferencesUpdate
+from app.postgres_notification_preferences import UnconfiguredNotificationPreferencesService
 from app.postgres_profiles import UnconfiguredProfileService
 from app.problems import problem_response
 from app.profile_photos import (
@@ -104,6 +106,7 @@ def create_app(
     session_controls_handler: SessionControls | None = None,
     profile_service=None,
     profile_photo_service=None,
+    notification_preferences_service=None,
     account_controls=None,
     member_runtime_factory=member_runtime,
     probe_timeout_seconds: float = 2.0,
@@ -143,6 +146,12 @@ def create_app(
                     application.state.profile_service = getattr(
                         handler, "profile_service", UnconfiguredProfileService()
                     )
+                if config.profile_enabled and notification_preferences_service is None:
+                    application.state.notification_preferences_service = getattr(
+                        handler,
+                        "notification_preferences_service",
+                        UnconfiguredNotificationPreferencesService(),
+                    )
                 if config.profile_photo_enabled and profile_photo_service is None:
                     application.state.profile_photo_service = getattr(
                         handler, "profile_photo_service", UnconfiguredProfilePhotoService()
@@ -160,6 +169,10 @@ def create_app(
                         application.state.staff_session_handler = UnconfiguredStaffSessionService()
                     if profile_service is None:
                         application.state.profile_service = UnconfiguredProfileService()
+                    if notification_preferences_service is None:
+                        application.state.notification_preferences_service = (
+                            UnconfiguredNotificationPreferencesService()
+                        )
                     if profile_photo_service is None:
                         application.state.profile_photo_service = UnconfiguredProfilePhotoService()
                     if account_controls is None:
@@ -182,6 +195,9 @@ def create_app(
     app.state.session_controls = session_controls_handler or UnconfiguredSessionControls()
     app.state.profile_service = profile_service or UnconfiguredProfileService()
     app.state.profile_photo_service = profile_photo_service or UnconfiguredProfilePhotoService()
+    app.state.notification_preferences_service = (
+        notification_preferences_service or UnconfiguredNotificationPreferencesService()
+    )
     app.state.account_controls = account_controls or UnconfiguredAccountControls()
 
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=config.trusted_host_list)
@@ -372,6 +388,30 @@ def create_app(
         try:
             return await app.state.profile_photo_service.complete(
                 bearer_token(request), uploadId, request.state.trace_id
+            )
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.get(
+        "/v1/me/notification-preferences",
+        tags=["Notifications"],
+        response_model=NotificationPreferences,
+    )
+    async def get_my_notification_preferences(request: Request):
+        try:
+            return await app.state.notification_preferences_service.get(bearer_token(request))
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.put(
+        "/v1/me/notification-preferences",
+        tags=["Notifications"],
+        response_model=NotificationPreferences,
+    )
+    async def replace_my_notification_preferences(request: Request, payload: NotificationPreferencesUpdate):
+        try:
+            return await app.state.notification_preferences_service.replace(
+                bearer_token(request), payload, request.state.trace_id
             )
         except MemberSessionFailure as exc:
             return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)

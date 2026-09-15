@@ -17,6 +17,7 @@ from app.config import ConfigurationError, Settings
 from app.google_phone_identity import GooglePhoneIdentityVerifier
 from app.member_auth import MemberSessionService
 from app.postgres_member_repository import PostgresMemberRepository
+from app.postgres_notification_preferences import PostgresNotificationPreferencesService
 from app.postgres_profiles import PostgresProfileService, verify_profile_schema
 from app.postgres_staff_session import PostgresStaffSessionService
 from app.profile_photos import (
@@ -145,6 +146,9 @@ async def member_runtime(
                             settings.approved_media_bucket,
                         )
                     handler.profile_service = PostgresProfileService(authorization, photo_storage)
+                    handler.notification_preferences_service = PostgresNotificationPreferencesService(
+                        authorization
+                    )
                     if settings.profile_photo_enabled:
                         handler.profile_photo_service = PostgresProfilePhotoService(
                             authorization,

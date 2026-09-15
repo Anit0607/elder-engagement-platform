@@ -6,7 +6,7 @@ const workspace = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..
 const outputDirectory = path.join(workspace, "api", "postman");
 const outputPath = path.join(
   outputDirectory,
-  "Elder_Engage_Week2_Draft.postman_collection.json",
+  "Elder_Engage_Sprint3_Draft.postman_collection.json",
 );
 
 const jsonHeaders = [{ key: "Content-Type", value: "application/json" }];
@@ -50,9 +50,9 @@ const request = (name, method, url, options = {}) => {
 const collection = {
   info: {
     _postman_id: "5b4e91aa-1971-4bc1-9092-1ccbd4e217d9",
-    name: "Elder Engage Week 2 REST Draft",
+    name: "Elder Engage Sprint 3 REST Draft",
     description:
-      "Safe synthetic companion to elder-engage-v1.openapi.json. Contract-only: no operation is claimed implemented, deployed, or accepted. Never insert a production credential before importing this collection into an approved private workspace.",
+      "Safe synthetic companion to elder-engage-v1.openapi.json. The deployment record, not this collection, determines which operations are callable. Never insert a production credential before importing this collection into an approved private workspace.",
     schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
   },
   variable: [
@@ -132,6 +132,28 @@ const collection = {
           "Complete profile-photo upload",
           "POST",
           "/v1/me/profile/photo-upload/{{uploadId}}/complete",
+        ),
+        request("Get my notification preferences", "GET", "/v1/me/notification-preferences", {
+          description: "Returns only the signed-in account's notification choices.",
+        }),
+        request(
+          "Replace my notification preferences",
+          "PUT",
+          "/v1/me/notification-preferences",
+          {
+            body: {
+              eventReminders: true,
+              contentUpdates: false,
+              deliveryWindow: {
+                enabled: true,
+                startLocalTime: "22:00",
+                endLocalTime: "06:00",
+                timeZone: "Asia/Kolkata",
+              },
+            },
+            description:
+              "Replaces the complete set of notification choices for the signed-in account.",
+          },
         ),
         request("List my sessions", "GET", "/v1/me/sessions"),
         request("Revoke one session", "DELETE", "/v1/me/sessions/{{sessionId}}", {

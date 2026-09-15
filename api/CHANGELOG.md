@@ -2,6 +2,14 @@
 
 The contract remains controlled. Only operations named in a matching verified deployment record are claimed callable; contract-only operations remain unavailable.
 
+## Notification-preference candidate — 0.3.0 draft — 15 September 2026
+
+- Added authenticated read and complete-replacement operations for an account's own notification preferences.
+- Event reminders and content updates are independent choices. The optional local-time delivery window supports overnight ranges and validates its time zone before saving.
+- A replacement and its minimal audit record commit together. Missing saved preferences return safe defaults without writing data.
+- Added Android/iOS request and response examples, negative contract checks and a generated Sprint 3 Postman collection.
+- This is a tested source candidate under EE-022. It is not claimed deployed or client-accepted.
+
 ## Week 2 private development verification — 15 September 2026
 
 - Deployed and verified Google phone identity exchange, Member/staff sessions,

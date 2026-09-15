@@ -27,10 +27,10 @@ const visit = (value, location = "#") => {
 };
 
 if (contract.openapi !== "3.1.1") errors.push("The contract must use OpenAPI 3.1.1.");
-if (!String(contract.info?.version ?? "").match(/^0\.2\./))
-  errors.push("The Sprint 2 contract version must remain in the 0.2.x draft line.");
-if (contract["x-contract-status"] !== "sprint-2-draft")
-  errors.push("The contract must remain clearly marked as a Sprint 2 draft.");
+if (!String(contract.info?.version ?? "").match(/^0\.3\./))
+  errors.push("The Sprint 3 contract version must remain in the 0.3.x draft line.");
+if (contract["x-contract-status"] !== "sprint-3-draft")
+  errors.push("The contract must remain clearly marked as a Sprint 3 draft.");
 for (const server of contract.servers ?? []) {
   try {
     const url = new URL(server.url);
@@ -103,10 +103,14 @@ for (const tokenField of ["accessToken", "refreshToken"]) {
 for (const requiredPath of [
   "/v1/me/profile/photo-upload",
   "/v1/me/profile/photo-upload/{uploadId}/complete",
+  "/v1/me/notification-preferences",
 ]) {
   if (!contract.paths?.[requiredPath])
     errors.push(`Profile photo lifecycle path is missing: ${requiredPath}`);
 }
+if (!contract.paths?.["/v1/me/notification-preferences"]?.get ||
+    !contract.paths?.["/v1/me/notification-preferences"]?.put)
+  errors.push("Notification preferences must define both read and complete replacement operations.");
 if (!contract.paths?.["/v1/admin/users"]?.post)
   errors.push("Manual Administrator profile creation is missing.");
 

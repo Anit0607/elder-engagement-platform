@@ -1,6 +1,6 @@
 # Week 2 Postman companion
 
-`Elder_Engage_Week2_Draft.postman_collection.json` is generated from safe, synthetic examples for the current REST draft.
+`Elder_Engage_Sprint3_Draft.postman_collection.json` is generated from safe, synthetic examples for the current REST draft.
 
 Generate it from the project root with:
 

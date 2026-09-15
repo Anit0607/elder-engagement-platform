@@ -1,8 +1,8 @@
 {
   "info": {
     "_postman_id": "5b4e91aa-1971-4bc1-9092-1ccbd4e217d9",
-    "name": "Elder Engage Week 2 REST Draft",
-    "description": "Safe synthetic companion to elder-engage-v1.openapi.json. Contract-only: no operation is claimed implemented, deployed, or accepted. Never insert a production credential before importing this collection into an approved private workspace.",
+    "name": "Elder Engage Sprint 3 REST Draft",
+    "description": "Safe synthetic companion to elder-engage-v1.openapi.json. The deployment record, not this collection, determines which operations are callable. Never insert a production credential before importing this collection into an approved private workspace.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -381,6 +381,78 @@
               ]
             },
             "description": "Contract-only request. It is not claimed callable until the matching backend is deployed and verified."
+          }
+        },
+        {
+          "name": "Get my notification preferences",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/notification-preferences",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "notification-preferences"
+              ]
+            },
+            "description": "Returns only the signed-in account's notification choices."
+          }
+        },
+        {
+          "name": "Replace my notification preferences",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventReminders\": true,\n  \"contentUpdates\": false,\n  \"deliveryWindow\": {\n    \"enabled\": true,\n    \"startLocalTime\": \"22:00\",\n    \"endLocalTime\": \"06:00\",\n    \"timeZone\": \"Asia/Kolkata\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/notification-preferences",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "notification-preferences"
+              ]
+            },
+            "description": "Replaces the complete set of notification choices for the signed-in account."
           }
         },
         {

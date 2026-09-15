@@ -58,9 +58,14 @@ Implemented now:
 - role-bound own-profile and Administrator account-control permissions;
 - detailed English/Bengali/Hindi profiles with the non-restrictive `55+` label;
 - private, short-lived profile-photo upload/view links and metadata-stripping image processing;
-- a versioned Week 2 REST contract for identity, profiles and account controls.
+- Member-controlled event-reminder and content-update choices with an optional local delivery window;
+- a versioned Sprint 3 REST contract containing the verified Week 2 foundation and the notification-preference candidate.
 
-The development container is deployed to private Cloud Run, and checksum-locked migrations `V0001`–`V0005` are applied to private Cloud SQL. The Member-session service follows the approved immediate-access boundary: the repository atomically finds or creates an active Member for a verified phone identity, and `profileComplete=false` routes a new Member to self-service profile setup. Cloud SQL uses private IP and automatic IAM authentication. Cloud Run loads only pinned Secret Manager versions; missing, weak or equal keys prevent startup. Database commands and certificate requests are time-bounded, and pool, connector and certificate session resources close at shutdown. Contributors remain Administrator-created. Circles, content, moderation, feeds, events, notifications and media providers are later-sprint work.
+The development container is deployed to private Cloud Run, and checksum-locked migrations `V0001`–`V0005` are applied to private Cloud SQL. The Member-session service follows the approved immediate-access boundary: the repository atomically finds or creates an active Member for a verified phone identity, and `profileComplete=false` routes a new Member to self-service profile setup. Cloud SQL uses private IP and automatic IAM authentication. Cloud Run loads only pinned Secret Manager versions; missing, weak or equal keys prevent startup. Database commands and certificate requests are time-bounded, and pool, connector and certificate session resources close at shutdown. Contributors remain Administrator-created. The Sprint 3 notification-preference work is currently a tested source candidate and is not yet deployed. Circles, content, moderation, feeds, events and media providers remain later work.
+
+## Notification preferences (EE-022, source candidate)
+
+Authenticated accounts can read and completely replace only their own notification preferences. Event reminders and content updates are independent choices. The optional delivery window uses a validated time zone and supports windows that cross midnight. Missing saved preferences return safe defaults without changing the database. Each saved replacement and a minimal, non-personal audit record commit together. The internal delivery policy rejects unknown categories and times without a time zone. This source candidate is not claimed available in Google Cloud until the deployment and live acceptance steps pass.
 
 ## Staff sign-in (EE-010, verified in private development)
 
