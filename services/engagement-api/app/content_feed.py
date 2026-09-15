@@ -26,7 +26,9 @@ def unavailable():
 
 
 class ContentPublicationRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid", strict=True, populate_by_name=True)
+    # UUIDs cross REST interfaces as JSON strings. Do not use model-wide strict
+    # mode here: it would reject the standards-compliant Android/iOS shape.
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     audience: Literal["all_members", "circles"]
     circle_ids: list[UUID] = Field(default_factory=list, alias="circleIds", max_length=20)
