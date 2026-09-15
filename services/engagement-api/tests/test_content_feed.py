@@ -354,6 +354,11 @@ def test_schema_configuration_and_http_boundary(settings):
             headers=headers,
             json={"audience": "all_members", "circleIds": []},
         ).status_code == 200
+        assert client.post(
+            f"/v1/admin/content/{CONTENT}/publication",
+            headers=headers,
+            json={"audience": "circles", "circleIds": [str(CIRCLE)]},
+        ).status_code == 200
         assert client.get("/v1/feed?limit=20", headers=headers).status_code == 200
         assert client.get(
             f"/v1/feed/{CONTENT}/media", headers=headers
