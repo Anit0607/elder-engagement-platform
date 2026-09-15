@@ -16,22 +16,12 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from tools.test_development_member_login import SafeTestFailure, cloud_cli
 from tools.test_development_member_sessions import fictional_proof
 from tools.test_development_profile_photos import check_profile_photo
-from tools.test_development_profiles import check_profiles
 
 PAGE_HOST = "127.0.0.1"
 PAGE_PORT = 8790
 PAGE_ORIGIN = f"http://{PAGE_HOST}:{PAGE_PORT}"
 
 FRIENDLY_CHECKS = {
-    "approved_profile_fields_saved_for_same_member": "Approved profile details save correctly",
-    "english_bengali_hindi_saved_and_omitted_fields_preserved": (
-        "English, Bengali and Hindi save without losing other profile details"
-    ),
-    "unsupported_language_and_self_assigned_permissions_rejected": (
-        "Invalid language and self-promotion to Administrator are blocked"
-    ),
-    "age_label_is_not_an_access_restriction": "The 55+ label does not block younger users",
-    "renewed_login_reads_saved_english_profile": "A renewed login sees the saved profile",
     "short_lived_restricted_upload_authorised": "Photo upload permission is short-lived and restricted",
     "synthetic_photo_uploaded_directly_to_private_storage": (
         "The synthetic photo reaches private storage without passing through the app server"
@@ -58,14 +48,20 @@ def run_acceptance(project: str, region: str) -> dict:
     if not re.fullmatch(r"https://[a-z0-9.-]+\.run\.app", origin):
         raise SafeTestFailure("The development service address could not be verified")
     gateway = cloud_cli("auth", "print-identity-token")
-    profile_checks = check_profiles(origin, gateway, fictional_proof(project, identity_index=1))
-    photo_checks = check_profile_photo(origin, gateway, fictional_proof(project, identity_index=1))
-    checks = profile_checks + photo_checks
+    try:
+        proof = fictional_proof(project, identity_index=1)
+    except SafeTestFailure as exc:
+        if str(exc) == "A test network request failed":
+            raise SafeTestFailure(
+                "Google's fictional sign-in connection was interrupted; this check is safe to try again"
+            ) from None
+        raise
+    checks = check_profile_photo(origin, gateway, proof)
     if set(checks) != set(FRIENDLY_CHECKS):
         raise SafeTestFailure("The expected Week 2 checks did not all complete")
     return {
         "status": "passed",
-        "message": "All remaining Week 2 profile and photo checks succeeded",
+        "message": "All remaining Week 2 profile-photo checks succeeded",
         "checks": [FRIENDLY_CHECKS[item] for item in checks],
         "realSmsSent": False,
         "personalPhotoUsed": False,
@@ -118,11 +114,12 @@ button:disabled{{opacity:.55}} #result{{white-space:pre-wrap;line-height:1.5}}
 <li>Administrator password plus authenticator-app sign-in</li>
 <li>English, Bengali and Hindi screen preference</li>
 <li>Administrator suspension/reactivation and permission protection</li>
+<li>Detailed profile fields, languages and the non-restrictive 55+ label</li>
 </ul></div>
 <div class="card"><h2>Remaining acceptance check</h2>
 <p>This uses a fictional Member and a generated picture. It sends no real text
 message and uses no personal photo.</p>
-<button id="run">Run profile and photo checks</button>
+<button id="run">Run profile-photo checks</button>
 <p id="result">Ready. The check normally takes under one minute.</p></div>
 <script nonce="{self.csrf}">
 const button=document.getElementById('run'), result=document.getElementById('result');

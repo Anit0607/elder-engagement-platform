@@ -437,7 +437,7 @@ For the final Week 2 client check, run `python -m
 tools.development_week2_acceptance_page --project approved-development-project
 --region approved-region --confirm CLIENT-TEST-EE-016-development` (one line),
 then open `http://127.0.0.1:8790`. The loopback-only page presents the earlier
-accepted checks and lets the client trigger the remaining nine profile/photo
-checks without seeing cloud credentials or signed links.
+accepted checks and lets the client trigger the remaining four profile-photo
+checks with one fictional login, without seeing cloud credentials or signed links.
 
 Do not copy `config/engagement/.env.example` into a staging or production deployment. It contains explicit non-operational development identifiers which secure-environment validation rejects.

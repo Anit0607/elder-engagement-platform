@@ -37,7 +37,18 @@ def check_profile_photo(origin: str, gateway: str, proof: str) -> list[str]:
         headers = {"X-Serverless-Authorization": f"Bearer {gateway}"}
         if access:
             headers["Authorization"] = f"Bearer {access}"
-        status, response = request_json(method, origin + path, headers=headers, json=body)
+        try:
+            status, response = request_json(method, origin + path, headers=headers, json=body)
+        except SafeTestFailure as exc:
+            if str(exc) == "A test network request failed":
+                raise SafeTestFailure(
+                    "The private development connection was interrupted; this check is safe to try again"
+                ) from None
+            raise
+        if path == "/v1/auth/member/session" and status == 429:
+            raise SafeTestFailure(
+                "The fictional Member reached its temporary sign-in limit; wait ten minutes and try again"
+            )
         if status != expected:
             raise SafeTestFailure("A development profile-photo expectation did not pass")
         return response
