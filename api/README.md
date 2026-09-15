@@ -1,6 +1,6 @@
 # Elder Engagement REST API v1
 
-Status: Sprint 2 controlled draft
+Status: Sprint 2 controlled contract with a verified private development subset
 Tracker ownership: EE-051 for the initial contract and EE-023 for the Week 4 production-ready integration package.
 
 ## Current source of truth
@@ -23,7 +23,7 @@ cd ..\..
 node tools\generate_engagement_postman.mjs
 ```
 
-The contract currently defines the Week 2 foundation: operations, Member identity-provider token exchange, Contributor/Administrator credentials, refresh and revocation, detailed profiles, and account controls. It is a contract-only draft: no listed endpoint is claimed implemented or callable until a matching backend commit is deployed and its smoke-test evidence is recorded. Circles, upload, moderation, feed, events, notification preferences, and later broadcast operations will be added under their approved milestones.
+The contract currently defines the Week 2 foundation: operations, Member identity-provider token exchange, Contributor/Administrator credentials, refresh and revocation, detailed profiles, and account controls. The private development deployment implements and verifies authentication, sessions, own profiles, profile photos, and status/role controls. Administrator user creation/listing remains contract-only until its planned Administrator workflow is implemented. Circles, content upload, moderation, feed, events, notification preferences, and later broadcast operations will be added under their approved milestones. No staging or production availability is claimed.
 
 ## Version and server rules
 
@@ -37,9 +37,9 @@ The contract currently defines the Week 2 foundation: operations, Member identit
 
 The mobile client completes phone one-time-password verification through the client-approved Firebase Authentication or Identity Platform project. It sends the resulting identity-provider token to the REST backend to create the platform session. The REST backend never accepts or logs the one-time password itself.
 
-A verified phone identity receives immediate Member access. The backend atomically finds or creates the active Member account, and a `profileComplete=false` response sends a new Member to self-service profile setup without blocking the session. Contributor and Administrator profiles use a username and remain Administrator-created and invited until the separate credential-activation flow under EE-010 is implemented. The backend determines roles from stored account data and never accepts the mobile client's claim of a role.
+A verified phone identity receives immediate Member access. The backend atomically finds or creates the active Member account, and a `profileComplete=false` response sends a new Member to self-service profile setup without blocking the session. Contributor and Administrator profiles use a username and remain Administrator-created. Fictional development accounts were provisioned through a controlled one-time job; the production Administrator console and real-account invitation/recovery flow remain later work. The backend determines roles from stored account data and never accepts the mobile client's claim of a role.
 
-Contributor and Administrator credentials use the separate staff session operation. The final stronger Administrator second-factor rule remains a client decision and is explicitly described as conditional in the draft.
+Contributor and Administrator credentials use the separate staff session operation. The client-approved stronger Administrator method is a password plus a changing code from an authenticator app; the private development deployment verifies this method with a fictional Administrator.
 
 ## Security rules
 

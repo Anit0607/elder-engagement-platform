@@ -32,7 +32,7 @@ of an authenticator app. The job, pinned secret versions, immutable image and
 controlled execution are **not provisioned by this source change**. Never run
 it against another environment or expose it through a public route.
 
-Status: Sprint 1 development foundation deployed; Week 2 identity work started but not production-ready. This is the current Amiko service. The top-level `backend/` directory is an inherited booking implementation and is not imported, renamed or extended here.
+Status: Sprint 1 foundation and the agreed Week 2 backend are deployed and verified in the private development environment. This remains a development release, not production readiness or final client acceptance. The top-level `backend/` directory is an inherited booking implementation and is not imported, renamed or extended here.
 
 Implemented now:
 
@@ -53,13 +53,18 @@ Implemented now:
   and puts no phone or profile details in short-lived access tokens;
 - an enabled-runtime, database-backed limit of five new Member sessions per ten
   minutes, serialized under a user-row lock across instances and device changes;
+- rotating refresh, logout and owned-device revocation for Member and staff sessions;
+- Contributor password sign-in and Administrator password plus authenticator-app sign-in;
+- role-bound own-profile and Administrator account-control permissions;
+- detailed English/Bengali/Hindi profiles with the non-restrictive `55+` label;
+- private, short-lived profile-photo upload/view links and metadata-stripping image processing;
 - a versioned Week 2 REST contract for identity, profiles and account controls.
 
-The development container is deployed to private Cloud Run, and database migration `V0001` is applied to private Cloud SQL. The Member-session service follows the approved immediate-access boundary: the repository atomically finds or creates an active Member for a verified phone identity, and `profileComplete=false` routes a new Member to self-service profile setup. `EE_MEMBER_SESSION_ENABLED=true` connects the verifier, repository and session issuer through the application lifespan. Cloud SQL uses private IP, automatic IAM authentication and a four-connection pool; it never loads the password-style database URL secret. Cloud Run injects the two pinned Secret Manager values as base64 into `AMIKO_SESSION_SIGNING_KEY_BASE64` and `AMIKO_REFRESH_PEPPER_BASE64`. Missing, weak or equal keys prevent startup. Disabling the flag preserves the unavailable login boundary. Database commands and certificate requests are time-bounded, and pool, connector and certificate session resources close at shutdown. Refresh, logout and session-management operations remain EE-011 work. Contributors remain Administrator-created. Profiles, staff sign-in, circles, content, moderation, feeds, events, notifications and media providers are not yet implemented.
+The development container is deployed to private Cloud Run, and checksum-locked migrations `V0001`–`V0005` are applied to private Cloud SQL. The Member-session service follows the approved immediate-access boundary: the repository atomically finds or creates an active Member for a verified phone identity, and `profileComplete=false` routes a new Member to self-service profile setup. Cloud SQL uses private IP and automatic IAM authentication. Cloud Run loads only pinned Secret Manager versions; missing, weak or equal keys prevent startup. Database commands and certificate requests are time-bounded, and pool, connector and certificate session resources close at shutdown. Contributors remain Administrator-created. Circles, content, moderation, feeds, events, notifications and media providers are later-sprint work.
 
-## Staff sign-in (EE-010, disabled implementation candidate)
+## Staff sign-in (EE-010, verified in private development)
 
-### Administrator account-control candidate (EE-014, not deployed)
+### Administrator account controls (EE-014, verified in private development)
 
 Status and role PATCH handlers require connected staff authentication and
 `EE_ACCOUNT_CONTROLS_ENABLED=true` (default false). Only a currently authenticated
@@ -76,7 +81,7 @@ existing Google phone identity and removes staff credentials before changing rol
 Role changes revoke old sessions. Staff creation/enrollment and the Administrator
 console remain separate work; these source handlers do not claim live acceptance.
 
-### Own-profile implementation candidate (EE-013, not deployed)
+### Own profiles and photos (EE-013, verified in private development)
 
 `EE_PROFILE_ENABLED=false` is the default. Enabled profiles require connected
 identity and V0004 English preference support at startup. `GET/PATCH
@@ -91,11 +96,14 @@ English/Bengali/Hindi and the `55+` profile label are approved. Younger users ar
 not blocked. Future minimum-age enforcement is a separate extension requiring
 an agreed age input, consent/verification and policy rollout, not just a label.
 Profile audits store changed field names, not names/location/interest values.
-Photo authorization/validation/attachment is still pending; private object keys
-are never returned and this candidate returns no photo address. Source and
-database checks do not substitute for cloud/client acceptance.
+Photo authorisation uses a five-minute signed upload restricted to the declared
+type and exact size, with a five-mebibyte maximum. The server verifies the hash
+and real image format, applies orientation, resizes oversized images, converts to
+WebP and strips source metadata before attaching it. Both buckets and object keys
+remain private; profiles receive only a five-minute view link. Synthetic live
+development checks passed, but they do not substitute for client acceptance.
 
-### Week 2 permission foundation (EE-012, not yet routed or deployed)
+### Week 2 permissions (EE-012, verified in private development)
 
 `app/authorization.py` defines own-profile/own-account permissions for active
 users and Administrator-only staff creation/status/role controls. A verified
@@ -414,7 +422,22 @@ REST interface. It uses the second configured fictional phone identity, sends no
 real text message, refuses to overwrite a non-fixture profile and signs out its
 test session. Clearly labelled synthetic profile data is retained. The test checks
 that age labels do not restrict access; this is not proof of a person's age or an
-implemented future age-verification policy. Photos are not tested or declared
-complete. Automated development evidence does not replace client acceptance.
+implemented future age-verification policy. Automated development evidence does
+not replace client acceptance.
+
+`python -m tools.test_development_profile_photos --project
+approved-development-project --region approved-region --confirm
+TEST-EE-013-PHOTO-development` verifies the separate photo path with the same
+fictional Member and an in-memory synthetic PNG. It proves the upload restriction,
+private direct upload, server-side WebP conversion, metadata removal, short-lived
+profile view link and completed-upload replay rejection. It never prints a token,
+phone number, Member identifier or signed URL, and sends no real text message.
+
+For the final Week 2 client check, run `python -m
+tools.development_week2_acceptance_page --project approved-development-project
+--region approved-region --confirm CLIENT-TEST-EE-016-development` (one line),
+then open `http://127.0.0.1:8790`. The loopback-only page presents the earlier
+accepted checks and lets the client trigger the remaining nine profile/photo
+checks without seeing cloud credentials or signed links.
 
 Do not copy `config/engagement/.env.example` into a staging or production deployment. It contains explicit non-operational development identifiers which secure-environment validation rejects.

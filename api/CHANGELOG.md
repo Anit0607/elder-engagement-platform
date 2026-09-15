@@ -1,6 +1,21 @@
 # Elder Engage REST API change log
 
-The contract remains a controlled Sprint 2 draft and no listed operation is claimed callable until its matching backend deployment is verified.
+The contract remains controlled. Only operations named in a matching verified deployment record are claimed callable; contract-only operations remain unavailable.
+
+## Week 2 private development verification — 15 September 2026
+
+- Deployed and verified Google phone identity exchange, Member/staff sessions,
+  refresh/logout/device revocation, own profiles, private profile-photo handling,
+  and Administrator status/role controls in the private development environment.
+- Applied checksum-locked database migrations through `V0005` using recorded
+  one-time jobs after a fresh successful backup. GitHub's authenticated private
+  health check and live fictional Member/profile/photo checks passed.
+- The photo trial used a synthetic image and no real text message. It verified a
+  restricted upload, WebP conversion, metadata removal, short-lived viewing and
+  completed-upload replay rejection without printing tokens or signed links.
+- Administrator user creation/listing, the production Administrator console,
+  real staff invitation/recovery, staging/production release and direct iOS
+  handoff remain outstanding. This is not a production release.
 
 ## Account-control candidate — 0.2.2 draft — 14 September 2026
 
