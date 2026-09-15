@@ -9,6 +9,8 @@ from pydantic import ValidationError
 
 from app.circles import CircleCreate, CircleSuggestionRules, CircleUpdate, is_suggested
 from app.main import create_app
+from app.member_auth import MemberSessionFailure
+from app.postgres_circles import PostgresCircleService
 
 
 def test_circle_suggestions_use_general_interest_or_language_rules():
@@ -40,6 +42,38 @@ def test_circle_create_rejects_ambiguous_or_unsupported_values(payload):
 def test_circle_update_requires_a_real_change(payload):
     with pytest.raises(ValidationError):
         CircleUpdate.model_validate(payload)
+
+
+class CircleListConnection:
+    def __init__(self, interests='["Music"]'):
+        self.interests = interests
+
+    async def fetchrow(self, query, *args):
+        return {"preferred_language": "en", "interests": self.interests}
+
+    async def fetch(self, query, *args):
+        return [
+            {
+                "id": uuid4(),
+                "name": "Fictional music circle",
+                "description": None,
+                "active": True,
+                "suggestion_rules": '{"interests":["Music"],"preferredLanguages":[]}',
+                "created_at": datetime.now(UTC),
+                "updated_at": datetime.now(UTC),
+                "selected_by_user": None,
+                "joined": False,
+            }
+        ]
+
+
+@pytest.mark.anyio
+async def test_database_encoded_profile_interests_drive_suggestions():
+    result = await PostgresCircleService(None)._list(CircleListConnection(), uuid4())
+    assert len(result) == 1 and result[0].suggested
+    with pytest.raises(MemberSessionFailure) as error:
+        await PostgresCircleService(None)._list(CircleListConnection("not-json"), uuid4())
+    assert error.value.status == 503
 
 
 class CircleService:

@@ -95,7 +95,15 @@ class PostgresCircleService:
                WHERE user_id=$1""",
             user_id,
         )
-        interests = list(profile["interests"]) if profile else []
+        try:
+            interests_value = profile["interests"] if profile else []
+            interests = (
+                json.loads(interests_value) if isinstance(interests_value, str) else list(interests_value)
+            )
+            if not isinstance(interests, list) or any(not isinstance(value, str) for value in interests):
+                raise TypeError("Profile interests are malformed")
+        except (json.JSONDecodeError, TypeError) as exc:
+            raise unavailable() from exc
         language = profile["preferred_language"] if profile else None
         rows = await connection.fetch(
             """SELECT c.id,c.name,c.description,c.active,c.suggestion_rules,c.created_at,c.updated_at,
