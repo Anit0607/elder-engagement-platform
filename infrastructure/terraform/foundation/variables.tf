@@ -362,6 +362,12 @@ variable "enable_content_feed" {
   default     = false
 }
 
+variable "enable_event_service" {
+  description = "Enable Administrator event creation and circle-filtered Member event listing after its migration passes."
+  type        = bool
+  default     = false
+}
+
 variable "enable_account_controls" {
   description = "Enable reviewed Administrator-only account controls after connected staff sign-in is ready."
   type        = bool

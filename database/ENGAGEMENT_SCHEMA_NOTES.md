@@ -1,6 +1,6 @@
 # Engagement database baseline
 
-Status: V0001–V0008 are checksum-locked and applied to the private development PostgreSQL 16 database.
+Status: V0001–V0008 are checksum-locked and applied to the private development PostgreSQL 16 database. V0009 is a reviewed source candidate pending controlled application.
 
 `migrations/V0001__engagement_baseline.sql` is the canonical PostgreSQL 16 baseline for the approved engagement product. Its approved repository bytes are locked by `migrations/manifest.json`. `amiko_v1_schema.sql` belongs to the inherited booking/caregiver scope and is retained only as history.
 
@@ -84,3 +84,11 @@ in the new note copy, while the original reason remains unchanged. The `other`
 choice requires an explanation. It does not publish, delete or move content.
 Its fresh backup, reviewed migration job, restricted preview identity, private
 deployment and live synthetic MP4/MP3/PDF moderation proof passed.
+
+## EE-021 additive candidate: V0009
+
+`V0009__event_reminder_rules.sql` adds normalized reminder offsets for the
+existing events table. Each event may use unique timings from five minutes to
+seven days before its start. The table records scheduling rules only; it does
+not send a notification or add a provider credential. Controlled database
+application, private deployment and live fictional proof remain pending.

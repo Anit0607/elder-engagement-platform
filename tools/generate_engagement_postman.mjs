@@ -221,8 +221,30 @@ const collection = {
       ],
     },
     {
+      name: "Events",
+      item: [
+        request("List my upcoming events", "GET", "/v1/events?period=upcoming&limit=20", {
+          description:
+            "Member only. Returns information-only events allowed for all Members or one of the Member's active circles.",
+        }),
+      ],
+    },
+    {
       name: "Administration",
       item: [
+        request("Create circle event", "POST", "/v1/admin/events", {
+          body: {
+            title: "Synthetic music gathering",
+            description: "Fictional event used only for contract testing",
+            startsAt: "2026-10-10T10:00:00+05:30",
+            endsAt: "2026-10-10T11:00:00+05:30",
+            audience: "circles",
+            circleIds: ["{{circleId}}"],
+            reminderMinutesBefore: [1440, 60],
+          },
+          description:
+            "Administrator only. Records the event and reminder schedule; Meet/telephone joining and reminder delivery are separate milestones.",
+        }),
         request("List pending content", "GET", "/v1/admin/content-moderation"),
         request(
           "Preview pending content",

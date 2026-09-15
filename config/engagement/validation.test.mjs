@@ -24,6 +24,22 @@ test("account controls reject unsafe or disconnected activation", () => {
   }
 });
 
+test("event service requires connected profiles and circles", () => {
+  const missing = validateConfig({ ...baseline, EE_EVENT_SERVICE_ENABLED: "true" });
+  assert(missing.some((error) => error.includes("Events require")));
+  const valid = validateConfig({
+    ...baseline,
+    EE_MEMBER_SESSION_ENABLED: "true",
+    EE_MEMBER_IDENTITY_PROVIDER: "identity_platform",
+    EE_FIREBASE_PROJECT_ID: baseline.EE_GCP_PROJECT_ID,
+    EE_MEMBER_TOKEN_AUDIENCE: baseline.EE_GCP_PROJECT_ID,
+    EE_DATABASE_IAM_USER: "application@example-development-project.iam",
+    EE_PROFILE_ENABLED: "true",
+    EE_EVENT_SERVICE_ENABLED: "true",
+  });
+  assert.equal(valid.length, 0);
+});
+
 test("content uploads reject unsafe or disconnected activation", () => {
   for (const value of ["true", "yes", ""]) {
     assert.notEqual(validateConfig({ ...baseline, EE_CONTENT_UPLOAD_ENABLED: value }).length, 0);

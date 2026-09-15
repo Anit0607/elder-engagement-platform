@@ -19,6 +19,7 @@ const allowedKeys = new Set([
   "EE_CONTENT_UPLOAD_ENABLED",
   "EE_CONTENT_MODERATION_ENABLED", "EE_MODERATION_SIGNER_SERVICE_ACCOUNT",
   "EE_CONTENT_FEED_ENABLED", "EE_CONTENT_DELIVERY_SIGNER_SERVICE_ACCOUNT",
+  "EE_EVENT_SERVICE_ENABLED",
   "EE_ACCOUNT_CONTROLS_ENABLED",
 ]);
 
@@ -67,6 +68,12 @@ function boundedInteger(values, errors, key, minimum, maximum) {
 
 export function validateConfig(values) {
   const errors = [];
+  if (Object.hasOwn(values, "EE_EVENT_SERVICE_ENABLED") && !["true", "false"].includes(values.EE_EVENT_SERVICE_ENABLED)) {
+    errors.push("EE_EVENT_SERVICE_ENABLED must be true or false");
+  }
+  if (values.EE_EVENT_SERVICE_ENABLED === "true" && values.EE_PROFILE_ENABLED !== "true") {
+    errors.push("Events require the connected profile and circle runtime");
+  }
   if (Object.hasOwn(values, "EE_CONTENT_FEED_ENABLED") && !["true", "false"].includes(values.EE_CONTENT_FEED_ENABLED)) {
     errors.push("EE_CONTENT_FEED_ENABLED must be true or false");
   }

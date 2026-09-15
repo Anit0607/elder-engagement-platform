@@ -29,6 +29,7 @@ def test_complete_permission_matrix(role, permission, owned):
         Permission.VIEW_CIRCLES,
         Permission.OWN_CIRCLE_MEMBERSHIPS,
         Permission.VIEW_CONTENT_FEED,
+        Permission.VIEW_EVENTS,
     }
     allowed = (
         owned

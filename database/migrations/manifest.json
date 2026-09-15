@@ -56,6 +56,13 @@
       "file": "V0008__content_moderation_reasons.sql",
       "sha256": "fc48e9d48e5222b3e26c4cf04b0817a87f121e7665d5f32af499ec784218b2b2",
       "requires_empty": false
+    },
+    {
+      "id": "V0009",
+      "name": "event_reminder_rules",
+      "file": "V0009__event_reminder_rules.sql",
+      "sha256": "8d37a847d2f34c2258dcdef087e0f190313a23a15a430a5816fa5ce481673479",
+      "requires_empty": false
     }
   ]
 }

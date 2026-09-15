@@ -2,6 +2,13 @@
 
 The contract remains controlled. Only operations named in a matching verified deployment record are claimed callable; contract-only operations remain unavailable.
 
+## Basic events — 0.3.5 candidate — 16 September 2026
+
+- Added Administrator creation of future information-only events for all Members or one-to-twenty active circles.
+- Added zero-to-five unique reminder offsets from five minutes to seven days before an event. EE-021 records the schedule; notification delivery remains a later milestone.
+- Added bounded upcoming/past Member event pages that recheck current active-circle membership on every request.
+- Google Meet and telephone joining remain separate later integrations. Deployment and live fictional audience proof are still required; this source candidate is not a production release.
+
 ## Circle-filtered Member feed — 0.3.4 — 16 September 2026
 
 - Added Administrator publication of an approved, clean item to either all Members or one-to-twenty active circles.

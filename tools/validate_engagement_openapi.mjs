@@ -109,6 +109,8 @@ for (const requiredPath of [
   "/v1/admin/circles",
   "/v1/admin/circle-settings",
   "/v1/admin/users/{userId}/circles/{circleId}/membership",
+  "/v1/admin/events",
+  "/v1/events",
 ]) {
   if (!contract.paths?.[requiredPath])
     errors.push(`Profile photo lifecycle path is missing: ${requiredPath}`);

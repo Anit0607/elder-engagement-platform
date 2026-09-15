@@ -29,6 +29,7 @@ from app.content_uploads import (
     PostgresContentUploadService,
     verify_content_upload_schema,
 )
+from app.events import PostgresEventService, verify_event_schema
 from app.google_phone_identity import GooglePhoneIdentityVerifier
 from app.member_auth import MemberSessionService
 from app.postgres_circles import PostgresCircleService, verify_circle_schema
@@ -205,6 +206,9 @@ async def member_runtime(
                     handler.content_feed_service = PostgresContentFeedService(
                         authorization, GoogleContentFeedStorage(delivery_storage)
                     )
+                if settings.event_service_enabled:
+                    await verify_event_schema(pool)
+                    handler.event_service = PostgresEventService(authorization)
                 if settings.account_controls_enabled:
                     handler.account_controls = PostgresAccountControls(
                         authorization

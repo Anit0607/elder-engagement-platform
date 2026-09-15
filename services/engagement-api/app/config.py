@@ -54,6 +54,7 @@ class Settings(BaseModel):
     content_upload_enabled: bool = False
     content_moderation_enabled: bool = False
     content_feed_enabled: bool = False
+    event_service_enabled: bool = False
     account_controls_enabled: bool = False
     staff_authenticator_key_secret_ref: str = ""
     database_iam_user: str = ""
@@ -126,6 +127,7 @@ class Settings(BaseModel):
         "content_upload_enabled",
         "content_moderation_enabled",
         "content_feed_enabled",
+        "event_service_enabled",
         "account_controls_enabled",
         mode="before",
     )
@@ -193,6 +195,8 @@ class Settings(BaseModel):
             self.content_moderation_enabled and self.content_delivery_signer_service_account
         ):
             raise ValueError("Content feed requires moderation and its read-only delivery signer")
+        if self.event_service_enabled and not self.profile_enabled:
+            raise ValueError("Events require the connected profile and circle runtime")
         if self.account_controls_enabled and not self.staff_session_enabled:
             raise ValueError("Account controls require the connected staff runtime")
         if self.fcm_enabled and not self.fcm_project_id:
