@@ -27,6 +27,12 @@ from app.account_controls import (
 )
 from app.circles import CircleCreate, CircleSettings, CircleSettingsUpdate, CircleSummary, CircleUpdate
 from app.config import Settings, load_settings
+from app.content_uploads import (
+    ContentUploadAuthorisation,
+    ContentUploadReceipt,
+    ContentUploadRequest,
+    UnconfiguredContentUploadService,
+)
 from app.logging_config import configure_logging, request_id_context, trace_id_context
 from app.member_auth import (
     MemberSessionFailure,
@@ -110,6 +116,7 @@ def create_app(
     profile_photo_service=None,
     notification_preferences_service=None,
     circle_service=None,
+    content_upload_service=None,
     account_controls=None,
     member_runtime_factory=member_runtime,
     probe_timeout_seconds: float = 2.0,
@@ -163,6 +170,10 @@ def create_app(
                     application.state.profile_photo_service = getattr(
                         handler, "profile_photo_service", UnconfiguredProfilePhotoService()
                     )
+                if config.content_upload_enabled and content_upload_service is None:
+                    application.state.content_upload_service = getattr(
+                        handler, "content_upload_service", UnconfiguredContentUploadService()
+                    )
                 if config.account_controls_enabled and account_controls is None:
                     application.state.account_controls = getattr(
                         handler, "account_controls", UnconfiguredAccountControls()
@@ -184,6 +195,8 @@ def create_app(
                         application.state.circle_service = UnconfiguredCircleService()
                     if profile_photo_service is None:
                         application.state.profile_photo_service = UnconfiguredProfilePhotoService()
+                    if content_upload_service is None:
+                        application.state.content_upload_service = UnconfiguredContentUploadService()
                     if account_controls is None:
                         application.state.account_controls = UnconfiguredAccountControls()
         else:
@@ -204,6 +217,7 @@ def create_app(
     app.state.session_controls = session_controls_handler or UnconfiguredSessionControls()
     app.state.profile_service = profile_service or UnconfiguredProfileService()
     app.state.profile_photo_service = profile_photo_service or UnconfiguredProfilePhotoService()
+    app.state.content_upload_service = content_upload_service or UnconfiguredContentUploadService()
     app.state.notification_preferences_service = (
         notification_preferences_service or UnconfiguredNotificationPreferencesService()
     )
@@ -397,6 +411,33 @@ def create_app(
     async def complete_profile_photo_upload(request: Request, uploadId: uuid.UUID):
         try:
             return await app.state.profile_photo_service.complete(
+                bearer_token(request), uploadId, request.state.trace_id
+            )
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.post(
+        "/v1/contributor/content-uploads",
+        tags=["Content"],
+        response_model=ContentUploadAuthorisation,
+        status_code=201,
+    )
+    async def start_content_upload(request: Request, payload: ContentUploadRequest):
+        try:
+            return await app.state.content_upload_service.start(
+                bearer_token(request), payload, request.state.trace_id
+            )
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.post(
+        "/v1/contributor/content-uploads/{uploadId}/complete",
+        tags=["Content"],
+        response_model=ContentUploadReceipt,
+    )
+    async def complete_content_upload(request: Request, uploadId: uuid.UUID):
+        try:
+            return await app.state.content_upload_service.complete(
                 bearer_token(request), uploadId, request.state.trace_id
             )
         except MemberSessionFailure as exc:

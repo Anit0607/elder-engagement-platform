@@ -31,6 +31,8 @@ def test_complete_permission_matrix(role, permission, owned):
         if permission in own_permissions
         else role == "member" and owned
         if permission in member_only_own
+        else role == "contributor" and owned
+        if permission == Permission.UPLOAD_CONTENT
         else role == "administrator"
     )
     if allowed:

@@ -2,13 +2,21 @@
 
 The contract remains controlled. Only operations named in a matching verified deployment record are claimed callable; contract-only operations remain unavailable.
 
+## Contributor-upload candidate — 0.3.2 draft — 16 September 2026
+
+- Added Contributor-only start/complete operations for private MP4, MP3/M4A and PDF uploads.
+- Added mandatory ownership/permission confirmation and separate 250 MiB video, 50 MiB audio and 25 MiB PDF limits.
+- Completion verifies the stored content type, exact size, SHA-256 fingerprint and file signature before recording pending scan/moderation state. It never publishes the upload.
+- Added checksum-locked V0007, a restricted `content-quarantine/` storage permission, Android/iOS examples and synthetic-media generation recipe.
+- This is an EE-018 source candidate. Database migration, development deployment and live acceptance are not yet claimed.
+
 ## Predefined-circle candidate — 0.3.1 draft — 15 September 2026
 
 - Added Member circle discovery, interest/language suggestions, immediate join/leave and the client-approved initial five-circle limit.
 - Added Administrator create/list/update/deactivate, Member assignment/removal and a changeable one-to-twenty membership-limit setting.
 - Circle and membership changes use current account permissions, retain membership history and create minimal audit records. Contributors do not receive Member circle access.
 - Added checksum-locked V0006 for the single circle-limit setting, Android/iOS contract examples and disposable PostgreSQL coverage.
-- This is a tested source candidate under EE-017. Database migration, development deployment and client acceptance are not yet claimed.
+- V0006, the private development deployment and a repeatable fictional-account live proof passed. Client production acceptance remains a later release activity.
 
 ## Notification-preference candidate — 0.3.0 draft — 15 September 2026
 

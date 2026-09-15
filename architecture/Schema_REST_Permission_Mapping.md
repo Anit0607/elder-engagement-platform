@@ -1,7 +1,7 @@
 # Schema, REST and permission mapping
 
-Status: Sprint 3 controlled mapping through the EE-017 source candidate
-Sources: `database/migrations/V0001__engagement_baseline.sql` and `api/openapi/elder-engage-v1.openapi.json`
+Status: Sprint 3 controlled mapping through the EE-018 source candidate
+Sources: the checksum-locked migration manifest and `api/openapi/elder-engage-v1.openapi.json`
 
 This mapping prevents the inherited booking product from being mistaken for Amiko. “Draft now” means the operation exists in the controlled OpenAPI draft but is not claimed live until its deployment record passes. “Planned” means it is an approved tracker item but is deliberately unavailable in the current contract.
 
@@ -14,8 +14,9 @@ This mapping prevents the inherited booking product from being mistaken for Amik
 | `circles` | Draft now: Member suggestions/list and Administrator create/list/update/deactivate | View active circles and any inactive joined circle | None | Create/list/update/deactivate | EE-017, EE-023 |
 | `circle_memberships` | Draft now: own join/leave and Administrator assign/remove | View/select/leave own circles, initially up to five | None | Assign/remove active Members and change the one-to-twenty limit | EE-017, EE-023 |
 | `circle_configuration` | Draft now: Administrator GET/PUT | No direct access | No direct access | Read/change the one-to-twenty membership limit | EE-017, EE-023 |
-| `content_items` | Planned upload, moderation and feed operations | Read approved visible content | Create and view own submissions; no self-approval | Review all governed submissions and archive | EE-018–020, EE-023 |
-| `content_assets` | Planned signed upload/complete and approved delivery | Read only through authorised approved content | Upload only to own pending content | Inspect metadata and moderation state; no public bucket access | EE-018, EE-019, EE-025 |
+| `content_items` | Draft now: Contributor private upload start/complete; moderation and feed planned | No current operation | Create own pending submissions; no self-approval | No current content operation; review follows in EE-019 | EE-018–020, EE-023 |
+| `content_assets` | Draft now: validated quarantine record; approved delivery planned | No current operation | Complete only own authorised upload | No current content operation; inspect/review follows in EE-019 | EE-018, EE-019, EE-025 |
+| `content_uploads` | Draft now: short-lived signed upload and validated completion | None | Start/complete own private upload | No direct operation | EE-018, EE-023 |
 | `content_audiences` | Planned content authoring/moderation and filtered feed | No direct write; determines feed visibility | Propose allowed audience if policy permits | Approve or set governed audience | EE-019, EE-020, EE-023 |
 | `moderation_decisions` | Planned approval/rejection operations | None | Read outcome/reason for own content | Create immutable decisions and view audit history | EE-019, EE-023 |
 | `events` | Planned event operations | Read visible upcoming events | Create only if final role policy permits | Create/update/deactivate | EE-021, EE-023 |

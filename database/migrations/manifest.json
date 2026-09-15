@@ -42,6 +42,13 @@
       "file": "V0006__circle_membership_configuration.sql",
       "sha256": "81c07f3ec52a99b1e994d9f842895a5ea97001df885e3aa50e43930d32597b18",
       "requires_empty": false
+    },
+    {
+      "id": "V0007",
+      "name": "contributor_content_uploads",
+      "file": "V0007__contributor_content_uploads.sql",
+      "sha256": "4a8dd6e337d0abba08c2dfce78ccbdecdc30afecb709ea62279132eb1ce9947b",
+      "requires_empty": false
     }
   ]
 }

@@ -344,6 +344,12 @@ variable "enable_profile_photos" {
   default     = false
 }
 
+variable "enable_content_uploads" {
+  description = "Enable private Contributor content uploads after migration and quarantine permissions pass."
+  type        = bool
+  default     = false
+}
+
 variable "enable_account_controls" {
   description = "Enable reviewed Administrator-only account controls after connected staff sign-in is ready."
   type        = bool

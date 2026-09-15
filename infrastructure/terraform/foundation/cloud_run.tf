@@ -10,7 +10,7 @@ resource "google_cloud_run_v2_service" "api" {
 
   template {
     service_account                  = google_service_account.runtime.email
-    timeout                          = "60s"
+    timeout                          = var.enable_content_uploads ? "300s" : "60s"
     max_instance_request_concurrency = 40
 
     scaling {
@@ -43,9 +43,11 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       dynamic "env" {
-        for_each = merge(local.cloud_run_environment, {
-          EE_PROFILE_PHOTO_ENABLED = tostring(var.enable_profile_photos)
-        })
+        for_each = merge(
+          local.cloud_run_environment,
+          { EE_PROFILE_PHOTO_ENABLED = tostring(var.enable_profile_photos) },
+          var.enable_content_uploads ? { EE_CONTENT_UPLOAD_ENABLED = "true" } : {}
+        )
         content {
           name  = env.key
           value = env.value

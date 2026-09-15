@@ -71,6 +71,16 @@ resource "google_storage_bucket_iam_member" "runtime_manages_profile_photo_quara
   }
 }
 
+resource "google_storage_bucket_iam_member" "runtime_manages_content_quarantine" {
+  bucket = google_storage_bucket.uploads.name
+  role   = "roles/storage.objectUser"
+  member = "serviceAccount:${google_service_account.runtime.email}"
+  condition {
+    title      = "content-quarantine-only"
+    expression = "resource.name.startsWith('projects/_/buckets/${google_storage_bucket.uploads.name}/objects/content-quarantine/')"
+  }
+}
+
 resource "google_storage_bucket_iam_member" "runtime_manages_approved_profile_photos" {
   bucket = google_storage_bucket.approved_media.name
   role   = "roles/storage.objectUser"

@@ -14,6 +14,11 @@ from google.cloud.sql.connector import Connector, IPTypes
 from app.account_controls import PostgresAccountControls
 from app.authorization import SessionAuthorization
 from app.config import ConfigurationError, Settings
+from app.content_uploads import (
+    GoogleContentStorage,
+    PostgresContentUploadService,
+    verify_content_upload_schema,
+)
 from app.google_phone_identity import GooglePhoneIdentityVerifier
 from app.member_auth import MemberSessionService
 from app.postgres_circles import PostgresCircleService, verify_circle_schema
@@ -134,21 +139,22 @@ async def member_runtime(
                         staff_controls,
                         refresh_pepper,
                     )
+                authorization = SessionAuthorization(pool, sessions, staff_controls)
+                signed_storage = None
+                if settings.profile_photo_enabled or settings.content_upload_enabled:
+                    signed_storage = GooglePhotoStorage(
+                        settings.gcp_project_id,
+                        settings.upload_signer_service_account,
+                        settings.uploads_bucket,
+                        settings.approved_media_bucket,
+                    )
                 if settings.profile_enabled:
                     await verify_profile_schema(pool)
-                    authorization = SessionAuthorization(pool, sessions, staff_controls)
                     await verify_circle_schema(pool)
                     handler.circle_service = PostgresCircleService(authorization)
-                    photo_storage = None
                     if settings.profile_photo_enabled:
                         await verify_profile_photo_schema(pool)
-                        photo_storage = GooglePhotoStorage(
-                            settings.gcp_project_id,
-                            settings.upload_signer_service_account,
-                            settings.uploads_bucket,
-                            settings.approved_media_bucket,
-                        )
-                    handler.profile_service = PostgresProfileService(authorization, photo_storage)
+                    handler.profile_service = PostgresProfileService(authorization, signed_storage)
                     handler.notification_preferences_service = PostgresNotificationPreferencesService(
                         authorization
                     )
@@ -156,12 +162,19 @@ async def member_runtime(
                         handler.profile_photo_service = PostgresProfilePhotoService(
                             authorization,
                             handler.profile_service,
-                            photo_storage,
+                            signed_storage,
                             expires_seconds=settings.upload_authorization_seconds,
                         )
+                if settings.content_upload_enabled:
+                    await verify_content_upload_schema(pool)
+                    handler.content_upload_service = PostgresContentUploadService(
+                        authorization,
+                        GoogleContentStorage(signed_storage),
+                        expires_seconds=settings.upload_authorization_seconds,
+                    )
                 if settings.account_controls_enabled:
                     handler.account_controls = PostgresAccountControls(
-                        SessionAuthorization(pool, sessions, staff_controls)
+                        authorization
                     )
                 yield handler
     finally:

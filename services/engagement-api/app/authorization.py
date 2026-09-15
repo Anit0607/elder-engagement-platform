@@ -27,6 +27,7 @@ class Permission(StrEnum):
     OWN_CIRCLE_MEMBERSHIPS = "own-circle-memberships"
     MANAGE_CIRCLES = "manage-circles"
     MANAGE_CIRCLE_MEMBERSHIPS = "manage-circle-memberships"
+    UPLOAD_CONTENT = "upload-content"
     CREATE_STAFF = "create-staff"
     ACCOUNT_STATUS = "account-status"
     ACCOUNT_ROLE = "account-role"
@@ -53,6 +54,8 @@ def require_permission(principal: Principal, permission: Permission, target: UUI
         allowed = principal.role == "member" and target == principal.user_id
     elif permission in {Permission.MANAGE_CIRCLES, Permission.MANAGE_CIRCLE_MEMBERSHIPS}:
         allowed = principal.role == "administrator"
+    elif permission == Permission.UPLOAD_CONTENT:
+        allowed = principal.role == "contributor" and target == principal.user_id
     elif permission in {Permission.CREATE_STAFF, Permission.ACCOUNT_STATUS, Permission.ACCOUNT_ROLE}:
         allowed = principal.role == "administrator"
     if principal.role not in {"member", "contributor", "administrator"} or not allowed:

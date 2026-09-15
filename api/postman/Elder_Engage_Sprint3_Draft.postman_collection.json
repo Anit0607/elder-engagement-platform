@@ -618,6 +618,85 @@
       ]
     },
     {
+      "name": "Contributor content",
+      "item": [
+        {
+          "name": "Start private PDF upload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Synthetic activity guide\",\n  \"description\": \"Fictional content used only for contract testing\",\n  \"language\": \"en\",\n  \"contentType\": \"application/pdf\",\n  \"sizeBytes\": 32768,\n  \"sha256\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n  \"rightsConfirmed\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/contributor/content-uploads",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "contributor",
+                "content-uploads"
+              ]
+            },
+            "description": "Contributor only. Save the returned short-lived upload URL only until the direct private upload finishes; never log it."
+          }
+        },
+        {
+          "name": "Complete private content upload",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/contributor/content-uploads/{{uploadId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "contributor",
+                "content-uploads",
+                "{{uploadId}}",
+                "complete"
+              ]
+            },
+            "description": "Validates the private object and records pending moderation. It does not publish the content."
+          }
+        }
+      ]
+    },
+    {
       "name": "Administration",
       "item": [
         {

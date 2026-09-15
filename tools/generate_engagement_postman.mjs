@@ -175,6 +175,33 @@ const collection = {
       ],
     },
     {
+      name: "Contributor content",
+      item: [
+        request("Start private PDF upload", "POST", "/v1/contributor/content-uploads", {
+          body: {
+            title: "Synthetic activity guide",
+            description: "Fictional content used only for contract testing",
+            language: "en",
+            contentType: "application/pdf",
+            sizeBytes: 32768,
+            sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            rightsConfirmed: true,
+          },
+          description:
+            "Contributor only. Save the returned short-lived upload URL only until the direct private upload finishes; never log it.",
+        }),
+        request(
+          "Complete private content upload",
+          "POST",
+          "/v1/contributor/content-uploads/{{uploadId}}/complete",
+          {
+            description:
+              "Validates the private object and records pending moderation. It does not publish the content.",
+          },
+        ),
+      ],
+    },
+    {
       name: "Administration",
       item: [
         request("List users", "GET", "/v1/admin/users?limit=25"),
