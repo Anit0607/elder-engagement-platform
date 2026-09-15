@@ -37,6 +37,11 @@ from app.member_auth import (
 from app.member_runtime import member_runtime
 from app.postgres_profiles import UnconfiguredProfileService
 from app.problems import problem_response
+from app.profile_photos import (
+    PhotoUploadRequest,
+    UnconfiguredProfilePhotoService,
+    UploadAuthorisation,
+)
 from app.profiles import Profile, ProfileUpdate
 from app.readiness import REQUIRED_DEPENDENCIES, DependencyProbe, NotConfiguredProbe
 from app.request_limits import RequestBodyLimitMiddleware
@@ -98,6 +103,7 @@ def create_app(
     staff_session_handler: StaffSessionHandler | None = None,
     session_controls_handler: SessionControls | None = None,
     profile_service=None,
+    profile_photo_service=None,
     account_controls=None,
     member_runtime_factory=member_runtime,
     probe_timeout_seconds: float = 2.0,
@@ -137,6 +143,10 @@ def create_app(
                     application.state.profile_service = getattr(
                         handler, "profile_service", UnconfiguredProfileService()
                     )
+                if config.profile_photo_enabled and profile_photo_service is None:
+                    application.state.profile_photo_service = getattr(
+                        handler, "profile_photo_service", UnconfiguredProfilePhotoService()
+                    )
                 if config.account_controls_enabled and account_controls is None:
                     application.state.account_controls = getattr(
                         handler, "account_controls", UnconfiguredAccountControls()
@@ -150,6 +160,8 @@ def create_app(
                         application.state.staff_session_handler = UnconfiguredStaffSessionService()
                     if profile_service is None:
                         application.state.profile_service = UnconfiguredProfileService()
+                    if profile_photo_service is None:
+                        application.state.profile_photo_service = UnconfiguredProfilePhotoService()
                     if account_controls is None:
                         application.state.account_controls = UnconfiguredAccountControls()
         else:
@@ -169,6 +181,7 @@ def create_app(
     app.state.staff_session_handler = staff_session_handler or UnconfiguredStaffSessionService()
     app.state.session_controls = session_controls_handler or UnconfiguredSessionControls()
     app.state.profile_service = profile_service or UnconfiguredProfileService()
+    app.state.profile_photo_service = profile_photo_service or UnconfiguredProfilePhotoService()
     app.state.account_controls = account_controls or UnconfiguredAccountControls()
 
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=config.trusted_host_list)
@@ -331,6 +344,34 @@ def create_app(
         try:
             return await app.state.profile_service.update(
                 bearer_token(request), payload, request.state.trace_id
+            )
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.post(
+        "/v1/me/profile/photo-upload",
+        tags=["Profile"],
+        response_model=UploadAuthorisation,
+        status_code=201,
+    )
+    async def start_profile_photo_upload(request: Request, payload: PhotoUploadRequest):
+        try:
+            return await app.state.profile_photo_service.start(
+                bearer_token(request), payload, request.state.trace_id
+            )
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.post(
+        "/v1/me/profile/photo-upload/{uploadId}/complete",
+        tags=["Profile"],
+        response_model=Profile,
+        response_model_exclude_none=True,
+    )
+    async def complete_profile_photo_upload(request: Request, uploadId: uuid.UUID):
+        try:
+            return await app.state.profile_photo_service.complete(
+                bearer_token(request), uploadId, request.state.trace_id
             )
         except MemberSessionFailure as exc:
             return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)

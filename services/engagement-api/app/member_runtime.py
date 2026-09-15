@@ -19,6 +19,11 @@ from app.member_auth import MemberSessionService
 from app.postgres_member_repository import PostgresMemberRepository
 from app.postgres_profiles import PostgresProfileService, verify_profile_schema
 from app.postgres_staff_session import PostgresStaffSessionService
+from app.profile_photos import (
+    GooglePhotoStorage,
+    PostgresProfilePhotoService,
+    verify_profile_photo_schema,
+)
 from app.session_refresh import PostgresSessionRefresh
 from app.shared_session_controls import SharedSessionControls
 from app.staff_credentials import StaffAuthenticator, StaffCredentialVerifier, StaffPasswords
@@ -129,9 +134,24 @@ async def member_runtime(
                     )
                 if settings.profile_enabled:
                     await verify_profile_schema(pool)
-                    handler.profile_service = PostgresProfileService(
-                        SessionAuthorization(pool, sessions, staff_controls)
-                    )
+                    authorization = SessionAuthorization(pool, sessions, staff_controls)
+                    photo_storage = None
+                    if settings.profile_photo_enabled:
+                        await verify_profile_photo_schema(pool)
+                        photo_storage = GooglePhotoStorage(
+                            settings.gcp_project_id,
+                            settings.upload_signer_service_account,
+                            settings.uploads_bucket,
+                            settings.approved_media_bucket,
+                        )
+                    handler.profile_service = PostgresProfileService(authorization, photo_storage)
+                    if settings.profile_photo_enabled:
+                        handler.profile_photo_service = PostgresProfilePhotoService(
+                            authorization,
+                            handler.profile_service,
+                            photo_storage,
+                            expires_seconds=settings.upload_authorization_seconds,
+                        )
                 if settings.account_controls_enabled:
                     handler.account_controls = PostgresAccountControls(
                         SessionAuthorization(pool, sessions, staff_controls)

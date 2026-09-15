@@ -43,7 +43,9 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       dynamic "env" {
-        for_each = local.cloud_run_environment
+        for_each = merge(local.cloud_run_environment, {
+          EE_PROFILE_PHOTO_ENABLED = tostring(var.enable_profile_photos)
+        })
         content {
           name  = env.key
           value = env.value

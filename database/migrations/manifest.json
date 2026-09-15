@@ -28,6 +28,13 @@
       "file": "V0004__english_profile_language.sql",
       "sha256": "fe3dc1acded46f68fd1af1934e6d922895fb3ee64ee90bdb32096118ae312f11",
       "requires_empty": false
+    },
+    {
+      "id": "V0005",
+      "name": "profile_photo_uploads",
+      "file": "V0005__profile_photo_uploads.sql",
+      "sha256": "46e208847f994c86fe3319a562b6ed86da258555756a7a8d327fd76c3590d0d4",
+      "requires_empty": false
     }
   ]
 }

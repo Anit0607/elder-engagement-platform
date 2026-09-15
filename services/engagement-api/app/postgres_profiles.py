@@ -41,13 +41,14 @@ async def verify_profile_schema(pool):
 
 
 class PostgresProfileService:
-    def __init__(self, authorization):
+    def __init__(self, authorization, photo_storage=None):
         self._authorization = authorization
+        self._photo_storage = photo_storage
 
     async def _read(self, connection, user_id):
         row = await connection.fetchrow(
             """SELECT u.id, u.role::text, u.status::text, p.display_name, p.preferred_language,
-                      p.created_at, p.updated_at, p.age_group, p.interests,
+                      p.created_at, p.updated_at, p.age_group, p.interests, p.photo_object_key,
                       p.country_code, p.state_name, p.city_name,
                       n.enabled, n.window_start, n.window_end, n.time_zone
                FROM engagement_app.user_profiles p JOIN engagement_app.app_users u ON u.id=p.user_id
@@ -84,9 +85,11 @@ class PostgresProfileService:
                 if isinstance(row["interests"], str)
                 else row["interests"],
                 broad_location=location,
-                # Private object keys are never returned or converted to a public
-                # address. Photo authorization/attachment is separate work.
-                photo_url=None,
+                # The private key itself is never returned. A viewing address is
+                # short-lived and created only when the photo feature is active.
+                photo_url=await self._photo_storage.view_url(row.get("photo_object_key"))
+                if self._photo_storage is not None and row.get("photo_object_key")
+                else None,
                 notification_window=NotificationWindow(
                     enabled=enabled,
                     time_zone=row["time_zone"] or "UTC",
