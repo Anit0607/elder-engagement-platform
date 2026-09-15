@@ -28,6 +28,7 @@ $allowed = @(
     '^(\.gitattributes|\.gitignore|README\.md|SECURITY\.md)$',
     '^\.github/workflows/[^/]+\.ya?ml$',
     '^api/(CHANGELOG\.md|IOS_CONTRACT_NOTIFICATION_LOG\.md|IOS_REST_API_INTEGRATION_CHECKLIST\.md|README\.md)$',
+    '^api/evidence/[a-z0-9-]+\.md$',
     '^api/contract-tests/',
     '^api/openapi/elder-engage-v1\.openapi\.json$',
     '^api/postman/(Elder_Engage_(Week2|Sprint3)_Draft\.postman_collection\.json|README\.md)$',
