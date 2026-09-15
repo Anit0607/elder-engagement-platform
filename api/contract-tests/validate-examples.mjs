@@ -109,6 +109,14 @@ expectInvalid("Unknown notification preference", "NotificationPreferencesUpdate"
   ...contract.components.examples.SyntheticNotificationPreferencesUpdate.value,
   unknown: true,
 });
+expectInvalid("Circle with unknown field", "CircleCreate", {
+  name: "Synthetic circle",
+  unknown: true,
+});
+expectInvalid("Empty circle update", "CircleUpdate", {});
+expectInvalid("Circle membership limit above approved range", "CircleSettingsUpdate", {
+  maxMemberships: 21,
+});
 
 for (const field of ["accessToken", "refreshToken"]) {
   if (contract.components.schemas.SessionResponse.properties[field]?.writeOnly)
@@ -128,6 +136,7 @@ for (const code of contract.components.schemas.ErrorCode.enum) {
       "ACCOUNT_SUSPENDED",
       "MFA_REQUIRED",
       "RATE_LIMITED",
+      "CIRCLE_LIMIT_REACHED",
     ].includes(code) &&
     !contract["x-client-error-actions"]?.[code]
   )
@@ -150,7 +159,8 @@ for (const item of flattenPostman(postman.item)) {
     .split("?")[0]
     .replaceAll("{{sessionId}}", "{sessionId}")
     .replaceAll("{{userId}}", "{userId}")
-    .replaceAll("{{uploadId}}", "{uploadId}");
+    .replaceAll("{{uploadId}}", "{uploadId}")
+    .replaceAll("{{circleId}}", "{circleId}");
   postmanRequests.add(`${item.request.method} ${route}`);
 }
 for (const operation of openApiRequests) {

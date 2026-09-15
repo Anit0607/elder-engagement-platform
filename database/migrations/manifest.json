@@ -35,6 +35,13 @@
       "file": "V0005__profile_photo_uploads.sql",
       "sha256": "46e208847f994c86fe3319a562b6ed86da258555756a7a8d327fd76c3590d0d4",
       "requires_empty": false
+    },
+    {
+      "id": "V0006",
+      "name": "circle_membership_configuration",
+      "file": "V0006__circle_membership_configuration.sql",
+      "sha256": "81c07f3ec52a99b1e994d9f842895a5ea97001df885e3aa50e43930d32597b18",
+      "requires_empty": false
     }
   ]
 }

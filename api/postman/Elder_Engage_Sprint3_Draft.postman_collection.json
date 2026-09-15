@@ -40,6 +40,11 @@
       "key": "uploadId",
       "value": "55555555-5555-4555-8555-555555555555",
       "type": "string"
+    },
+    {
+      "key": "circleId",
+      "value": "66666666-6666-4666-8666-666666666666",
+      "type": "string"
     }
   ],
   "item": [
@@ -517,6 +522,102 @@
       ]
     },
     {
+      "name": "Circles",
+      "item": [
+        {
+          "name": "List my circles and suggestions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/circles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "circles"
+              ]
+            },
+            "description": "Contract-only request. It is not claimed callable until the matching backend is deployed and verified."
+          }
+        },
+        {
+          "name": "Join a circle",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/circles/{{circleId}}/membership",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "circles",
+                "{{circleId}}",
+                "membership"
+              ]
+            },
+            "description": "A successful response is HTTP 204 with no body."
+          }
+        },
+        {
+          "name": "Leave a circle",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/me/circles/{{circleId}}/membership",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me",
+                "circles",
+                "{{circleId}}",
+                "membership"
+              ]
+            },
+            "description": "A successful response is HTTP 204 with no body."
+          }
+        }
+      ]
+    },
+    {
       "name": "Administration",
       "item": [
         {
@@ -682,6 +783,260 @@
                 "users",
                 "{{userId}}",
                 "role"
+              ]
+            },
+            "description": "Contract-only request. It is not claimed callable until the matching backend is deployed and verified."
+          }
+        },
+        {
+          "name": "List all circles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/circles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "circles"
+              ]
+            },
+            "description": "Contract-only request. It is not claimed callable until the matching backend is deployed and verified."
+          }
+        },
+        {
+          "name": "Create circle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Synthetic music circle\",\n  \"description\": \"Synthetic contract example\",\n  \"suggestionRules\": {\n    \"interests\": [\n      \"music\"\n    ],\n    \"preferredLanguages\": [\n      \"bn\"\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/circles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "circles"
+              ]
+            },
+            "description": "Contract-only request. It is not claimed callable until the matching backend is deployed and verified."
+          }
+        },
+        {
+          "name": "Update circle",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"active\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/circles/{{circleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "circles",
+                "{{circleId}}"
+              ]
+            },
+            "description": "Contract-only request. It is not claimed callable until the matching backend is deployed and verified."
+          }
+        },
+        {
+          "name": "Assign Member to circle",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/users/{{userId}}/circles/{{circleId}}/membership",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "users",
+                "{{userId}}",
+                "circles",
+                "{{circleId}}",
+                "membership"
+              ]
+            },
+            "description": "A successful response is HTTP 204 with no body."
+          }
+        },
+        {
+          "name": "Remove Member from circle",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/users/{{userId}}/circles/{{circleId}}/membership",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "users",
+                "{{userId}}",
+                "circles",
+                "{{circleId}}",
+                "membership"
+              ]
+            },
+            "description": "A successful response is HTTP 204 with no body."
+          }
+        },
+        {
+          "name": "Get circle settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/circle-settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "circle-settings"
+              ]
+            },
+            "description": "Contract-only request. It is not claimed callable until the matching backend is deployed and verified."
+          }
+        },
+        {
+          "name": "Change circle membership limit",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maxMemberships\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/circle-settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "circle-settings"
               ]
             },
             "description": "Contract-only request. It is not claimed callable until the matching backend is deployed and verified."

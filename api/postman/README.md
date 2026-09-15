@@ -1,4 +1,4 @@
-# Week 2 Postman companion
+# Sprint 3 Postman companion
 
 `Elder_Engage_Sprint3_Draft.postman_collection.json` is generated from safe, synthetic examples for the current REST draft.
 

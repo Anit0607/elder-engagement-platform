@@ -25,6 +25,7 @@ from app.account_controls import (
     StatusChangeRequest,
     UnconfiguredAccountControls,
 )
+from app.circles import CircleCreate, CircleSettings, CircleSettingsUpdate, CircleSummary, CircleUpdate
 from app.config import Settings, load_settings
 from app.logging_config import configure_logging, request_id_context, trace_id_context
 from app.member_auth import (
@@ -36,6 +37,7 @@ from app.member_auth import (
 )
 from app.member_runtime import member_runtime
 from app.notification_preferences import NotificationPreferences, NotificationPreferencesUpdate
+from app.postgres_circles import UnconfiguredCircleService
 from app.postgres_notification_preferences import UnconfiguredNotificationPreferencesService
 from app.postgres_profiles import UnconfiguredProfileService
 from app.problems import problem_response
@@ -107,6 +109,7 @@ def create_app(
     profile_service=None,
     profile_photo_service=None,
     notification_preferences_service=None,
+    circle_service=None,
     account_controls=None,
     member_runtime_factory=member_runtime,
     probe_timeout_seconds: float = 2.0,
@@ -152,6 +155,10 @@ def create_app(
                         "notification_preferences_service",
                         UnconfiguredNotificationPreferencesService(),
                     )
+                if config.profile_enabled and circle_service is None:
+                    application.state.circle_service = getattr(
+                        handler, "circle_service", UnconfiguredCircleService()
+                    )
                 if config.profile_photo_enabled and profile_photo_service is None:
                     application.state.profile_photo_service = getattr(
                         handler, "profile_photo_service", UnconfiguredProfilePhotoService()
@@ -173,6 +180,8 @@ def create_app(
                         application.state.notification_preferences_service = (
                             UnconfiguredNotificationPreferencesService()
                         )
+                    if circle_service is None:
+                        application.state.circle_service = UnconfiguredCircleService()
                     if profile_photo_service is None:
                         application.state.profile_photo_service = UnconfiguredProfilePhotoService()
                     if account_controls is None:
@@ -198,6 +207,7 @@ def create_app(
     app.state.notification_preferences_service = (
         notification_preferences_service or UnconfiguredNotificationPreferencesService()
     )
+    app.state.circle_service = circle_service or UnconfiguredCircleService()
     app.state.account_controls = account_controls or UnconfiguredAccountControls()
 
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=config.trusted_host_list)
@@ -206,7 +216,7 @@ def create_app(
             CORSMiddleware,
             allow_origins=config.cors_origin_list,
             allow_credentials=False,
-            allow_methods=["GET", "POST", "PATCH", "DELETE"],
+            allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
             allow_headers=["Authorization", "Content-Type", "X-Request-Id", "traceparent"],
             expose_headers=["X-Request-Id", "traceparent"],
         )
@@ -411,6 +421,98 @@ def create_app(
     async def replace_my_notification_preferences(request: Request, payload: NotificationPreferencesUpdate):
         try:
             return await app.state.notification_preferences_service.replace(
+                bearer_token(request), payload, request.state.trace_id
+            )
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.get("/v1/me/circles", tags=["Circles"], response_model=list[CircleSummary])
+    async def list_my_circles(request: Request):
+        try:
+            return await app.state.circle_service.list_mine(bearer_token(request))
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.post("/v1/me/circles/{circleId}/membership", tags=["Circles"], status_code=204)
+    async def join_circle(request: Request, circleId: uuid.UUID):
+        try:
+            await app.state.circle_service.join(bearer_token(request), circleId, request.state.trace_id)
+            return Response(status_code=204)
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.delete("/v1/me/circles/{circleId}/membership", tags=["Circles"], status_code=204)
+    async def leave_circle(request: Request, circleId: uuid.UUID):
+        try:
+            await app.state.circle_service.leave(bearer_token(request), circleId, request.state.trace_id)
+            return Response(status_code=204)
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.get("/v1/admin/circles", tags=["Administration"], response_model=list[CircleSummary])
+    async def list_admin_circles(request: Request):
+        try:
+            return await app.state.circle_service.list_all(bearer_token(request))
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.post("/v1/admin/circles", tags=["Administration"], response_model=CircleSummary, status_code=201)
+    async def create_circle(request: Request, payload: CircleCreate):
+        try:
+            return await app.state.circle_service.create(
+                bearer_token(request), payload, request.state.trace_id
+            )
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.patch("/v1/admin/circles/{circleId}", tags=["Administration"], response_model=CircleSummary)
+    async def update_circle(request: Request, circleId: uuid.UUID, payload: CircleUpdate):
+        try:
+            return await app.state.circle_service.update(
+                bearer_token(request), circleId, payload, request.state.trace_id
+            )
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.post(
+        "/v1/admin/users/{userId}/circles/{circleId}/membership",
+        tags=["Administration"],
+        status_code=204,
+    )
+    async def assign_circle(request: Request, userId: uuid.UUID, circleId: uuid.UUID):
+        try:
+            await app.state.circle_service.assign(
+                bearer_token(request), userId, circleId, request.state.trace_id
+            )
+            return Response(status_code=204)
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.delete(
+        "/v1/admin/users/{userId}/circles/{circleId}/membership",
+        tags=["Administration"],
+        status_code=204,
+    )
+    async def remove_circle(request: Request, userId: uuid.UUID, circleId: uuid.UUID):
+        try:
+            await app.state.circle_service.remove(
+                bearer_token(request), userId, circleId, request.state.trace_id
+            )
+            return Response(status_code=204)
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.get("/v1/admin/circle-settings", tags=["Administration"], response_model=CircleSettings)
+    async def get_circle_settings(request: Request):
+        try:
+            return await app.state.circle_service.settings(bearer_token(request))
+        except MemberSessionFailure as exc:
+            return _problem(request, exc.status, exc.code, exc.title, retryable=exc.retryable)
+
+    @app.put("/v1/admin/circle-settings", tags=["Administration"], response_model=CircleSettings)
+    async def replace_circle_settings(request: Request, payload: CircleSettingsUpdate):
+        try:
+            return await app.state.circle_service.replace_settings(
                 bearer_token(request), payload, request.state.trace_id
             )
         except MemberSessionFailure as exc:

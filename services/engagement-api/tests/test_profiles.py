@@ -273,6 +273,7 @@ async def test_profile_metadata_requires_boolean_true(ready):
 async def test_profile_runtime_wiring_without_staff(settings):
     config = Settings.model_validate({**connected_settings(settings).model_dump(), "profile_enabled": True})
     pool = Authorization()
+    pool.fetchval.side_effect = [True, 3]
 
     @asynccontextmanager
     async def acquire():

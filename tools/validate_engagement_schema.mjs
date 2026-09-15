@@ -3,13 +3,18 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const workspace = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const schemaPath = path.join(
-  workspace,
-  "database",
-  "migrations",
-  "V0001__engagement_baseline.sql",
+const migrationDirectory = path.join(workspace, "database", "migrations");
+const manifest = JSON.parse(
+  await readFile(path.join(migrationDirectory, "manifest.json"), "utf8"),
 );
-const sql = await readFile(schemaPath, "utf8");
+const migrationFiles = manifest.migrations.map((migration) => migration.file);
+if (migrationFiles.some((file) => !/^V[0-9]{4}__[a-z0-9_]+\.sql$/.test(file)))
+  throw new Error("Migration manifest contains an invalid file name.");
+const sql = (
+  await Promise.all(
+    migrationFiles.map((file) => readFile(path.join(migrationDirectory, file), "utf8")),
+  )
+).join("\n");
 const concurrencyTest = await readFile(
   path.join(workspace, "database", "tests", "test_staff_role_concurrency.py"),
   "utf8",
@@ -23,6 +28,7 @@ const requiredTables = [
   "auth_sessions",
   "circles",
   "circle_memberships",
+  "circle_configuration",
   "content_items",
   "content_assets",
   "content_audiences",
@@ -104,5 +110,5 @@ if (errors.length) {
 }
 
 console.log(
-  `Engagement schema validation passed: ${tableNames.length} current-scope tables; excluded legacy table check passed.`,
+  `Engagement schema validation passed: ${tableNames.length} current-scope tables across the migration manifest; excluded legacy table check passed.`,
 );

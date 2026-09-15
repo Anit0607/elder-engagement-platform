@@ -23,6 +23,10 @@ class Permission(StrEnum):
     OWN_PROFILE = "own-profile"
     OWN_ACCOUNT = "own-account"
     OWN_NOTIFICATIONS = "own-notifications"
+    VIEW_CIRCLES = "view-circles"
+    OWN_CIRCLE_MEMBERSHIPS = "own-circle-memberships"
+    MANAGE_CIRCLES = "manage-circles"
+    MANAGE_CIRCLE_MEMBERSHIPS = "manage-circle-memberships"
     CREATE_STAFF = "create-staff"
     ACCOUNT_STATUS = "account-status"
     ACCOUNT_ROLE = "account-role"
@@ -43,6 +47,12 @@ def require_permission(principal: Principal, permission: Permission, target: UUI
         Permission.OWN_NOTIFICATIONS,
     }:
         allowed = target == principal.user_id
+    elif permission == Permission.VIEW_CIRCLES:
+        allowed = principal.role == "member" and target == principal.user_id
+    elif permission == Permission.OWN_CIRCLE_MEMBERSHIPS:
+        allowed = principal.role == "member" and target == principal.user_id
+    elif permission in {Permission.MANAGE_CIRCLES, Permission.MANAGE_CIRCLE_MEMBERSHIPS}:
+        allowed = principal.role == "administrator"
     elif permission in {Permission.CREATE_STAFF, Permission.ACCOUNT_STATUS, Permission.ACCOUNT_ROLE}:
         allowed = principal.role == "administrator"
     if principal.role not in {"member", "contributor", "administrator"} or not allowed:
@@ -78,6 +88,8 @@ class SessionAuthorization:
                     Permission.CREATE_STAFF,
                     Permission.ACCOUNT_STATUS,
                     Permission.ACCOUNT_ROLE,
+                    Permission.MANAGE_CIRCLES,
+                    Permission.MANAGE_CIRCLE_MEMBERSHIPS,
                 }:
                     # Serialize cross-account mutations before either user row
                     # is locked; prevents administrator A/B lock inversions and

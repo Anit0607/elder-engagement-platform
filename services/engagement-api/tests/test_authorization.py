@@ -25,7 +25,14 @@ def test_complete_permission_matrix(role, permission, owned):
         Permission.OWN_ACCOUNT,
         Permission.OWN_NOTIFICATIONS,
     }
-    allowed = owned if permission in own_permissions else role == "administrator"
+    member_only_own = {Permission.VIEW_CIRCLES, Permission.OWN_CIRCLE_MEMBERSHIPS}
+    allowed = (
+        owned
+        if permission in own_permissions
+        else role == "member" and owned
+        if permission in member_only_own
+        else role == "administrator"
+    )
     if allowed:
         require_permission(principal, permission, target)
     else:

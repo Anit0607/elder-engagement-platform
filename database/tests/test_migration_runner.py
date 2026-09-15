@@ -202,7 +202,7 @@ def _expect_migration_error(action, contains: str) -> None:
 
 def test_empty_apply_and_rerun() -> None:
     with database_fixture() as fixture:
-        assert _run(fixture) == ["V0001", "V0002", "V0003", "V0004", "V0005"]
+        assert _run(fixture) == ["V0001", "V0002", "V0003", "V0004", "V0005", "V0006"]
         assert _run(fixture) == []
         with psycopg.connect(fixture.migration_url) as connection:
             table_count = connection.execute(
@@ -218,7 +218,7 @@ def test_empty_apply_and_rerun() -> None:
         entries = json.loads(BASELINE_MANIFEST.read_text(encoding="utf-8"))[
             "migrations"
         ]
-        assert table_count == 19
+        assert table_count == 20
         assert ledger == [
             (entry["id"], entry["sha256"], "ci-test", "1.0.0") for entry in entries
         ]
@@ -263,7 +263,7 @@ def test_baseline_upgrade_preserves_existing_accounts_and_sessions() -> None:
                 ).format(sql.Identifier(fixture.app_schema)),
                 (owner, uuid.uuid4(), uuid.uuid4()),
             ).fetchone()[0]
-        assert _run(fixture) == ["V0002", "V0003", "V0004", "V0005"]
+        assert _run(fixture) == ["V0002", "V0003", "V0004", "V0005", "V0006"]
         assert _run(fixture) == []
         with psycopg.connect(fixture.runtime_url) as connection:
             credential = connection.execute(
@@ -329,7 +329,7 @@ def test_v0002_upgrade_revokes_sessions_with_runtime_permissions() -> None:
                 ).format(sql.Identifier(fixture.app_schema)),
                 (owner, uuid.uuid4(), uuid.uuid4()),
             )
-        assert _run(fixture) == ["V0003", "V0004", "V0005"]
+        assert _run(fixture) == ["V0003", "V0004", "V0005", "V0006"]
         assert _run(fixture) == []
         with psycopg.connect(fixture.runtime_url) as connection:
             connection.execute(
@@ -376,7 +376,7 @@ def test_v0003_upgrade_adds_english_without_changing_existing_profiles() -> None
                 ).format(sql.Identifier(fixture.app_schema)),
                 (owner,),
             )
-        assert _run(fixture) == ["V0004", "V0005"]
+        assert _run(fixture) == ["V0004", "V0005", "V0006"]
         assert _run(fixture) == []
         with psycopg.connect(fixture.runtime_url) as connection:
             assert connection.execute(
@@ -545,7 +545,14 @@ def test_system_schema_names_are_rejected() -> None:
 
 def test_pg8000_apply_rerun_and_rollback() -> None:
     with database_fixture() as fixture:
-        assert _run_pg8000(fixture) == ["V0001", "V0002", "V0003", "V0004", "V0005"]
+        assert _run_pg8000(fixture) == [
+            "V0001",
+            "V0002",
+            "V0003",
+            "V0004",
+            "V0005",
+            "V0006",
+        ]
         assert _run_pg8000(fixture) == []
 
     with database_fixture() as fixture, tempfile.TemporaryDirectory() as temp_directory:

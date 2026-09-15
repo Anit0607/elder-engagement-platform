@@ -1,15 +1,14 @@
 # Engagement database baseline
 
-Status: Sprint 1 baseline approved, checksum-locked and applied once to the private development PostgreSQL 16 database under EE-003 on 12 September 2026. The successful job had one completed task, no failed task, verified ownership and minimum application permissions. Temporary execution access was removed afterward.
+Status: V0001–V0005 are checksum-locked and applied to the private development PostgreSQL 16 database. V0006 is the reviewed EE-017 source candidate and is not yet applied.
 
 `migrations/V0001__engagement_baseline.sql` is the canonical PostgreSQL 16 baseline for the approved engagement product. Its approved repository bytes are locked by `migrations/manifest.json`. `amiko_v1_schema.sql` belongs to the inherited booking/caregiver scope and is retained only as history.
 
 ## Included boundaries
 
-Week 2 candidate V0004 adds approved English to profile-language choices without
-rewriting released V0001–V0003 or changing saved profiles. Bengali/Hindi remain
-valid. The `55+` age label is not an enforced minimum age. V0004 is not yet applied
-to the client database; migration execution and live verification remain required.
+V0004 added approved English to profile-language choices without rewriting released
+V0001–V0003 or changing saved profiles. Bengali/Hindi remain valid. The `55+` age
+label is not an enforced minimum age. V0005 added the private profile-photo lifecycle.
 
 - Member, Contributor, and Administrator identities, detailed profiles, sessions, and account controls.
 - Predefined circles and unique active membership history.
@@ -21,7 +20,7 @@ YouTube rows store only the official video identifier and metadata; they never r
 
 ## Decisions deliberately left open
 
-- Final profile fields, age groups, circle suggestion rules, notification-window behaviour, retention periods, and deletion/export policy.
+- Retention periods and deletion/export policy. Profile fields, the nonrestrictive `55+` label, circle suggestion rules and notification-window behaviour are approved.
 - Dedicated staff-authenticator runtime encryption key and secure enrollment/recovery. Member phone identity uses Google; Administrator password plus an authenticator-app code and Administrator-created Contributor username/password have been approved.
 - Final domains and external provider identifiers.
 
@@ -59,3 +58,11 @@ on role changes. Staff refresh must not be enabled without this guard: an old
 Contributor refresh token must not inherit Administrator access after promotion.
 It does not edit applied migrations. Cloud execution remains pending reviewed
 release preparation and a fresh verified backup.
+
+## EE-017 additive candidate: V0006
+
+`V0006__circle_membership_configuration.sql` adds one controlled setting whose
+initial value is the approved maximum of five active circle memberships. An
+Administrator may later change it only within the accepted range of one to twenty.
+It does not alter the released circle or membership history tables. A fresh backup,
+reviewed migration job and live verification are required before deployment.
