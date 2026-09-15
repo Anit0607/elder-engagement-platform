@@ -338,6 +338,12 @@ variable "enable_profiles" {
   default     = false
 }
 
+variable "enable_profile_photos" {
+  description = "Enable private profile-photo upload and viewing after its migration and storage checks pass."
+  type        = bool
+  default     = false
+}
+
 variable "enable_account_controls" {
   description = "Enable reviewed Administrator-only account controls after connected staff sign-in is ready."
   type        = bool

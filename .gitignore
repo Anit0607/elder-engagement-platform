@@ -32,6 +32,7 @@ output/qa/
 .codex_review/
 tracker-runtime/
 tools-runtime/
+.tool-state/
 **/.kotlin/
 secure-runtime/
 **/node_modules/
