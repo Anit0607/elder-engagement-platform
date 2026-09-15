@@ -702,6 +702,75 @@
       ]
     },
     {
+      "name": "Member content feed",
+      "item": [
+        {
+          "name": "List my visible content",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/feed?limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "feed"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Member only. Returns approved and published items allowed for all Members or one of the Member's active circles."
+          }
+        },
+        {
+          "name": "Open visible content media",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/feed/{{contentItemId}}/media",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "feed",
+                "{{contentItemId}}",
+                "media"
+              ]
+            },
+            "description": "Rechecks current circle access and returns a sensitive five-minute private media link. Do not log or retain it."
+          }
+        }
+      ]
+    },
+    {
       "name": "Administration",
       "item": [
         {
@@ -807,6 +876,51 @@
               ]
             },
             "description": "Records the Administrator decision but does not publish the content."
+          }
+        },
+        {
+          "name": "Publish approved content to one circle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"audience\": \"circles\",\n  \"circleIds\": [\n    \"{{circleId}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/content/{{contentItemId}}/publication",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "content",
+                "{{contentItemId}}",
+                "publication"
+              ]
+            },
+            "description": "Moves one approved clean file from quarantine to private approved storage and records the controlled audience."
           }
         },
         {

@@ -117,6 +117,14 @@ expectInvalid("Empty circle update", "CircleUpdate", {});
 expectInvalid("Circle membership limit above approved range", "CircleSettingsUpdate", {
   maxMemberships: 21,
 });
+expectInvalid("All-Member publication with a circle", "ContentPublicationRequest", {
+  audience: "all_members",
+  circleIds: ["66666666-6666-4666-8666-666666666666"],
+});
+expectInvalid("Circle publication without a circle", "ContentPublicationRequest", {
+  audience: "circles",
+  circleIds: [],
+});
 
 for (const field of ["accessToken", "refreshToken"]) {
   if (contract.components.schemas.SessionResponse.properties[field]?.writeOnly)

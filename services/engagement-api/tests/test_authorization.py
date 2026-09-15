@@ -25,7 +25,11 @@ def test_complete_permission_matrix(role, permission, owned):
         Permission.OWN_ACCOUNT,
         Permission.OWN_NOTIFICATIONS,
     }
-    member_only_own = {Permission.VIEW_CIRCLES, Permission.OWN_CIRCLE_MEMBERSHIPS}
+    member_only_own = {
+        Permission.VIEW_CIRCLES,
+        Permission.OWN_CIRCLE_MEMBERSHIPS,
+        Permission.VIEW_CONTENT_FEED,
+    }
     allowed = (
         owned
         if permission in own_permissions

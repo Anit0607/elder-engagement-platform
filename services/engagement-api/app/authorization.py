@@ -30,6 +30,8 @@ class Permission(StrEnum):
     UPLOAD_CONTENT = "upload-content"
     VIEW_CONTENT_MODERATION = "view-content-moderation"
     DECIDE_CONTENT_MODERATION = "decide-content-moderation"
+    MANAGE_CONTENT_PUBLICATION = "manage-content-publication"
+    VIEW_CONTENT_FEED = "view-content-feed"
     CREATE_STAFF = "create-staff"
     ACCOUNT_STATUS = "account-status"
     ACCOUNT_ROLE = "account-role"
@@ -58,12 +60,15 @@ def require_permission(principal: Principal, permission: Permission, target: UUI
         allowed = principal.role == "administrator"
     elif permission == Permission.UPLOAD_CONTENT:
         allowed = principal.role == "contributor" and target == principal.user_id
+    elif permission == Permission.VIEW_CONTENT_FEED:
+        allowed = principal.role == "member" and target == principal.user_id
     elif permission in {
         Permission.CREATE_STAFF,
         Permission.ACCOUNT_STATUS,
         Permission.ACCOUNT_ROLE,
         Permission.VIEW_CONTENT_MODERATION,
         Permission.DECIDE_CONTENT_MODERATION,
+        Permission.MANAGE_CONTENT_PUBLICATION,
     }:
         allowed = principal.role == "administrator"
     if principal.role not in {"member", "contributor", "administrator"} or not allowed:
@@ -102,6 +107,7 @@ class SessionAuthorization:
                     Permission.MANAGE_CIRCLES,
                     Permission.MANAGE_CIRCLE_MEMBERSHIPS,
                     Permission.DECIDE_CONTENT_MODERATION,
+                    Permission.MANAGE_CONTENT_PUBLICATION,
                 }:
                     # Serialize cross-account mutations before either user row
                     # is locked; prevents administrator A/B lock inversions and

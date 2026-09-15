@@ -53,6 +53,7 @@ class Settings(BaseModel):
     profile_photo_enabled: bool = False
     content_upload_enabled: bool = False
     content_moderation_enabled: bool = False
+    content_feed_enabled: bool = False
     account_controls_enabled: bool = False
     staff_authenticator_key_secret_ref: str = ""
     database_iam_user: str = ""
@@ -61,6 +62,7 @@ class Settings(BaseModel):
     approved_media_bucket: str = Field(min_length=1)
     upload_signer_service_account: str = Field(min_length=1)
     moderation_signer_service_account: str = ""
+    content_delivery_signer_service_account: str = ""
     upload_max_bytes: int = Field(ge=32_768, le=1_073_741_824)
     upload_allowed_mime_types: str = Field(min_length=1)
     upload_authorization_seconds: int = Field(ge=60, le=900)
@@ -110,7 +112,7 @@ class Settings(BaseModel):
             raise ValueError("storage signer must be a service-account email")
         return value
 
-    @field_validator("moderation_signer_service_account")
+    @field_validator("moderation_signer_service_account", "content_delivery_signer_service_account")
     @classmethod
     def validate_optional_moderation_signer(cls, value: str) -> str:
         if value and not SERVICE_ACCOUNT_PATTERN.fullmatch(value):
@@ -123,6 +125,7 @@ class Settings(BaseModel):
         "profile_photo_enabled",
         "content_upload_enabled",
         "content_moderation_enabled",
+        "content_feed_enabled",
         "account_controls_enabled",
         mode="before",
     )
@@ -186,6 +189,10 @@ class Settings(BaseModel):
             self.content_upload_enabled and self.moderation_signer_service_account
         ):
             raise ValueError("Content moderation requires uploads and its read-only signer")
+        if self.content_feed_enabled and not (
+            self.content_moderation_enabled and self.content_delivery_signer_service_account
+        ):
+            raise ValueError("Content feed requires moderation and its read-only delivery signer")
         if self.account_controls_enabled and not self.staff_session_enabled:
             raise ValueError("Account controls require the connected staff runtime")
         if self.fcm_enabled and not self.fcm_project_id:

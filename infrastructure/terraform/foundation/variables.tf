@@ -356,6 +356,12 @@ variable "enable_content_moderation" {
   default     = false
 }
 
+variable "enable_content_feed" {
+  description = "Enable Administrator publication and circle-filtered Member feed after its storage and access checks pass."
+  type        = bool
+  default     = false
+}
+
 variable "enable_account_controls" {
   description = "Enable reviewed Administrator-only account controls after connected staff sign-in is ready."
   type        = bool
