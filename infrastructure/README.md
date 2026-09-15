@@ -173,6 +173,20 @@ is an ancestor of main; the original marker is never rewritten, and the exact
 image, migration source, plan checksum and target must still match.
 Staff account enrollment, application deployment and client acceptance remain
 separate steps. The original V0001 executor and released SQL are not repurposed.
+
+## Recorded EE-013 profile-photo database update
+
+`scripts/Invoke-ProfilePhotoDatabaseUpdate.ps1` is the separate, once-only V0005
+controller. It preserves the already-recorded V0001 and V0002-V0004 executions,
+accepts only an in-place migration-job image/source update, requires a fresh
+successful on-demand backup named `Pre-EE-013 profile photo table update`, and
+records both earlier execution identities before requesting one new execution.
+Use `Plan` first. `Start` requires the exact confirmation
+`UPDATE-EE013-DEVELOPMENT-V0005`; after any uncertain acknowledgement, use only
+`Verify`. Verification accepts exactly one new execution and one completion
+record whose applied list is exactly V0005. It never reruns or changes the
+completed fictional-staff setup job.
+
 ## Development verification-code rotation
 
 After fictional phone-number testing, replace any verification codes exposed in
