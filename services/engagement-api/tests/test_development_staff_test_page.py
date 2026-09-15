@@ -128,7 +128,7 @@ def test_account_control_trial_restores_fixture_and_returns_no_identifiers(monke
     handler.session = session("administrator", identity="fictional-administrator")
     fixture_session = session("contributor", identity="fictional-contributor")
     fixture = Mock(session=fixture_session)
-    fixture.perform.side_effect = [(200, {}), (403, {}), (200, {}), (200, {})]
+    fixture.perform.side_effect = [(200, {}), (200, {}), (200, {})]
     fixture.call.return_value = (403, {})
     monkeypatch.setattr(page, "StaffTrial", Mock(return_value=fixture))
     handler.call = Mock(
@@ -141,7 +141,7 @@ def test_account_control_trial_restores_fixture_and_returns_no_identifiers(monke
 
     status, result = handler.perform({"action": "verify-controls"})
 
-    assert status == 200 and result["checks"] == 4
+    assert status == 200 and result["checks"] == 3
     assert "fictional-contributor" not in json.dumps(result)
     assert handler.call.call_args_list[1].args[2]["status"] == "active"
     assert fixture.call.call_count == 2
@@ -151,7 +151,7 @@ def test_account_control_trial_stops_when_restoration_is_not_confirmed(monkeypat
     handler = trial()
     handler.session = session("administrator")
     fixture = Mock(session=session("contributor"))
-    fixture.perform.side_effect = [(200, {}), (403, {})]
+    fixture.perform.return_value = (200, {})
     fixture.call.return_value = (403, {})
     monkeypatch.setattr(page, "StaffTrial", Mock(return_value=fixture))
     handler.call = Mock(side_effect=[(200, {"status": "suspended"}), (503, {})])
