@@ -63,6 +63,7 @@ const collection = {
     { key: "userId", value: "11111111-1111-4111-8111-111111111111", type: "string" },
     { key: "sessionId", value: "44444444-4444-4444-8444-444444444444", type: "string" },
     { key: "uploadId", value: "55555555-5555-4555-8555-555555555555", type: "string" },
+    { key: "circleId", value: "66666666-6666-4666-8666-666666666666", type: "string" },
   ],
   item: [
     {
@@ -162,6 +163,18 @@ const collection = {
       ],
     },
     {
+      name: "Circles",
+      item: [
+        request("List my circles and suggestions", "GET", "/v1/me/circles"),
+        request("Join a circle", "POST", "/v1/me/circles/{{circleId}}/membership", {
+          description: "A successful response is HTTP 204 with no body.",
+        }),
+        request("Leave a circle", "DELETE", "/v1/me/circles/{{circleId}}/membership", {
+          description: "A successful response is HTTP 204 with no body.",
+        }),
+      ],
+    },
+    {
       name: "Administration",
       item: [
         request("List users", "GET", "/v1/admin/users?limit=25"),
@@ -180,6 +193,33 @@ const collection = {
         }),
         request("Change user role", "PATCH", "/v1/admin/users/{{userId}}/role", {
           body: { role: "contributor", reason: "Synthetic contract test" },
+        }),
+        request("List all circles", "GET", "/v1/admin/circles"),
+        request("Create circle", "POST", "/v1/admin/circles", {
+          body: {
+            name: "Synthetic music circle",
+            description: "Synthetic contract example",
+            suggestionRules: { interests: ["music"], preferredLanguages: ["bn"] },
+          },
+        }),
+        request("Update circle", "PATCH", "/v1/admin/circles/{{circleId}}", {
+          body: { active: false },
+        }),
+        request(
+          "Assign Member to circle",
+          "POST",
+          "/v1/admin/users/{{userId}}/circles/{{circleId}}/membership",
+          { description: "A successful response is HTTP 204 with no body." },
+        ),
+        request(
+          "Remove Member from circle",
+          "DELETE",
+          "/v1/admin/users/{{userId}}/circles/{{circleId}}/membership",
+          { description: "A successful response is HTTP 204 with no body." },
+        ),
+        request("Get circle settings", "GET", "/v1/admin/circle-settings"),
+        request("Change circle membership limit", "PUT", "/v1/admin/circle-settings", {
+          body: { maxMemberships: 5 },
         }),
       ],
     },

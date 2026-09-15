@@ -16,6 +16,7 @@ from app.authorization import SessionAuthorization
 from app.config import ConfigurationError, Settings
 from app.google_phone_identity import GooglePhoneIdentityVerifier
 from app.member_auth import MemberSessionService
+from app.postgres_circles import PostgresCircleService, verify_circle_schema
 from app.postgres_member_repository import PostgresMemberRepository
 from app.postgres_notification_preferences import PostgresNotificationPreferencesService
 from app.postgres_profiles import PostgresProfileService, verify_profile_schema
@@ -136,6 +137,8 @@ async def member_runtime(
                 if settings.profile_enabled:
                     await verify_profile_schema(pool)
                     authorization = SessionAuthorization(pool, sessions, staff_controls)
+                    await verify_circle_schema(pool)
+                    handler.circle_service = PostgresCircleService(authorization)
                     photo_storage = None
                     if settings.profile_photo_enabled:
                         await verify_profile_photo_schema(pool)

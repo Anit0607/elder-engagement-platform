@@ -104,6 +104,11 @@ for (const requiredPath of [
   "/v1/me/profile/photo-upload",
   "/v1/me/profile/photo-upload/{uploadId}/complete",
   "/v1/me/notification-preferences",
+  "/v1/me/circles",
+  "/v1/me/circles/{circleId}/membership",
+  "/v1/admin/circles",
+  "/v1/admin/circle-settings",
+  "/v1/admin/users/{userId}/circles/{circleId}/membership",
 ]) {
   if (!contract.paths?.[requiredPath])
     errors.push(`Profile photo lifecycle path is missing: ${requiredPath}`);
@@ -123,6 +128,7 @@ for (const errorCode of [
   "ACCOUNT_SUSPENDED",
   "MFA_REQUIRED",
   "RATE_LIMITED",
+  "CIRCLE_LIMIT_REACHED",
 ]) {
   if (!contract.components?.schemas?.ErrorCode?.enum?.includes(errorCode))
     errors.push(`Stable error code is missing: ${errorCode}`);

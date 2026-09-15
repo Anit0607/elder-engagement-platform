@@ -2,18 +2,18 @@
   "openapi": "3.1.1",
   "info": {
     "title": "Elder Engagement REST API",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "summary": "Controlled Sprint 3 contract draft for Android, iOS, Contributor and Administrator clients",
-    "description": "This draft covers the verified Week 2 foundation and the first Week 3 notification-preference interface. It contains no production hostname, credential or personal data. Circles, content, moderation, feed and events will be added to the same v1 contract before the Week 4 interface freeze."
+    "description": "This draft covers the verified Week 2 foundation plus the Week 3 notification-preference and predefined-circle interfaces. It contains no production hostname, credential or personal data. Content, moderation, feed and events will be added to the same v1 contract before the Week 4 interface freeze."
   },
   "x-contract-status": "sprint-3-draft",
   "x-implementation-status": "Contract-only draft. No listed operation is claimed callable until the matching backend commit is deployed and its smoke-test evidence is recorded.",
   "x-planned-expansions": [
     {
-      "trackerItems": ["EE-017", "EE-018", "EE-019", "EE-020", "EE-021", "EE-023"],
+      "trackerItems": ["EE-018", "EE-019", "EE-020", "EE-021", "EE-023"],
       "target": "Week 4",
       "status": "Not available in this draft",
-      "capabilities": ["circles", "content upload", "moderation", "feed", "events"]
+      "capabilities": ["content upload", "moderation", "feed", "events"]
     },
     {
       "trackerItems": ["EE-040", "EE-041", "EE-042"],
@@ -30,7 +30,8 @@
     "REFRESH_TOKEN_REUSED": "Delete all local tokens and return to sign-in because the token family is revoked.",
     "ACCOUNT_SUSPENDED": "Delete local tokens, stop protected requests and show the client-approved support route.",
     "MFA_REQUIRED": "Prompt the authorised staff user for the configured second factor and retry once.",
-    "RATE_LIMITED": "Wait for the Retry-After duration before retrying."
+    "RATE_LIMITED": "Wait for the Retry-After duration before retrying.",
+    "CIRCLE_LIMIT_REACHED": "Explain the current membership limit and let the Member leave another circle before trying again."
   },
   "x-http-status-by-error-code": {
     "INVALID_REQUEST": 400,
@@ -46,6 +47,7 @@
     "FORBIDDEN": 403,
     "NOT_FOUND": 404,
     "CONFLICT": 409,
+    "CIRCLE_LIMIT_REACHED": 409,
     "RATE_LIMITED": 429,
     "DEPENDENCY_UNAVAILABLE": 503,
     "INTERNAL_ERROR": 500,
@@ -63,6 +65,7 @@
     { "name": "Authentication" },
     { "name": "Profile" },
     { "name": "Notifications" },
+    { "name": "Circles" },
     { "name": "Administration" }
   ],
   "paths": {
@@ -383,6 +386,207 @@
                 "schema": { "$ref": "#/components/schemas/NotificationPreferences" }
               }
             }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/v1/me/circles": {
+      "get": {
+        "tags": ["Circles"],
+        "operationId": "listMyCircles",
+        "summary": "List active and joined circles with recommendations",
+        "description": "Returns active predefined circles plus any inactive circle the authenticated Member still belongs to. suggested is calculated from the Member's saved interests and preferred language. Membership information is never returned for another Member.",
+        "responses": {
+          "200": {
+            "description": "Circles returned",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/CircleSummary" } }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/v1/me/circles/{circleId}/membership": {
+      "parameters": [
+        {
+          "name": "circleId",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string", "format": "uuid" }
+        }
+      ],
+      "post": {
+        "tags": ["Circles"],
+        "operationId": "joinCircle",
+        "summary": "Join an active circle",
+        "description": "The authenticated Member joins immediately. Repeating a completed join is safe. The Administrator-configured active-membership limit starts at five.",
+        "responses": {
+          "204": { "description": "Membership is active; response has no body" },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      },
+      "delete": {
+        "tags": ["Circles"],
+        "operationId": "leaveCircle",
+        "summary": "Leave a circle",
+        "description": "Closes the authenticated Member's active membership while retaining its history. Repeating a completed leave is safe.",
+        "responses": {
+          "204": { "description": "Membership is inactive; response has no body" },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/v1/admin/circles": {
+      "get": {
+        "tags": ["Administration"],
+        "operationId": "listAdminCircles",
+        "summary": "List all predefined circles",
+        "description": "Administrator-only list that includes inactive circles so they can be reviewed or reactivated.",
+        "responses": {
+          "200": {
+            "description": "All circles returned",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/CircleSummary" } }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      },
+      "post": {
+        "tags": ["Administration"],
+        "operationId": "createCircle",
+        "summary": "Create a predefined circle",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CircleCreate" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Circle created and audited",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CircleSummary" } } }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/v1/admin/circles/{circleId}": {
+      "patch": {
+        "tags": ["Administration"],
+        "operationId": "updateCircle",
+        "summary": "Update, deactivate or reactivate a circle",
+        "parameters": [
+          {
+            "name": "circleId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CircleUpdate" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Circle updated and audited",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CircleSummary" } } }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/v1/admin/users/{userId}/circles/{circleId}/membership": {
+      "parameters": [
+        { "name": "userId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "circleId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+      ],
+      "post": {
+        "tags": ["Administration"],
+        "operationId": "assignMemberToCircle",
+        "summary": "Assign an active Member to an active circle",
+        "responses": {
+          "204": { "description": "Membership is active; response has no body" },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      },
+      "delete": {
+        "tags": ["Administration"],
+        "operationId": "removeMemberFromCircle",
+        "summary": "Remove a Member from a circle",
+        "responses": {
+          "204": { "description": "Membership is inactive; response has no body" },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/v1/admin/circle-settings": {
+      "get": {
+        "tags": ["Administration"],
+        "operationId": "getCircleSettings",
+        "summary": "Get the current circle-membership limit",
+        "responses": {
+          "200": {
+            "description": "Circle settings returned",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CircleSettings" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      },
+      "put": {
+        "tags": ["Administration"],
+        "operationId": "replaceCircleSettings",
+        "summary": "Change the circle-membership limit",
+        "description": "Administrator-only complete replacement. The accepted range is one to twenty and the initial value is five.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CircleSettingsUpdate" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Circle settings changed and audited",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CircleSettings" } } }
           },
           "400": { "$ref": "#/components/responses/InvalidRequest" },
           "401": { "$ref": "#/components/responses/Unauthorised" },
@@ -891,6 +1095,79 @@
           "updatedAt": { "type": "string", "format": "date-time", "readOnly": true }
         }
       },
+      "CircleSuggestionRules": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "interests": {
+            "type": "array",
+            "maxItems": 10,
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1, "maxLength": 50 }
+          },
+          "preferredLanguages": {
+            "type": "array",
+            "maxItems": 3,
+            "uniqueItems": true,
+            "items": { "type": "string", "enum": ["en", "bn", "hi"] }
+          }
+        }
+      },
+      "CircleCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+          "description": { "type": ["string", "null"], "maxLength": 1000 },
+          "suggestionRules": { "$ref": "#/components/schemas/CircleSuggestionRules" }
+        }
+      },
+      "CircleUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+          "description": { "type": ["string", "null"], "maxLength": 1000 },
+          "suggestionRules": { "$ref": "#/components/schemas/CircleSuggestionRules" },
+          "active": { "type": "boolean" }
+        }
+      },
+      "CircleSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "description", "active", "suggestionRules", "joined", "selectedByUser", "suggested", "createdAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+          "description": { "type": ["string", "null"], "maxLength": 1000 },
+          "active": { "type": "boolean" },
+          "suggestionRules": { "$ref": "#/components/schemas/CircleSuggestionRules" },
+          "joined": { "type": "boolean" },
+          "selectedByUser": { "type": ["boolean", "null"] },
+          "suggested": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CircleSettingsUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["maxMemberships"],
+        "properties": {
+          "maxMemberships": { "type": "integer", "minimum": 1, "maximum": 20 }
+        }
+      },
+      "CircleSettings": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["maxMemberships", "updatedAt"],
+        "properties": {
+          "maxMemberships": { "type": "integer", "minimum": 1, "maximum": 20 },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
       "ProfileUpdate": {
         "type": "object",
         "additionalProperties": false,
@@ -1071,6 +1348,7 @@
           "FORBIDDEN",
           "NOT_FOUND",
           "CONFLICT",
+          "CIRCLE_LIMIT_REACHED",
           "RATE_LIMITED",
           "DEPENDENCY_UNAVAILABLE",
           "INTERNAL_ERROR",
