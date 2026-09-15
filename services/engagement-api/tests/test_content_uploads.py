@@ -130,6 +130,7 @@ def test_start_records_rights_private_intent_and_audit():
     assert "content_items" in connection.executed[0][0]
     assert "content-quarantine" in connection.executed[1][1][3]
     assert "content.upload.authorised" in connection.executed[2][0]
+    assert "$4::text" in connection.executed[2][0]
 
 
 def test_content_upload_authorisation_prevents_object_replacement():
