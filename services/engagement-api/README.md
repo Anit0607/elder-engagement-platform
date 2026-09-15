@@ -439,5 +439,8 @@ tools.development_week2_acceptance_page --project approved-development-project
 then open `http://127.0.0.1:8790`. The loopback-only page presents the earlier
 accepted checks and lets the client trigger the remaining four profile-photo
 checks with one fictional login, without seeing cloud credentials or signed links.
+Google's fictional sign-in proof is prepared before the page reports that it is
+ready, and a successful result is cached so an accidental second click cannot
+create another login.
 
 Do not copy `config/engagement/.env.example` into a staging or production deployment. It contains explicit non-operational development identifiers which secure-environment validation rejects.

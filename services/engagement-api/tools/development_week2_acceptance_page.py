@@ -11,6 +11,7 @@ import argparse
 import json
 import re
 import secrets
+import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from tools.test_development_member_login import SafeTestFailure, cloud_cli
@@ -35,7 +36,7 @@ FRIENDLY_CHECKS = {
 }
 
 
-def run_acceptance(project: str, region: str) -> dict:
+def prepare_acceptance(project: str, region: str) -> tuple[str, str, str]:
     origin = cloud_cli(
         "run",
         "services",
@@ -48,14 +49,18 @@ def run_acceptance(project: str, region: str) -> dict:
     if not re.fullmatch(r"https://[a-z0-9.-]+\.run\.app", origin):
         raise SafeTestFailure("The development service address could not be verified")
     gateway = cloud_cli("auth", "print-identity-token")
-    try:
-        proof = fictional_proof(project, identity_index=1)
-    except SafeTestFailure as exc:
-        if str(exc) == "A test network request failed":
-            raise SafeTestFailure(
-                "Google's fictional sign-in connection was interrupted; this check is safe to try again"
-            ) from None
-        raise
+    for attempt in range(3):
+        try:
+            proof = fictional_proof(project, identity_index=1)
+            return origin, gateway, proof
+        except SafeTestFailure as exc:
+            if str(exc) != "A test network request failed" or attempt == 2:
+                raise
+            time.sleep(attempt + 1)
+    raise SafeTestFailure("Google's fictional sign-in proof could not be prepared")
+
+
+def run_acceptance(origin: str, gateway: str, proof: str) -> dict:
     checks = check_profile_photo(origin, gateway, proof)
     if set(checks) != set(FRIENDLY_CHECKS):
         raise SafeTestFailure("The expected Week 2 checks did not all complete")
@@ -69,8 +74,10 @@ def run_acceptance(project: str, region: str) -> dict:
 
 
 class AcceptancePage(BaseHTTPRequestHandler):
-    project = ""
-    region = ""
+    origin = ""
+    gateway = ""
+    proof = ""
+    cached_result = None
     csrf = ""
 
     def log_message(self, _format, *_args):
@@ -184,7 +191,10 @@ button.onclick=async()=>{{
             self.reply(400, b'{"message":"Invalid test request"}', content_type="application/json")
             return
         try:
-            result = run_acceptance(self.project, self.region)
+            result = type(self).cached_result
+            if result is None:
+                result = run_acceptance(self.origin, self.gateway, self.proof)
+                type(self).cached_result = result
             body = json.dumps(result).encode()
             self.reply(200, body, content_type="application/json")
         except SafeTestFailure as error:
@@ -208,8 +218,14 @@ def main() -> int:
         parser.error("invalid development project")
     if not re.fullmatch(r"[a-z]+-[a-z]+[0-9]+", arguments.region):
         parser.error("invalid region")
-    AcceptancePage.project = arguments.project
-    AcceptancePage.region = arguments.region
+    try:
+        origin, gateway, proof = prepare_acceptance(arguments.project, arguments.region)
+    except SafeTestFailure as error:
+        print(f"Acceptance page did not start: {error}")
+        return 1
+    AcceptancePage.origin = origin
+    AcceptancePage.gateway = gateway
+    AcceptancePage.proof = proof
     AcceptancePage.csrf = secrets.token_urlsafe(32)
     server = HTTPServer((PAGE_HOST, PAGE_PORT), AcceptancePage)
     print(f"Week 2 acceptance page ready at {PAGE_ORIGIN}")
