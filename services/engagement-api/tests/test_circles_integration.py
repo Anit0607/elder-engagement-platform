@@ -71,9 +71,10 @@ async def test_real_postgres_circle_suggestions_membership_limit_and_administrat
         await verify_circle_schema(pool)
         async with pool.acquire() as connection:
             administrator = await connection.fetchval(
-                """INSERT INTO engagement_app.app_users (public_id,role,status)
-                   VALUES($1,'administrator','active') RETURNING id""",
+                """INSERT INTO engagement_app.app_users (public_id,role,status,username)
+                   VALUES($1,'administrator','active',$2) RETURNING id""",
                 f"AMI-ADM-{uuid4().hex[:16]}",
+                f"synthetic-circle-admin-{uuid4().hex[:12]}",
             )
             member = await connection.fetchval(
                 """INSERT INTO engagement_app.app_users
