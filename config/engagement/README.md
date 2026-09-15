@@ -43,6 +43,11 @@ This flag is not a production acceptance switch and does not complete the photo
 workflow. English/Bengali/Hindi profile choices and a non-blocking `55+` age label
 are approved; age-based exclusion is not enabled.
 
+Contributor uploads are off by default (`EE_CONTENT_UPLOAD_ENABLED=false`) and
+require connected staff authentication. Enabling the switch also requires the
+V0007 upload record and the restricted `content-quarantine/` storage permission;
+it does not enable Administrator approval or publish any object.
+
 Staff login is off by default (`EE_STAFF_SESSION_ENABLED=false`). Turning it on
 requires the connected Member runtime and a dedicated, numeric
 `EE_STAFF_AUTHENTICATOR_KEY_SECRET_REF`, distinct from session and field-encryption

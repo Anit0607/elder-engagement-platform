@@ -51,6 +51,7 @@ class Settings(BaseModel):
     staff_session_enabled: bool = False
     profile_enabled: bool = False
     profile_photo_enabled: bool = False
+    content_upload_enabled: bool = False
     account_controls_enabled: bool = False
     staff_authenticator_key_secret_ref: str = ""
     database_iam_user: str = ""
@@ -111,6 +112,7 @@ class Settings(BaseModel):
         "staff_session_enabled",
         "profile_enabled",
         "profile_photo_enabled",
+        "content_upload_enabled",
         "account_controls_enabled",
         mode="before",
     )
@@ -168,6 +170,8 @@ class Settings(BaseModel):
             raise ValueError("Profiles require the connected identity runtime")
         if self.profile_photo_enabled and not self.profile_enabled:
             raise ValueError("Profile photos require connected profiles")
+        if self.content_upload_enabled and not self.staff_session_enabled:
+            raise ValueError("Contributor content uploads require the connected staff runtime")
         if self.account_controls_enabled and not self.staff_session_enabled:
             raise ValueError("Account controls require the connected staff runtime")
         if self.fcm_enabled and not self.fcm_project_id:

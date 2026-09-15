@@ -31,6 +31,7 @@ const requiredTables = [
   "circle_configuration",
   "content_items",
   "content_assets",
+  "content_uploads",
   "content_audiences",
   "moderation_decisions",
   "events",

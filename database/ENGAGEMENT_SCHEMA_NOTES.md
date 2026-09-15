@@ -1,6 +1,6 @@
 # Engagement database baseline
 
-Status: V0001–V0005 are checksum-locked and applied to the private development PostgreSQL 16 database. V0006 is the reviewed EE-017 source candidate and is not yet applied.
+Status: V0001–V0006 are checksum-locked and applied to the private development PostgreSQL 16 database. V0007 is the reviewed EE-018 source candidate and is not yet applied.
 
 `migrations/V0001__engagement_baseline.sql` is the canonical PostgreSQL 16 baseline for the approved engagement product. Its approved repository bytes are locked by `migrations/manifest.json`. `amiko_v1_schema.sql` belongs to the inherited booking/caregiver scope and is retained only as history.
 
@@ -64,5 +64,13 @@ release preparation and a fresh verified backup.
 `V0006__circle_membership_configuration.sql` adds one controlled setting whose
 initial value is the approved maximum of five active circle memberships. An
 Administrator may later change it only within the accepted range of one to twenty.
-It does not alter the released circle or membership history tables. A fresh backup,
-reviewed migration job and live verification are required before deployment.
+It does not alter the released circle or membership history tables. Its fresh backup,
+reviewed migration job, development deployment and live fictional proof passed.
+
+## EE-018 additive candidate: V0007
+
+`V0007__contributor_content_uploads.sql` adds a short-lived upload-authorisation
+record, a versioned Contributor rights confirmation and English content language.
+It keeps the uploaded object in private quarantine and uses the existing pending
+moderation state. It does not approve or publish content. A fresh backup, reviewed
+migration job and live synthetic MP4/MP3/PDF verification are required before deployment.

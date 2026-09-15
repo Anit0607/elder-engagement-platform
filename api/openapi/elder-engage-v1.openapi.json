@@ -2,18 +2,18 @@
   "openapi": "3.1.1",
   "info": {
     "title": "Elder Engagement REST API",
-    "version": "0.3.1",
+    "version": "0.3.2",
     "summary": "Controlled Sprint 3 contract draft for Android, iOS, Contributor and Administrator clients",
-    "description": "This draft covers the verified Week 2 foundation plus the Week 3 notification-preference and predefined-circle interfaces. It contains no production hostname, credential or personal data. Content, moderation, feed and events will be added to the same v1 contract before the Week 4 interface freeze."
+    "description": "This draft covers the verified Week 2 foundation plus the Week 3 notification-preference, predefined-circle and private Contributor-upload interfaces. It contains no production hostname, credential or personal data. Moderation, feed and events will be added to the same v1 contract before the Week 4 interface freeze."
   },
   "x-contract-status": "sprint-3-draft",
   "x-implementation-status": "Contract-only draft. No listed operation is claimed callable until the matching backend commit is deployed and its smoke-test evidence is recorded.",
   "x-planned-expansions": [
     {
-      "trackerItems": ["EE-018", "EE-019", "EE-020", "EE-021", "EE-023"],
+      "trackerItems": ["EE-019", "EE-020", "EE-021", "EE-023"],
       "target": "Week 4",
       "status": "Not available in this draft",
-      "capabilities": ["content upload", "moderation", "feed", "events"]
+      "capabilities": ["moderation", "feed", "events"]
     },
     {
       "trackerItems": ["EE-040", "EE-041", "EE-042"],
@@ -31,7 +31,8 @@
     "ACCOUNT_SUSPENDED": "Delete local tokens, stop protected requests and show the client-approved support route.",
     "MFA_REQUIRED": "Prompt the authorised staff user for the configured second factor and retry once.",
     "RATE_LIMITED": "Wait for the Retry-After duration before retrying.",
-    "CIRCLE_LIMIT_REACHED": "Explain the current membership limit and let the Member leave another circle before trying again."
+    "CIRCLE_LIMIT_REACHED": "Explain the current membership limit and let the Member leave another circle before trying again.",
+    "UPLOAD_MISMATCH": "Do not retry completion. Ask the Contributor to select the correct file and start a new upload."
   },
   "x-http-status-by-error-code": {
     "INVALID_REQUEST": 400,
@@ -48,6 +49,7 @@
     "NOT_FOUND": 404,
     "CONFLICT": 409,
     "CIRCLE_LIMIT_REACHED": 409,
+    "UPLOAD_MISMATCH": 409,
     "RATE_LIMITED": 429,
     "DEPENDENCY_UNAVAILABLE": 503,
     "INTERNAL_ERROR": 500,
@@ -66,6 +68,7 @@
     { "name": "Profile" },
     { "name": "Notifications" },
     { "name": "Circles" },
+    { "name": "Content" },
     { "name": "Administration" }
   ],
   "paths": {
@@ -336,6 +339,70 @@
           "401": { "$ref": "#/components/responses/Unauthorised" },
           "404": { "$ref": "#/components/responses/NotFound" },
           "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/v1/contributor/content-uploads": {
+      "post": {
+        "tags": ["Content"],
+        "operationId": "startContributorContentUpload",
+        "summary": "Create a short-lived private content-upload authorisation",
+        "description": "Contributor only. The Contributor must confirm ownership or permission before Amiko creates a draft item and a private upload authorisation. The file remains outside the approved-content area.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ContentUploadRequest" },
+              "examples": { "syntheticPdf": { "$ref": "#/components/examples/SyntheticContentUploadRequest" } }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Private upload authorised",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ContentUploadAuthorisation" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
+        }
+      }
+    },
+    "/v1/contributor/content-uploads/{uploadId}/complete": {
+      "post": {
+        "tags": ["Content"],
+        "operationId": "completeContributorContentUpload",
+        "summary": "Validate a private upload and place it in the Administrator review queue",
+        "description": "Checks the stored object's exact content type, size, SHA-256 fingerprint and file signature. The signed upload is create-only, so a verified object cannot be replaced through the same link. Success records a quarantined asset with pending scan and moderation status; it does not publish or move the file to approved storage.",
+        "parameters": [
+          {
+            "name": "uploadId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Upload validated and waiting for Administrator review",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ContentUploadReceipt" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorised" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable" }
         }
       }
     },
@@ -1305,6 +1372,68 @@
           "expiresAt": { "type": "string", "format": "date-time" }
         }
       },
+      "ContentUploadRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "language", "contentType", "sizeBytes", "sha256", "rightsConfirmed"],
+        "properties": {
+          "title": { "type": "string", "minLength": 2, "maxLength": 200 },
+          "description": {
+            "anyOf": [
+              { "type": "string", "maxLength": 4000 },
+              { "type": "null" }
+            ]
+          },
+          "language": { "type": "string", "enum": ["en", "bn", "hi"] },
+          "contentType": {
+            "type": "string",
+            "enum": ["video/mp4", "audio/mpeg", "audio/mp4", "audio/x-m4a", "application/pdf"]
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 262144000,
+            "description": "Maximum 250 MiB for MP4 video, 50 MiB for MP3/M4A audio and 25 MiB for PDF."
+          },
+          "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
+          "rightsConfirmed": {
+            "type": "boolean",
+            "const": true,
+            "description": "Confirms that the Contributor owns the material or has permission to upload it."
+          }
+        }
+      },
+      "ContentUploadAuthorisation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["contentItemId", "uploadId", "uploadUrl", "method", "requiredHeaders", "expiresAt"],
+        "properties": {
+          "contentItemId": { "type": "string", "format": "uuid" },
+          "uploadId": { "type": "string", "format": "uuid" },
+          "uploadUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Sensitive short-lived value that must not be logged or stored after use."
+          },
+          "method": { "type": "string", "const": "PUT" },
+          "requiredHeaders": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          },
+          "expiresAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ContentUploadReceipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["contentItemId", "uploadId", "status", "kind"],
+        "properties": {
+          "contentItemId": { "type": "string", "format": "uuid" },
+          "uploadId": { "type": "string", "format": "uuid" },
+          "status": { "type": "string", "const": "pending" },
+          "kind": { "type": "string", "enum": ["video", "audio", "pdf"] }
+        }
+      },
       "Problem": {
         "type": "object",
         "additionalProperties": false,
@@ -1349,6 +1478,7 @@
           "NOT_FOUND",
           "CONFLICT",
           "CIRCLE_LIMIT_REACHED",
+          "UPLOAD_MISMATCH",
           "RATE_LIMITED",
           "DEPENDENCY_UNAVAILABLE",
           "INTERNAL_ERROR",
@@ -1380,6 +1510,18 @@
       "SyntheticRefreshRequest": {
         "summary": "Non-working refresh-token placeholder",
         "value": { "refreshToken": "synthetic-refresh-token-not-a-real-secret-value" }
+      },
+      "SyntheticContentUploadRequest": {
+        "summary": "Synthetic PDF upload metadata; no client content or credential",
+        "value": {
+          "title": "Synthetic activity guide",
+          "description": "Fictional content used only for contract testing",
+          "language": "en",
+          "contentType": "application/pdf",
+          "sizeBytes": 32768,
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "rightsConfirmed": true
+        }
       },
       "SyntheticSessionResponse": {
         "summary": "Synthetic response; token strings are not usable credentials",
