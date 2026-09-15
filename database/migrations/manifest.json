@@ -61,7 +61,7 @@
       "id": "V0009",
       "name": "event_reminder_rules",
       "file": "V0009__event_reminder_rules.sql",
-      "sha256": "8d37a847d2f34c2258dcdef087e0f190313a23a15a430a5816fa5ce481673479",
+      "sha256": "d0f91552e4d8f6402d3d8703b288ee3189207c65b4d68c7ec28a8849e92f8eba",
       "requires_empty": false
     }
   ]

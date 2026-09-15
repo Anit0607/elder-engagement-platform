@@ -303,7 +303,7 @@ class PostgresEventService:
                               SELECT 1 FROM engagement_app.event_audiences audience
                               JOIN engagement_app.circle_memberships membership
                                 ON membership.circle_id=audience.circle_id
-                               AND membership.user_id=$1 AND membership.active=true
+                               AND membership.user_id=$1 AND membership.left_at IS NULL
                               JOIN engagement_app.circles circle
                                 ON circle.id=audience.circle_id AND circle.active=true
                               WHERE audience.event_id=event.id AND audience.audience='circle'))

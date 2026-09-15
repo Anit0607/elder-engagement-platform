@@ -128,7 +128,7 @@ async def test_real_postgres_event_creation_and_circle_visibility():
         async with pool.acquire() as connection:
             await connection.execute(
                 """UPDATE engagement_app.circle_memberships
-                   SET active=false,left_at=now() WHERE circle_id=$1 AND user_id=$2""",
+                   SET left_at=now() WHERE circle_id=$1 AND user_id=$2""",
                 circle,
                 members[0],
             )
