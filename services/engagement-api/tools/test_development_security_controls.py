@@ -52,7 +52,7 @@ def assert_problem(response, payload, *, status: int, code: str) -> None:
 def run(origin: str, gateway: str) -> list[str]:
     checks: list[str] = []
 
-    response, payload = call(origin, gateway, "GET", "/v1/admin/users")
+    response, payload = call(origin, gateway, "GET", "/v1/admin/circles")
     assert_problem(response, payload, status=401, code="AUTHENTICATION_FAILED")
     checks.append("missing_application_authentication_was_rejected")
 
