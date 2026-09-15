@@ -64,7 +64,10 @@ resource "google_cloud_run_v2_job" "fictional_staff_setup" {
 
         dynamic "env" {
           for_each = merge(local.cloud_run_environment, {
-            EE_STAFF_SESSION_ENABLED              = "true"
+            EE_STAFF_SESSION_ENABLED = "true"
+            # This already-completed, one-time job must never inherit later
+            # application account-control activation.
+            EE_ACCOUNT_CONTROLS_ENABLED           = "false"
             EE_STAFF_AUTHENTICATOR_KEY_SECRET_REF = "projects/${var.project_id}/secrets/${local.name_prefix}-staff-authenticator-key/versions/${coalesce(var.staff_authenticator_secret_version, "invalid")}"
             STAFF_SETUP_MODE                      = "fictional-development"
             STAFF_SETUP_PROJECT                   = var.project_id
