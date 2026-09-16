@@ -242,9 +242,36 @@ variable "public_api_origin" {
 }
 
 variable "allow_unauthenticated" {
-  description = "Whether the Cloud Run API can receive unauthenticated requests."
+  description = "Whether the API can receive unauthenticated requests through the activated protected public gateway. Direct public Cloud Run access is prohibited."
   type        = bool
   default     = false
+}
+
+variable "prepare_public_gateway" {
+  description = "Prepare the fixed address, managed certificate, load balancer and Cloud Armor policy without exposing Cloud Run publicly."
+  type        = bool
+  default     = false
+}
+
+variable "activate_public_gateway" {
+  description = "Activate public API traffic only after DNS and the managed certificate are ready."
+  type        = bool
+  default     = false
+}
+
+variable "public_api_hostname" {
+  description = "Client-controlled API hostname used by the protected public gateway, without a scheme, port or path."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = var.public_api_hostname == null ? true : can(regex(
+      "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$",
+      var.public_api_hostname
+    ))
+    error_message = "public_api_hostname must be a complete hostname such as api-test.example.com, without a scheme, port or path."
+  }
 }
 
 variable "alert_notification_email" {

@@ -13,7 +13,7 @@ resource "google_monitoring_notification_channel" "operations_email" {
 }
 
 resource "google_monitoring_uptime_check_config" "api_health" {
-  count = var.deploy_application ? 1 : 0
+  count = var.deploy_application && !var.activate_public_gateway ? 1 : 0
 
   project            = var.project_id
   display_name       = "${local.name_prefix}-api-health"
@@ -67,7 +67,7 @@ resource "google_monitoring_uptime_check_config" "api_health" {
 }
 
 resource "google_cloud_run_v2_service_iam_member" "monitoring_uptime" {
-  count = var.deploy_application ? 1 : 0
+  count = var.deploy_application && !var.activate_public_gateway ? 1 : 0
 
   project  = var.project_id
   location = var.region
@@ -76,6 +76,58 @@ resource "google_cloud_run_v2_service_iam_member" "monitoring_uptime" {
   member   = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-monitoring-notification.iam.gserviceaccount.com"
 
   depends_on = [google_monitoring_uptime_check_config.api_health]
+}
+
+resource "google_monitoring_uptime_check_config" "public_api_health" {
+  count = var.deploy_application && var.activate_public_gateway ? 1 : 0
+
+  project            = var.project_id
+  display_name       = "${local.name_prefix}-public-api-health"
+  period             = "60s"
+  timeout            = "10s"
+  selected_regions   = ["ASIA_PACIFIC", "EUROPE", "USA"]
+  log_check_failures = true
+  user_labels        = local.common_labels
+
+  http_check {
+    path           = "/health"
+    port           = 443
+    use_ssl        = true
+    validate_ssl   = true
+    request_method = "GET"
+
+    accepted_response_status_codes {
+      status_value = 200
+    }
+  }
+
+  monitored_resource {
+    type = "uptime_url"
+    labels = {
+      project_id = var.project_id
+      host       = lower(var.public_api_hostname)
+    }
+  }
+
+  content_matchers {
+    content = "\"status\":\"ok\""
+    matcher = "CONTAINS_STRING"
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  depends_on = [google_compute_global_forwarding_rule.public_api]
+}
+
+locals {
+  active_health_check_id = one(concat(
+    google_monitoring_uptime_check_config.api_health[*].uptime_check_id,
+    google_monitoring_uptime_check_config.public_api_health[*].uptime_check_id
+  ))
+  active_health_resource_type = var.activate_public_gateway ? "uptime_url" : "cloud_run_revision"
+  active_health_group_field   = var.activate_public_gateway ? "resource.label.host" : "resource.label.service_name"
 }
 
 resource "google_monitoring_alert_policy" "api_unavailable" {
@@ -94,7 +146,7 @@ resource "google_monitoring_alert_policy" "api_unavailable" {
     display_name = "Health check fails from multiple regions"
 
     condition_threshold {
-      filter          = "metric.type=\"monitoring.googleapis.com/uptime_check/check_passed\" AND metric.label.check_id=\"${google_monitoring_uptime_check_config.api_health[0].uptime_check_id}\" AND resource.type=\"cloud_run_revision\""
+      filter          = "metric.type=\"monitoring.googleapis.com/uptime_check/check_passed\" AND metric.label.check_id=\"${local.active_health_check_id}\" AND resource.type=\"${local.active_health_resource_type}\""
       comparison      = "COMPARISON_GT"
       threshold_value = 1
       duration        = "120s"
@@ -103,7 +155,7 @@ resource "google_monitoring_alert_policy" "api_unavailable" {
         alignment_period     = "60s"
         per_series_aligner   = "ALIGN_NEXT_OLDER"
         cross_series_reducer = "REDUCE_COUNT_FALSE"
-        group_by_fields      = ["resource.label.service_name"]
+        group_by_fields      = [local.active_health_group_field]
       }
 
       trigger {
@@ -121,7 +173,10 @@ resource "google_monitoring_alert_policy" "api_unavailable" {
     auto_close = "1800s"
   }
 
-  depends_on = [google_cloud_run_v2_service_iam_member.monitoring_uptime]
+  depends_on = [
+    google_cloud_run_v2_service_iam_member.monitoring_uptime,
+    google_monitoring_uptime_check_config.public_api_health
+  ]
 }
 
 resource "google_monitoring_alert_policy" "api_error_log" {
