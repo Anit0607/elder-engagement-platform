@@ -111,7 +111,6 @@ resource "google_compute_backend_service" "public_api" {
   description           = "Protected external backend for the Amiko API"
   protocol              = "HTTP"
   load_balancing_scheme = "EXTERNAL_MANAGED"
-  timeout_sec           = 300
   security_policy       = google_compute_security_policy.public_api[0].id
 
   backend {
