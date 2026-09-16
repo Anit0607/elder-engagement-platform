@@ -27,7 +27,7 @@ if ($staged.Count -eq 0) {
 $allowed = @(
     '^(\.gitattributes|\.gitignore|README\.md|SECURITY\.md)$',
     '^\.github/workflows/[^/]+\.ya?ml$',
-    '^api/(CHANGELOG\.md|IOS_CONTRACT_NOTIFICATION_LOG\.md|IOS_REST_API_INTEGRATION_CHECKLIST\.md|README\.md)$',
+    '^api/(BACKEND_RELEASE_1_CLIENT_TEST_GUIDE\.md|BACKEND_RELEASE_1_NOTES\.md|CHANGELOG\.md|IOS_CONTRACT_NOTIFICATION_LOG\.md|IOS_REST_API_INTEGRATION_CHECKLIST\.md|README\.md)$',
     '^api/evidence/[a-z0-9-]+\.md$',
     '^api/contract-tests/',
     '^api/openapi/elder-engage-v1\.openapi\.json$',

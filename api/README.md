@@ -7,6 +7,8 @@ Tracker ownership: EE-051 for the initial contract and EE-023 for the Week 4 pro
 
 - `openapi/elder-engage-v1.openapi.json` — current OpenAPI 3.1.1 contract draft for the approved engagement platform.
 - `IOS_REST_API_INTEGRATION_CHECKLIST.md` — receipt, review, test, and acceptance checklist for the client's separate iOS developer.
+- `BACKEND_RELEASE_1_NOTES.md` — Week 4 capability, evidence and limitation summary.
+- `BACKEND_RELEASE_1_CLIENT_TEST_GUIDE.md` — role-by-role client acceptance steps and defect-reporting format.
 - `../tools/validate_engagement_openapi.mjs` — dependency-free contract integrity check.
 - `contract-tests/` — repeatable JSON Schema compilation, example validation, and negative contract tests.
 - `postman/Elder_Engage_Sprint3_Draft.postman_collection.json` — generated safe, synthetic Sprint 3 companion collection.
