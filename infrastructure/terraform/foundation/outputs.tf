@@ -13,6 +13,21 @@ output "cloud_run_uri" {
   value       = try(google_cloud_run_v2_service.api[0].uri, null)
 }
 
+output "public_gateway_ip" {
+  description = "Reserved address to place in the client-controlled DNS A record when the protected gateway is prepared."
+  value       = try(google_compute_global_address.public_api[0].address, null)
+}
+
+output "public_gateway_hostname" {
+  description = "Client-controlled hostname assigned to the protected public API gateway."
+  value       = var.prepare_public_gateway ? lower(var.public_api_hostname) : null
+}
+
+output "public_gateway_active" {
+  description = "Whether traffic is restricted to the protected public gateway."
+  value       = var.activate_public_gateway
+}
+
 output "database_connection_name" {
   description = "Cloud SQL connector name; this is not a credential."
   value       = google_sql_database_instance.postgres.connection_name

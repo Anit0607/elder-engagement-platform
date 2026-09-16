@@ -5,7 +5,7 @@ resource "google_cloud_run_v2_service" "api" {
   name                = local.cloud_run_service_name
   location            = var.region
   deletion_protection = var.environment == "production"
-  ingress             = "INGRESS_TRAFFIC_ALL"
+  ingress             = var.activate_public_gateway ? "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER" : "INGRESS_TRAFFIC_ALL"
   labels              = local.common_labels
 
   template {
@@ -183,6 +183,25 @@ resource "google_cloud_run_v2_service" "api" {
       )
       error_message = "A public API origin is required before any non-development or unauthenticated deployment."
     }
+    precondition {
+      condition = !var.prepare_public_gateway || (
+        var.deploy_application &&
+        var.public_api_hostname != null
+      )
+      error_message = "Public gateway preparation requires a deployed application and a client-controlled API hostname."
+    }
+    precondition {
+      condition = !var.activate_public_gateway || (
+        var.prepare_public_gateway &&
+        var.allow_unauthenticated &&
+        var.public_api_origin == local.public_gateway_origin
+      )
+      error_message = "Public activation requires the prepared gateway, explicit unauthenticated API access and an origin that exactly matches the protected hostname."
+    }
+    precondition {
+      condition     = !var.allow_unauthenticated || var.activate_public_gateway
+      error_message = "Unauthenticated access is allowed only through the activated protected public gateway."
+    }
   }
 
   depends_on = [google_project_service.required, google_secret_manager_secret_iam_member.runtime]
@@ -199,7 +218,7 @@ resource "google_cloud_run_v2_service_iam_member" "github_verifier" {
 }
 
 resource "google_cloud_run_v2_service_iam_member" "public_api" {
-  count = var.deploy_application && var.allow_unauthenticated ? 1 : 0
+  count = var.deploy_application && var.activate_public_gateway && var.allow_unauthenticated ? 1 : 0
 
   project  = var.project_id
   location = var.region

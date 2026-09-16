@@ -2,6 +2,7 @@ locals {
   name_prefix                     = "ee-${var.environment}"
   cloud_run_service_name          = "ee-${var.environment}-api"
   bootstrap_api_origin            = "https://${local.cloud_run_service_name}.bootstrap.invalid"
+  public_gateway_origin           = var.public_api_hostname == null ? null : "https://${lower(var.public_api_hostname)}"
   cloud_run_origin                = coalesce(var.public_api_origin, local.bootstrap_api_origin)
   cloud_run_hostname              = trimprefix(local.cloud_run_origin, "https://")
   approved_image_prefix           = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.containers.repository_id}/engagement-api@sha256:"
