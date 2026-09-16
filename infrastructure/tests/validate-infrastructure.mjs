@@ -127,6 +127,7 @@ const gatewaySource = read('terraform/foundation/public_gateway.tf');
 assert.match(gatewaySource, /google_compute_global_address" "public_api"/, 'the protected API gateway requires a stable address for DNS');
 assert.match(gatewaySource, /google_compute_region_network_endpoint_group" "public_api"/, 'the protected gateway must use a serverless Cloud Run endpoint');
 assert.match(gatewaySource, /network_endpoint_type\s*=\s*"SERVERLESS"/, 'the public gateway endpoint must be serverless');
+assert.doesNotMatch(gatewaySource, /timeout_sec\s*=/, 'Google does not support a custom backend timeout for serverless network endpoint groups');
 assert.match(gatewaySource, /google_compute_security_policy" "public_api"/, 'Cloud Armor must protect the public gateway');
 assert.match(gatewaySource, /action\s*=\s*"rate_based_ban"/, 'the gateway must temporarily block traffic floods');
 assert.match(gatewaySource, /rate_limit_threshold[\s\S]*?count\s*=\s*600[\s\S]*?interval_sec\s*=\s*60/m, 'the whole-API flood limit must remain reviewable and bounded');
