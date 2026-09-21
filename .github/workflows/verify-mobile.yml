@@ -24,6 +24,7 @@ jobs:
           java-version: '17'
           cache: gradle
           cache-dependency-path: apps/mobile/android/**/*.gradle*
+      - uses: android-actions/setup-android@v4
       - name: Install JavaScript dependencies
         working-directory: apps/mobile
         run: npm ci
