@@ -859,6 +859,7 @@
         "tags": ["Administration"],
         "operationId": "listUsers",
         "summary": "List users for authorised Administrators",
+        "x-implementation-status": "planned-not-callable",
         "parameters": [
           {
             "name": "cursor",
@@ -898,6 +899,7 @@
         "tags": ["Administration"],
         "operationId": "createUserProfile",
         "summary": "Manually create a detailed user profile",
+        "x-implementation-status": "planned-not-callable",
         "description": "Supports the client's manual profile-creation requirement. Final mandatory fields remain subject to the approved profile-field decision.",
         "requestBody": {
           "required": true,

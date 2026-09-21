@@ -1041,7 +1041,7 @@
                 }
               ]
             },
-            "description": "Contract-only request. It is not claimed callable until the matching backend is deployed and verified."
+            "description": "PLANNED — NOT CALLABLE in Backend Release 1. Administrator user listing belongs to the later Administrator-console workflow."
           }
         },
         {
@@ -1084,7 +1084,7 @@
                 "users"
               ]
             },
-            "description": "Contract-only request. It is not claimed callable until the matching backend is deployed and verified."
+            "description": "PLANNED — NOT CALLABLE in Backend Release 1. Administrator-created user accounts belong to the later Administrator-console workflow."
           }
         },
         {

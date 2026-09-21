@@ -2,6 +2,12 @@
 
 The contract remains controlled. Only operations named in a matching verified deployment record are claimed callable; contract-only operations remain unavailable.
 
+## Backend Release 1 availability clarification — 0.3.5 draft — 21 September 2026
+
+- Marked `GET` and `POST /v1/admin/users` as planned and not callable. These operations depend on the later Administrator workflow; no implemented route or promised release date changed.
+- Marked the corresponding Postman requests as not callable and added a regression check comparing every documented operation with the application routes.
+- This is a documentation and test clarification, not a public deployment, iOS handover or client acceptance.
+
 ## Basic events — 0.3.5 development verified — 16 September 2026
 
 - Added Administrator creation of future information-only events for all Members or one-to-twenty active circles.
