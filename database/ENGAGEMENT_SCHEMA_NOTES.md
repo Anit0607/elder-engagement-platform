@@ -20,7 +20,7 @@ YouTube rows store only the official video identifier and metadata; they never r
 
 ## Decisions deliberately left open
 
-- Retention periods and deletion/export policy. Profile fields, the nonrestrictive `55+` label, circle suggestion rules and notification-window behaviour are approved.
+- The client approved the data-lifecycle product direction recorded in `../architecture/Amiko_Data_Lifecycle_Decision.md`, including an adult-only launch, 24-month inactivity review, and 30-day export/deletion service targets. The nonrestrictive `55+` profile label, circle suggestion rules and notification-window behaviour are also approved. Category-specific legal retention, manual-backup expiry, rejected-upload expiry and recording/replay expiry remain open. The approval does not mean that an age gate or deletion/export workflow is deployed.
 - Dedicated staff-authenticator runtime encryption key and secure enrollment/recovery. Member phone identity uses Google; Administrator password plus an authenticator-app code and Administrator-created Contributor username/password have been approved.
 - Final domains and external provider identifiers.
 
