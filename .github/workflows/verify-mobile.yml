@@ -1,0 +1,42 @@
+name: Verify Amiko Android app
+on:
+  push:
+    branches: [main]
+    paths: ['apps/mobile/**', '.github/workflows/verify-mobile.yml']
+  pull_request:
+    paths: ['apps/mobile/**', '.github/workflows/verify-mobile.yml']
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.14.0'
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+          cache-dependency-path: apps/mobile/android/**/*.gradle*
+      - uses: android-actions/setup-android@v4
+      - name: Install JavaScript dependencies
+        working-directory: apps/mobile
+        run: npm ci
+      - name: Test, type-check, lint and audit
+        working-directory: apps/mobile
+        run: |
+          npm test -- --runInBand
+          npx tsc --noEmit
+          npm run lint
+          npm audit --audit-level=moderate
+      - name: Install Android build requirements
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;27.1.12297006' 'cmake;3.22.1'
+      - name: Build self-contained Android test package
+        working-directory: apps/mobile/android
+        run: ./gradlew :app:assembleClientTest -PreactNativeArchitectures=arm64-v8a --no-daemon

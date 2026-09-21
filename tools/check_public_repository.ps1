@@ -41,6 +41,7 @@ $allowed = @(
     '^infrastructure/',
     '^services/engagement-api/',
     '^apps/android/',
+    '^apps/mobile/',
     '^tools/(check_public_repository\.ps1|generate_engagement_postman\.mjs|generate_synthetic_upload_samples\.py|validate_database_migrations\.py|validate_engagement_config\.mjs|validate_engagement_openapi\.mjs|validate_engagement_schema\.mjs)$'
 )
 
