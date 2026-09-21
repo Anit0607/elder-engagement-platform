@@ -1,5 +1,10 @@
 [CmdletBinding()]
-param([switch]$BuildPackage, [switch]$ClientTestPackage)
+param(
+    [switch]$BuildPackage,
+    [switch]$ClientTestPackage,
+    [switch]$ConnectedDevelopment,
+    [string]$ApiOrigin = ''
+)
 
 $ErrorActionPreference = 'Stop'
 $taskRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
@@ -7,7 +12,8 @@ if (-not $taskRoot.StartsWith('D:\', [StringComparison]::OrdinalIgnoreCase)) {
     throw 'The Amiko local build is configured to keep tools and caches on D:.'
 }
 $taskNames = @('NPM_CONFIG_CACHE', 'TEMP', 'TMP', 'JAVA_HOME', 'ANDROID_HOME',
-    'ANDROID_SDK_ROOT', 'ANDROID_USER_HOME', 'GRADLE_USER_HOME', 'JAVA_TOOL_OPTIONS')
+    'ANDROID_SDK_ROOT', 'ANDROID_USER_HOME', 'GRADLE_USER_HOME', 'JAVA_TOOL_OPTIONS',
+    'AMIKO_FIREBASE_API_KEY', 'AMIKO_FIREBASE_APP_ID', 'AMIKO_FIREBASE_PROJECT', 'AMIKO_API_ORIGIN')
 $taskPrevious = @{}
 foreach ($taskName in $taskNames) {
     $taskPrevious[$taskName] = [Environment]::GetEnvironmentVariable($taskName)
@@ -32,6 +38,31 @@ try {
     } finally { Pop-Location }
 
     if ($BuildPackage -or $ClientTestPackage) {
+        if ($ConnectedDevelopment) {
+            $taskResponse = Get-Content (Join-Path $taskRoot 'secure-runtime\amiko-android-config-response.json') -Raw |
+                ConvertFrom-Json
+            $taskConfig = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($taskResponse.configFileContents)) |
+                ConvertFrom-Json
+            $taskClient = @($taskConfig.client | Where-Object {
+                $_.client_info.android_client_info.package_name -eq 'com.eldercaresaathi.amiko'
+            })
+            if ($taskClient.Count -ne 1) { throw 'Google configuration does not match the Android package.' }
+            $env:AMIKO_FIREBASE_API_KEY = $taskClient[0].api_key[0].current_key
+            $env:AMIKO_FIREBASE_APP_ID = $taskClient[0].client_info.mobilesdk_app_id
+            $env:AMIKO_FIREBASE_PROJECT = $taskConfig.project_info.project_id
+            if (@($env:AMIKO_FIREBASE_API_KEY, $env:AMIKO_FIREBASE_APP_ID,
+                $env:AMIKO_FIREBASE_PROJECT) | Where-Object { [string]::IsNullOrWhiteSpace($_) }) {
+                throw 'Downloaded identity configuration is incomplete.'
+            }
+            if ($ClientTestPackage) {
+                if ($ApiOrigin -ne 'https://api-test.eldercaresaathi.com') {
+                    throw 'Connected phone-test packages require the approved HTTPS test address.'
+                }
+                $env:AMIKO_API_ORIGIN = $ApiOrigin
+            } else {
+                $env:AMIKO_API_ORIGIN = 'http://127.0.0.1:8787'
+            }
+        }
         $taskJdk = @(Get-ChildItem (Join-Path $taskRoot 'tools-runtime\android-java') -Directory)
         if ($taskJdk.Count -ne 1) { throw 'Exactly one D-drive Android JDK is required.' }
         $env:JAVA_HOME = $taskJdk[0].FullName

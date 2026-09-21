@@ -2,6 +2,20 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+// Reuse the phone-verification code already accepted on a real Android phone.
+// Its source stays in the earlier test harness until the integration is proven.
+def localSettings = new Properties()
+def localSettingsFile = rootProject.file("../../android/amiko-local.properties")
+if (localSettingsFile.exists()) {
+    localSettingsFile.withInputStream { localSettings.load(it) }
+}
+def amikoSetting = { name, fallback = "" ->
+    System.getenv(name) ?: localSettings.getProperty(name, fallback)
+}
+def quotedSetting = { value ->
+    "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+}
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
@@ -78,12 +92,22 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace "com.eldercaresaathi.amiko"
+    sourceSets {
+        main {
+            java.srcDirs += file("../../../android/app/src/main/java")
+            res.srcDirs += file("../../../android/app/src/main/res")
+        }
+    }
     defaultConfig {
         applicationId "com.eldercaresaathi.amiko"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 4
         versionName "0.5.0"
+        buildConfigField "String", "FIREBASE_API_KEY", quotedSetting(amikoSetting("AMIKO_FIREBASE_API_KEY"))
+        buildConfigField "String", "FIREBASE_APP_ID", quotedSetting(amikoSetting("AMIKO_FIREBASE_APP_ID"))
+        buildConfigField "String", "FIREBASE_PROJECT", quotedSetting(amikoSetting("AMIKO_FIREBASE_PROJECT"))
+        buildConfigField "String", "API_ORIGIN", quotedSetting(amikoSetting("AMIKO_API_ORIGIN", "https://example.invalid"))
     }
     buildTypes {
         debug {
@@ -110,6 +134,10 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
+    implementation("androidx.core:core:1.17.0")
+    // 24.0.1 includes the fix for the 24.0.0 auth regression and remains
+    // compatible with React Native 0.86's Kotlin compiler. Re-evaluate later.
+    implementation("com.google.firebase:firebase-auth:24.0.1")
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

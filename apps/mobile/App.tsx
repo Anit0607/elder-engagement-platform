@@ -1,5 +1,7 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
+  Alert,
+  AppState,
   Pressable,
   ScrollView,
   StatusBar,
@@ -9,6 +11,10 @@ import {
 } from 'react-native';
 import {SafeAreaProvider, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {copy, type Language} from './src/copy';
+import {checkMemberSignIn, getSavedLanguage, openMemberPhoneSignIn, saveLanguage, signOutMember} from './src/memberSession';
+import {ProfileEditor} from './src/ProfileEditor';
+import {DeviceControls} from './src/DeviceControls';
+import {CircleDiscovery} from './src/CircleDiscovery';
 
 type Tab = 'home' | 'circles' | 'profile';
 const languages: Language[] = ['en', 'bn', 'hi'];
@@ -27,7 +33,60 @@ function AppContent() {
   const insets = useSafeAreaInsets();
   const [language, setLanguage] = useState<Language>('en');
   const [tab, setTab] = useState<Tab>('home');
+  const [account, setAccount] = useState<'checking' | 'signedIn' | 'signedOut' | 'error'>('checking');
   const t = copy[language];
+
+  useEffect(() => {
+    let active = true;
+    async function refresh() {
+      try {
+        const signedIn = await checkMemberSignIn();
+        if (active) {setAccount(signedIn ? 'signedIn' : 'signedOut');}
+      } catch {
+        if (active) {setAccount('error');}
+      }
+    }
+    refresh();
+    const listener = AppState.addEventListener('change', state => {
+      if (state === 'active') {refresh();}
+    });
+    return () => {active = false; listener.remove();};
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    getSavedLanguage().then(saved => {if (active) {setLanguage(saved);}}).catch(() => {});
+    return () => {active = false;};
+  }, []);
+
+  function chooseLanguage(value: Language) {
+    setLanguage(value);
+    saveLanguage(value).catch(() => {});
+  }
+
+  async function openSignIn() {
+    try {await openMemberPhoneSignIn(language);}
+    catch {setAccount('error');}
+  }
+
+  async function retryAccount() {
+    setAccount('checking');
+    try {setAccount(await checkMemberSignIn() ? 'signedIn' : 'signedOut');}
+    catch {setAccount('error');}
+  }
+
+  function confirmSignOut() {
+    Alert.alert(t.signOut, t.confirmSignOut, [
+      {text: t.cancel, style: 'cancel'},
+      {text: t.signOut, style: 'destructive', onPress: () => {
+        signOutMember().then(() => setAccount('signedOut')).catch(() => setAccount('error'));
+      }},
+    ]);
+  }
+
+  const profileBody = account === 'checking' ? t.checkingAccount :
+    account === 'signedIn' ? t.signedIn :
+    account === 'error' ? t.accountUnavailable : t.profileCardBody;
 
   return (
     <View style={[styles.screen, {paddingTop: insets.top}]}>
@@ -43,7 +102,7 @@ function AppContent() {
               accessibilityRole="button"
               accessibilityLabel={`${t.language}: ${copy[option].languageName}`}
               accessibilityState={{selected: language === option}}
-              onPress={() => setLanguage(option)}
+              onPress={() => chooseLanguage(option)}
               style={[styles.languageButton, language === option && styles.selectedLanguage]}>
               <Text style={[styles.languageText, language === option && styles.selectedLanguageText]}>
                 {option.toUpperCase()}
@@ -60,12 +119,41 @@ function AppContent() {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t[`${tab}CardTitle`]}</Text>
-          <Text style={styles.cardBody}>{t[`${tab}CardBody`]}</Text>
+          <Text style={styles.cardBody}>{tab === 'profile' ? profileBody :
+            tab === 'circles' && account === 'error' ? t.accountUnavailable :
+            tab === 'circles' && account === 'checking' ? t.checkingAccount : t[`${tab}CardBody`]}</Text>
+          {tab === 'circles' && account === 'signedOut' && <Pressable
+            accessibilityRole="button" onPress={openSignIn} style={styles.primaryButton}>
+            <Text style={styles.primaryButtonText}>{t.signIn}</Text>
+          </Pressable>}
+          {tab === 'circles' && account === 'error' && <Pressable
+            accessibilityRole="button" onPress={retryAccount} style={styles.primaryButton}>
+            <Text style={styles.primaryButtonText}>{t.tryAgain}</Text>
+          </Pressable>}
+          {tab === 'circles' && account === 'signedIn' && <CircleDiscovery language={language} />}
+          {tab === 'profile' && (account === 'signedOut' || account === 'signedIn') && (
+            <Pressable
+              testID="profile-account-action"
+              accessibilityRole="button"
+              onPress={account === 'signedIn' ? confirmSignOut : openSignIn}
+              style={styles.primaryButton}>
+              <Text style={styles.primaryButtonText}>{account === 'signedIn' ? t.signOut : t.signIn}</Text>
+            </Pressable>
+          )}
+          {tab === 'profile' && account === 'error' && (
+            <Pressable testID="profile-retry" accessibilityRole="button" onPress={retryAccount}
+              style={styles.primaryButton}>
+              <Text style={styles.primaryButtonText}>{t.tryAgain}</Text>
+            </Pressable>
+          )}
+          {tab === 'profile' && account === 'signedIn' && <ProfileEditor language={language} />}
+          {tab === 'profile' && account === 'signedIn' &&
+            <DeviceControls language={language} onSignedOut={() => setAccount('signedOut')} />}
         </View>
-        <View style={styles.notice}>
+        {tab === 'home' && <View style={styles.notice}>
           <Text style={styles.noticeTitle}>{t.previewTitle}</Text>
           <Text style={styles.noticeBody}>{t.previewBody}</Text>
-        </View>
+        </View>}
       </ScrollView>
 
       <View style={[styles.nav, {paddingBottom: Math.max(insets.bottom, 12)}]}>
@@ -113,6 +201,8 @@ const styles = StyleSheet.create({
   card: {backgroundColor: '#ffffff', borderRadius: 20, padding: 22, borderWidth: 1, borderColor: '#e0e9e1'},
   cardTitle: {fontSize: 20, fontWeight: '700', color: '#1b3325'},
   cardBody: {fontSize: 16, lineHeight: 25, color: '#4b5b50', marginTop: 10},
+  primaryButton: {backgroundColor: '#225940', padding: 16, borderRadius: 12, marginTop: 20, minHeight: 52, alignItems: 'center'},
+  primaryButtonText: {fontSize: 17, fontWeight: '700', color: '#ffffff'},
   notice: {marginTop: 16, padding: 18, borderRadius: 16, backgroundColor: '#e9f3ec'},
   noticeTitle: {fontSize: 15, fontWeight: '700', color: '#225940'},
   noticeBody: {fontSize: 14, lineHeight: 22, color: '#405447', marginTop: 6},

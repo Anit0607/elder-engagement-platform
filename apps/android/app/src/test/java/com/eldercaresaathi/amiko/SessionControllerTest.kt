@@ -65,6 +65,24 @@ class SessionControllerTest {
         assertEquals(2, api.calls)
         assertEquals(2, view.devices.size)
     }
+    @Test fun profileRequestUsesTheSameSafeRenewalPath() {
+        val store = Store(old); val api = Transport(store)
+        val result = SessionController(store, api).withSession { session ->
+            if (session.accessToken == old.accessToken) throw SessionHttpFailure(401)
+            assertSame(new, session)
+            "profile-loaded"
+        }
+        assertEquals("profile-loaded", result)
+        assertSame(new, store.value)
+        assertEquals(1, api.refreshes)
+    }
+    @Test fun profileRequestWithoutSignInDoesNotRun() {
+        val store = Store(null); val api = Transport(store)
+        assertThrows(SessionEnded::class.java) {
+            SessionController(store, api).withSession { "unexpected" }
+        }
+        assertEquals(0, api.refreshes)
+    }
     @Test fun reopeningUsesSavedReplacementWithoutAnotherRenewal() {
         val store = Store(old); val api = Transport(store)
         SessionController(store, api).restore()
