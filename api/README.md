@@ -25,7 +25,7 @@ cd ..\..
 node tools\generate_engagement_postman.mjs
 ```
 
-The contract defines the Week 2 foundation plus Sprint 3 notification-preference, predefined-circle, private Contributor-upload, Administrator-moderation, circle-filtered Member-feed and basic event interfaces. The private development deployment verifies all listed capabilities through basic events. EE-021 events are information-only and record reminder timing; Google Meet/telephone joining and reminder delivery remain later milestones. Administrator user creation/listing remains contract-only until its planned Administrator workflow is implemented. No staging or production availability is claimed.
+The contract defines the Week 2 foundation plus Sprint 3 notification-preference, predefined-circle, private Contributor-upload, Administrator-moderation, circle-filtered Member-feed and basic event interfaces. The private development deployment verifies the callable capabilities through basic events. EE-021 events are information-only and record reminder timing; Google Meet/telephone joining and reminder delivery remain later milestones. `GET` and `POST /v1/admin/users` are explicitly marked `planned-not-callable` in the OpenAPI file and in the Postman request descriptions. They remain unavailable until the planned Administrator workflow is implemented; the other 36 documented operations have matching application routes. No staging or production availability is claimed.
 
 ## Version and server rules
 

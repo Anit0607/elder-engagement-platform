@@ -270,8 +270,13 @@ const collection = {
               "Moves one approved clean file from quarantine to private approved storage and records the controlled audience.",
           },
         ),
-        request("List users", "GET", "/v1/admin/users?limit=25"),
+        request("List users", "GET", "/v1/admin/users?limit=25", {
+          description:
+            "PLANNED — NOT CALLABLE in Backend Release 1. Administrator user listing belongs to the later Administrator-console workflow.",
+        }),
         request("Create Member profile", "POST", "/v1/admin/users", {
+          description:
+            "PLANNED — NOT CALLABLE in Backend Release 1. Administrator-created user accounts belong to the later Administrator-console workflow.",
           body: {
             role: "member",
             phoneE164: "+919999999901",

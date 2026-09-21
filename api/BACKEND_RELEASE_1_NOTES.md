@@ -1,7 +1,8 @@
 # Amiko Backend Release 1 notes
 
-Status: client-test package prepared; stable client address and public traffic
-protection are not yet approved. This file does not claim public or production
+Status: client-test package prepared; the protected gateway has been prepared
+but remains inactive while the client-test Domain Name System record and
+certificate are pending. This file does not claim public or production
 availability.
 
 ## Included and verified in private development
@@ -33,10 +34,14 @@ availability.
 - Advanced malware scanning. Current file checks validate declared type, size,
   checksum and recognised file signature.
 - Android production release or Google Play submission.
+- Administrator user listing and account creation through `GET` and
+  `POST /v1/admin/users`; these two documented operations are explicitly
+  marked planned and are not callable in Backend Release 1.
 
 ## Release gates still required
 
-1. Approve the public traffic-protection design and stable client-test address.
+1. Add the approved `api-test.eldercaresaathi.com` Domain Name System A record,
+   verify its certificate, activate the protected route and pass public-entry checks.
 2. Nominate the client acceptance owner and testers.
 3. Supply the iOS developer's technical contact and GitHub identity.
 4. Approve privacy, retention, export and deletion rules.
