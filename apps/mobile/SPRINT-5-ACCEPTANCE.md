@@ -7,6 +7,8 @@ put personal photos, passwords or verification codes into a defect report.
 Before starting, Codex must confirm that the test web address has a working
 security certificate and provide a connected Amiko test build. The client
 should approve the logo, colours and English/Bengali/Hindi wording separately.
+Circle names and descriptions are currently supplied by an Administrator as
+written; changing the app language does not automatically translate them.
 
 | Sprint item | What the client does | Pass condition |
 | --- | --- | --- |
