@@ -289,6 +289,11 @@ class PhoneLoginActivity : Activity() {
                                 }.setNegativeButton(android.R.string.cancel, null).show()
                         }.text = label + " — " + getString(R.string.remove_device)
                     }
+                    if (intent.getBooleanExtra("amiko_return_to_app", false)) {
+                        setResult(Activity.RESULT_OK)
+                        finish()
+                        return@post
+                    }
                 } else {
                     completed = false; providerAccepted = false
                     verificationId = null; resendToken = null; phone.text.clear(); code.text.clear()

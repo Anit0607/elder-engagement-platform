@@ -26,6 +26,18 @@ object SessionCodec {
 }
 
 class MemberApi : SessionTransport {
+    fun profile(accessToken: String): String = request("GET", "/v1/me/profile", access=accessToken)
+    fun updateProfile(accessToken: String, body: JSONObject): String =
+        request("PATCH", "/v1/me/profile", access=accessToken, body=body)
+    fun circles(accessToken: String): String = request("GET", "/v1/me/circles", access=accessToken)
+    fun joinCircle(accessToken: String, circleId: String) {
+        require(UUID.fromString(circleId).toString() == circleId)
+        request("POST", "/v1/me/circles/$circleId/membership", access=accessToken, expected=204)
+    }
+    fun leaveCircle(accessToken: String, circleId: String) {
+        require(UUID.fromString(circleId).toString() == circleId)
+        request("DELETE", "/v1/me/circles/$circleId/membership", access=accessToken, expected=204)
+    }
     override fun exchange(providerToken: String, installation: String): MemberSession {
         require(UUID.fromString(installation).toString() == installation)
         return SessionCodec.parse(request("POST", "/v1/auth/member/session", body=JSONObject()

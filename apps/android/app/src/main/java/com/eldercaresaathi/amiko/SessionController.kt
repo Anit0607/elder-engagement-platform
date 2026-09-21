@@ -31,6 +31,9 @@ class SessionController(private val store: SessionRepository, private val transp
     fun signIn(proof: String, installation: String): MemberSession = synchronized(lock) {
         transport.exchange(proof, installation).also { store.save(it) }
     }
+    fun <T> withSession(action: (MemberSession) -> T): T = synchronized(lock) {
+        authenticated(action)
+    }
     fun restore(): SessionView? = synchronized(lock) {
         if (store.load() == null) return@synchronized null
         authenticated { SessionView(it, transport.devices(it.accessToken)) }
