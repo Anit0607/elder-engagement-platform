@@ -74,7 +74,8 @@ class MemberApi : SessionTransport {
     }
     fun completePhotoUpload(accessToken: String, uploadId: String): String {
         require(UUID.fromString(uploadId).toString() == uploadId)
-        return request("POST", "/v1/me/profile/photo-upload/$uploadId/complete", access=accessToken)
+        return request("POST", "/v1/me/profile/photo-upload/$uploadId/complete", access=accessToken,
+            readTimeoutMs=60_000)
     }
     override fun exchange(providerToken: String, installation: String): MemberSession {
         require(UUID.fromString(installation).toString() == installation)
@@ -104,7 +105,7 @@ class MemberApi : SessionTransport {
         request("DELETE", "/v1/me/sessions/$deviceId", access=accessToken, expected=204)
     }
     private fun request(method: String, path: String, access: String?=null, body: JSONObject?=null,
-                        expected: Int=200): String {
+                        expected: Int=200, readTimeoutMs: Int=20_000): String {
         val origin = URI(BuildConfig.API_ORIGIN)
         require(origin.userInfo == null && origin.query == null && origin.fragment == null)
         require(origin.path.isNullOrEmpty() || origin.path == "/")
@@ -114,7 +115,7 @@ class MemberApi : SessionTransport {
         try {
             connection.requestMethod = method
             connection.connectTimeout = 15_000
-            connection.readTimeout = 20_000
+            connection.readTimeout = readTimeoutMs
             connection.instanceFollowRedirects = false
             if (access != null) connection.setRequestProperty("Authorization", "Bearer $access")
             if (body != null) {

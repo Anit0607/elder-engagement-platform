@@ -15,7 +15,7 @@ type Copy = {
   saveProfile: string; savingProfile: string; profileSaved: string; profileLoadFailed: string;
   profileSaveFailed: string; nameRequired: string; profileInvalid: string;
   profilePhoto: string; choosePhoto: string; uploadingPhoto: string;
-  photoHelp: string; photoSaved: string; photoFailed: string;
+  photoHelp: string; saveBeforePhoto: string; photoSaved: string; photoFailed: string;
   loadingProfile: string;
   yourDevices: string; thisDevice: string; anotherDevice: string; removeDevice: string;
   removeConfirm: string; deviceLoadFailed: string; noDevices: string;
@@ -51,6 +51,7 @@ export const copy: Record<Language, Copy> = {
     profileInvalid: 'Please check your interests, location and notification times.',
     profilePhoto: 'Your profile photo', choosePhoto: 'Choose a profile photo', uploadingPhoto: 'Uploading photo…',
     photoHelp: 'JPEG, PNG or WebP; maximum 5 MB. You can leave the photo empty.',
+    saveBeforePhoto: 'Save your profile first, then you can add a photo.',
     photoSaved: 'Photo saved', photoFailed: 'Photo could not be uploaded. Please try another image.',
     loadingProfile: 'Loading your profile…',
     yourDevices: 'Your signed-in devices', thisDevice: 'This phone', anotherDevice: 'Another device',
@@ -88,6 +89,7 @@ export const copy: Record<Language, Copy> = {
     profileInvalid: 'আগ্রহ, জায়গা ও বিজ্ঞপ্তির সময় পরীক্ষা করুন।',
     profilePhoto: 'আপনার প্রোফাইল ছবি', choosePhoto: 'প্রোফাইল ছবি বেছে নিন', uploadingPhoto: 'ছবি আপলোড হচ্ছে…',
     photoHelp: 'JPEG, PNG বা WebP; সর্বোচ্চ ৫ MB। ছবি না দিলেও চলবে।',
+    saveBeforePhoto: 'আগে প্রোফাইল সংরক্ষণ করুন, তারপর ছবি যোগ করতে পারবেন।',
     photoSaved: 'ছবি সংরক্ষিত হয়েছে', photoFailed: 'ছবি আপলোড করা যায়নি। অন্য ছবি দিয়ে চেষ্টা করুন।',
     loadingProfile: 'প্রোফাইল খোলা হচ্ছে…',
     yourDevices: 'যেসব ডিভাইসে সাইন ইন আছে', thisDevice: 'এই ফোন', anotherDevice: 'অন্য ডিভাইস',
@@ -125,6 +127,7 @@ export const copy: Record<Language, Copy> = {
     profileInvalid: 'रुचियाँ, स्थान और सूचना का समय जाँचें।',
     profilePhoto: 'आपकी प्रोफ़ाइल फ़ोटो', choosePhoto: 'प्रोफ़ाइल फ़ोटो चुनें', uploadingPhoto: 'फ़ोटो अपलोड हो रही है…',
     photoHelp: 'JPEG, PNG या WebP; अधिकतम 5 MB। फ़ोटो देना वैकल्पिक है।',
+    saveBeforePhoto: 'पहले प्रोफ़ाइल सहेजें, फिर फ़ोटो जोड़ सकेंगे।',
     photoSaved: 'फ़ोटो सहेज दी गई', photoFailed: 'फ़ोटो अपलोड नहीं हो सकी। दूसरी तस्वीर चुनें।',
     loadingProfile: 'प्रोफ़ाइल खोली जा रही है…',
     yourDevices: 'साइन इन किए गए उपकरण', thisDevice: 'यह फ़ोन', anotherDevice: 'दूसरा उपकरण',

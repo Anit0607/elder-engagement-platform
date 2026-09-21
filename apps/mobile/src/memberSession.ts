@@ -70,6 +70,8 @@ function parseProfile(json: string): MemberProfile {
       !['en', 'bn', 'hi'].includes(profile.preferredLanguage) ||
       !Array.isArray(profile.interests) ||
       !profile.interests.every(item => typeof item === 'string') ||
+      (profile.photoUrl !== undefined && profile.photoUrl !== null &&
+        typeof profile.photoUrl !== 'string') ||
       typeof profile.notificationWindow?.enabled !== 'boolean') {
     throw new Error('INVALID_PROFILE_RESPONSE');
   }

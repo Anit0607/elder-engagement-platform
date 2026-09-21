@@ -38,3 +38,26 @@ test('completed photo upload reports success', async () => {
   await ReactTestRenderer.act(async () => choose.props.onPress());
   expect(JSON.stringify(screen.toJSON())).toContain('Photo saved');
 });
+
+test('a new member saves the profile before adding a photo', async () => {
+  (getMemberProfile as jest.Mock).mockResolvedValue(null);
+  let screen!: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    screen = ReactTestRenderer.create(<ProfileEditor language="en" />);
+  });
+  const choose = screen.root.findAllByProps({accessibilityRole: 'button'})[0];
+  expect(choose.props.disabled).toBe(true);
+  expect(JSON.stringify(screen.toJSON())).toContain('Save your profile first');
+});
+
+test('a temporary profile-loading problem can be retried', async () => {
+  (getMemberProfile as jest.Mock).mockRejectedValueOnce(new Error('offline'));
+  let screen!: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    screen = ReactTestRenderer.create(<ProfileEditor language="en" />);
+  });
+  expect(JSON.stringify(screen.toJSON())).toContain('Could not load your profile');
+  const retry = screen.root.findByProps({accessibilityRole: 'button'});
+  await ReactTestRenderer.act(async () => retry.props.onPress());
+  expect(JSON.stringify(screen.toJSON())).toContain('Sample Member');
+});

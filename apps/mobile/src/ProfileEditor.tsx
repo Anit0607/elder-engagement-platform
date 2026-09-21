@@ -46,12 +46,16 @@ export function ProfileEditor({language}: {language: Language}) {
   const [error, setError] = useState<'load' | 'save' | 'name' | 'invalid' | ''>('');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoState, setPhotoState] = useState<'ready' | 'uploading' | 'saved' | 'error'>('ready');
+  const [hasProfile, setHasProfile] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
+    setStatus('loading');
     getMemberProfile().then(profile => {
       if (!active) {return;}
       if (profile) {
+        setHasProfile(true);
         setPhotoUrl(profile.photoUrl ?? null);
         setForm({
           name: profile.displayName,
@@ -67,7 +71,7 @@ export function ProfileEditor({language}: {language: Language}) {
       setStatus('ready');
     }).catch(() => {if (active) {setStatus('error'); setError('load');}});
     return () => {active = false;};
-  }, []);
+  }, [loadAttempt]);
 
   const change = (field: keyof Form, value: string | boolean) => {
     setForm(current => ({...current, [field]: value}));
@@ -83,7 +87,11 @@ export function ProfileEditor({language}: {language: Language}) {
       return;
     }
     setStatus('saving'); setError('');
-    try {await updateMemberProfile(update); setStatus('saved');}
+    try {
+      await updateMemberProfile(update);
+      setHasProfile(true);
+      setStatus('saved');
+    }
     catch {setStatus('error'); setError('save');}
   }
 
@@ -98,7 +106,13 @@ export function ProfileEditor({language}: {language: Language}) {
 
   if (status === 'loading') {return <Text style={styles.message}>{t.loadingProfile}</Text>;}
   if (status === 'error' && error === 'load') {
-    return <Text style={styles.error}>{t.profileLoadFailed}</Text>;
+    return <View>
+      <Text style={styles.error}>{t.profileLoadFailed}</Text>
+      <Pressable accessibilityRole="button" onPress={() => setLoadAttempt(value => value + 1)}
+        style={styles.saveButton}>
+        <Text style={styles.saveText}>{t.tryAgain}</Text>
+      </Pressable>
+    </View>;
   }
   return (
     <View style={styles.form}>
@@ -140,11 +154,12 @@ export function ProfileEditor({language}: {language: Language}) {
 
       {photoUrl?.startsWith('https://storage.googleapis.com/') &&
         <Image source={{uri: photoUrl}} accessibilityLabel={t.profilePhoto} style={styles.photo} />}
-      <Pressable accessibilityRole="button" accessibilityState={{disabled: photoState === 'uploading'}}
-        disabled={photoState === 'uploading'} onPress={choosePhoto} style={styles.photoButton}>
+      <Pressable accessibilityRole="button" accessibilityState={{disabled: !hasProfile || photoState === 'uploading'}}
+        disabled={!hasProfile || photoState === 'uploading'} onPress={choosePhoto}
+        style={[styles.photoButton, !hasProfile && styles.photoButtonDisabled]}>
         <Text style={styles.photoButtonText}>{photoState === 'uploading' ? t.uploadingPhoto : t.choosePhoto}</Text>
       </Pressable>
-      <Text style={styles.hint}>{t.photoHelp}</Text>
+      <Text style={styles.hint}>{hasProfile ? t.photoHelp : t.saveBeforePhoto}</Text>
       {photoState === 'saved' && <Text style={styles.success}>{t.photoSaved}</Text>}
       {photoState === 'error' && <Text style={styles.error}>{t.photoFailed}</Text>}
       <Pressable accessibilityRole="button" accessibilityState={{disabled: status === 'saving'}}
@@ -170,6 +185,7 @@ const styles = StyleSheet.create({
   photoButton: {minHeight: 52, borderRadius: 10, borderWidth: 1, borderColor: '#225940',
     marginTop: 18, alignItems: 'center', justifyContent: 'center'},
   photoButtonText: {fontSize: 16, fontWeight: '700', color: '#225940'},
+  photoButtonDisabled: {opacity: 0.5},
   saveButton: {minHeight: 54, backgroundColor: '#225940', borderRadius: 12, marginTop: 18,
     alignItems: 'center', justifyContent: 'center'},
   saveText: {fontSize: 17, fontWeight: '700', color: '#fff'},
