@@ -32,7 +32,7 @@ $allowed = @(
     '^api/contract-tests/',
     '^api/openapi/elder-engage-v1\.openapi\.json$',
     '^api/postman/(Elder_Engage_(Week2|Sprint3)_Draft\.postman_collection\.json|README\.md)$',
-    '^architecture/(Engagement_Deployment_Runbook_Draft|Engagement_Platform_Architecture_v1|Schema_REST_Permission_Mapping)\.md$',
+    '^architecture/(Amiko_Data_Lifecycle_Decision|Engagement_Deployment_Runbook_Draft|Engagement_Platform_Architecture_v1|Schema_REST_Permission_Mapping)\.md$',
     '^config/engagement/',
     '^database/(Dockerfile|ENGAGEMENT_SCHEMA_NOTES\.md|migration_runner\.py|requirements\.lock)$',
     '^database/bootstrap/V[0-9]{4}__[a-z0-9_]+\.sql\.template$',

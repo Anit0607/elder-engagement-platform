@@ -99,7 +99,7 @@ erDiagram
   RECORDING ||--o| CONTENT_ITEM : becomes
 ```
 
-The physical schema must use immutable identifiers, timestamps, constrained status values, unique membership rules, and audit records. Deletion, retention, location precision, and profile fields remain configurable until the client approves the related decisions.
+The physical schema must use immutable identifiers, timestamps, constrained status values, unique membership rules, and audit records. The client-approved data-lifecycle direction is recorded in `Amiko_Data_Lifecycle_Decision.md`; category-specific retention, broad-location wording and legal applicability remain to be finalised. An approved direction is not a deployed deletion/export or age-verification control.
 
 ## 7. Media and upload controls
 
@@ -134,7 +134,7 @@ The physical schema must use immutable identifiers, timestamps, constrained stat
 
 - Public domains and the timing/identifiers for separate staging and production projects.
 - Complete profile fields, circle rules, and account-control policy.
-- Privacy notice, consent, age, retention, deletion/export, and broad-location decisions.
+- Final privacy notice, consent wording, location wording, category-specific retention periods, manual-backup and recording expiry, and legal applicability review. The adult-only launch and data-request/deletion service targets are approved but not yet implemented.
 - Identity Platform/Firebase configuration and fictional test numbers. The approved Member journey is verified-phone sign-in followed by immediate access and self-created profile; Contributors are Administrator-created.
 - YouTube, Meet, Firebase Cloud Messaging, and Agora client-owned accounts and quotas.
 - Broadcast duration, viewer launch cap, consent, replay approval, and retention.

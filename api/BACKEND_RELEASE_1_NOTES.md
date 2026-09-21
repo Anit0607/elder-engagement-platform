@@ -44,7 +44,7 @@ availability.
    verify its certificate, activate the protected route and pass public-entry checks.
 2. Nominate the client acceptance owner and testers.
 3. Supply the iOS developer's technical contact and GitHub identity.
-4. Approve privacy, retention, export and deletion rules.
+4. Implement the approved privacy direction and obtain the final category-specific retention/legal review before any real production data. The client approved the direction in `../architecture/Amiko_Data_Lifecycle_Decision.md`; approval alone does not deliver the age gate, export or deletion operations.
 5. Complete the client test guide and record pass/fail evidence.
 
 The deployed source revision, OpenAPI checksum, Postman checksum and client-test
