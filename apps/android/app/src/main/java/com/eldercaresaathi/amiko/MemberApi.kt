@@ -4,6 +4,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URI
+import java.security.MessageDigest
 import java.util.UUID
 
 object SessionCodec {
@@ -37,6 +38,43 @@ class MemberApi : SessionTransport {
     fun leaveCircle(accessToken: String, circleId: String) {
         require(UUID.fromString(circleId).toString() == circleId)
         request("DELETE", "/v1/me/circles/$circleId/membership", access=accessToken, expected=204)
+    }
+    fun startPhotoUpload(accessToken: String, contentType: String, bytes: ByteArray): JSONObject {
+        require(contentType in listOf("image/jpeg", "image/png", "image/webp"))
+        require(bytes.size in 1..5_242_880)
+        val digest = MessageDigest.getInstance("SHA-256").digest(bytes)
+            .joinToString("") { "%02x".format(it) }
+        return JSONObject(request("POST", "/v1/me/profile/photo-upload", access=accessToken,
+            body=JSONObject().put("contentType", contentType).put("sizeBytes", bytes.size)
+                .put("sha256", digest), expected=201))
+    }
+    fun sendPhotoUpload(authorization: JSONObject, contentType: String, bytes: ByteArray): String {
+        require(authorization.getString("method") == "PUT")
+        val uploadId = authorization.getString("uploadId")
+        require(UUID.fromString(uploadId).toString() == uploadId)
+        val url = URI(authorization.getString("uploadUrl"))
+        require(url.scheme == "https" && url.host == "storage.googleapis.com" &&
+            url.userInfo == null && url.fragment == null)
+        val headers = authorization.getJSONObject("requiredHeaders")
+        require(headers.length() == 2 && headers.getString("Content-Type") == contentType &&
+            headers.getString("Content-Length") == bytes.size.toString())
+        val connection = url.toURL().openConnection() as HttpURLConnection
+        try {
+            connection.requestMethod = "PUT"
+            connection.connectTimeout = 15_000
+            connection.readTimeout = 30_000
+            connection.instanceFollowRedirects = false
+            connection.doOutput = true
+            connection.setFixedLengthStreamingMode(bytes.size)
+            connection.setRequestProperty("Content-Type", contentType)
+            connection.outputStream.use { it.write(bytes) }
+            if (connection.responseCode !in listOf(200, 201)) throw IllegalStateException("Photo upload failed")
+        } finally { connection.disconnect() }
+        return uploadId
+    }
+    fun completePhotoUpload(accessToken: String, uploadId: String): String {
+        require(UUID.fromString(uploadId).toString() == uploadId)
+        return request("POST", "/v1/me/profile/photo-upload/$uploadId/complete", access=accessToken)
     }
     override fun exchange(providerToken: String, installation: String): MemberSession {
         require(UUID.fromString(installation).toString() == installation)

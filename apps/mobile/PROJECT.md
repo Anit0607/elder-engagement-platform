@@ -8,11 +8,13 @@ The app provides Home, Circles and Profile navigation in English, Bengali and
 Hindi. Text and colours are **provisional** until client branding and translated
 wording are approved. Member phone sign-in, profile editing, device controls
 and predefined-circle selection are connected through the existing secure
-native account layer. Account tokens remain in Android's protected storage,
-not JavaScript. The Home feed, profile-photo upload and live content are not
-connected yet. These screens have local automated tests and Android build
-checks, but **not** final phone/client acceptance. The test API address must
-have a working security certificate before connected client-device checks.
+native account layer. The profile screen also offers optional private photo
+upload, including file-size checks; its live flow still needs a phone check.
+Account tokens remain in Android's protected storage, not JavaScript. The Home
+feed and live content are not connected yet. These screens have local automated
+tests and Android build checks, but **not** final phone/client acceptance. The
+test API address must have a working security certificate before connected
+client-device checks.
 
 Run local checks from the workspace root with D-drive cache isolation:
 

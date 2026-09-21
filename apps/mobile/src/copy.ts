@@ -13,7 +13,9 @@ type Copy = {
   yourName: string; age55: string; interests: string; interestsHint: string;
   state: string; city: string; notificationTimes: string; startTime: string; endTime: string;
   saveProfile: string; savingProfile: string; profileSaved: string; profileLoadFailed: string;
-  profileSaveFailed: string; nameRequired: string; profileInvalid: string; photoLater: string;
+  profileSaveFailed: string; nameRequired: string; profileInvalid: string;
+  profilePhoto: string; choosePhoto: string; uploadingPhoto: string;
+  photoHelp: string; photoSaved: string; photoFailed: string;
   loadingProfile: string;
   yourDevices: string; thisDevice: string; anotherDevice: string; removeDevice: string;
   removeConfirm: string; deviceLoadFailed: string; noDevices: string;
@@ -47,7 +49,9 @@ export const copy: Record<Language, Copy> = {
     profileSaveFailed: 'Could not save your profile. Please try again.',
     nameRequired: 'Please enter your name (up to 120 characters).',
     profileInvalid: 'Please check your interests, location and notification times.',
-    photoLater: 'A profile photo can be added after photo upload is connected.',
+    profilePhoto: 'Your profile photo', choosePhoto: 'Choose a profile photo', uploadingPhoto: 'Uploading photo…',
+    photoHelp: 'JPEG, PNG or WebP; maximum 5 MB. You can leave the photo empty.',
+    photoSaved: 'Photo saved', photoFailed: 'Photo could not be uploaded. Please try another image.',
     loadingProfile: 'Loading your profile…',
     yourDevices: 'Your signed-in devices', thisDevice: 'This phone', anotherDevice: 'Another device',
     removeDevice: 'Sign out device', removeConfirm: 'Sign out this device? It will need to sign in again.',
@@ -82,7 +86,9 @@ export const copy: Record<Language, Copy> = {
     profileSaveFailed: 'প্রোফাইল সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।',
     nameRequired: 'আপনার নাম লিখুন (সর্বোচ্চ ১২০ অক্ষর)।',
     profileInvalid: 'আগ্রহ, জায়গা ও বিজ্ঞপ্তির সময় পরীক্ষা করুন।',
-    photoLater: 'ছবি আপলোড চালু হলে প্রোফাইলে ছবি যোগ করা যাবে।',
+    profilePhoto: 'আপনার প্রোফাইল ছবি', choosePhoto: 'প্রোফাইল ছবি বেছে নিন', uploadingPhoto: 'ছবি আপলোড হচ্ছে…',
+    photoHelp: 'JPEG, PNG বা WebP; সর্বোচ্চ ৫ MB। ছবি না দিলেও চলবে।',
+    photoSaved: 'ছবি সংরক্ষিত হয়েছে', photoFailed: 'ছবি আপলোড করা যায়নি। অন্য ছবি দিয়ে চেষ্টা করুন।',
     loadingProfile: 'প্রোফাইল খোলা হচ্ছে…',
     yourDevices: 'যেসব ডিভাইসে সাইন ইন আছে', thisDevice: 'এই ফোন', anotherDevice: 'অন্য ডিভাইস',
     removeDevice: 'ডিভাইস থেকে সাইন আউট', removeConfirm: 'এই ডিভাইস থেকে সাইন আউট করবেন? আবার সাইন ইন করতে হবে।',
@@ -117,7 +123,9 @@ export const copy: Record<Language, Copy> = {
     profileSaveFailed: 'प्रोफ़ाइल सहेजी नहीं जा सकी। फिर कोशिश करें।',
     nameRequired: 'अपना नाम लिखें (अधिकतम 120 अक्षर)।',
     profileInvalid: 'रुचियाँ, स्थान और सूचना का समय जाँचें।',
-    photoLater: 'फ़ोटो अपलोड चालू होने के बाद प्रोफ़ाइल में फ़ोटो जोड़ सकेंगे।',
+    profilePhoto: 'आपकी प्रोफ़ाइल फ़ोटो', choosePhoto: 'प्रोफ़ाइल फ़ोटो चुनें', uploadingPhoto: 'फ़ोटो अपलोड हो रही है…',
+    photoHelp: 'JPEG, PNG या WebP; अधिकतम 5 MB। फ़ोटो देना वैकल्पिक है।',
+    photoSaved: 'फ़ोटो सहेज दी गई', photoFailed: 'फ़ोटो अपलोड नहीं हो सकी। दूसरी तस्वीर चुनें।',
     loadingProfile: 'प्रोफ़ाइल खोली जा रही है…',
     yourDevices: 'साइन इन किए गए उपकरण', thisDevice: 'यह फ़ोन', anotherDevice: 'दूसरा उपकरण',
     removeDevice: 'उपकरण से साइन आउट', removeConfirm: 'इस उपकरण से साइन आउट करें? फिर से साइन इन करना होगा।',

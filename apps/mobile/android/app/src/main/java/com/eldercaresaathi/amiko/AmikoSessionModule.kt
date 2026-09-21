@@ -1,20 +1,90 @@
 package com.eldercaresaathi.amiko
 
+import android.app.Activity
 import android.content.Intent
+import com.facebook.react.bridge.BaseActivityEventListener
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import java.util.concurrent.Executors
+import java.io.ByteArrayOutputStream
 import org.json.JSONObject
 
 /** Keeps tokens in Android Keystore storage; JavaScript only receives account state. */
 class AmikoSessionModule(context: ReactApplicationContext) : ReactContextBaseJavaModule(context) {
     private val executor = Executors.newSingleThreadExecutor()
     private val sessions = SessionController(SessionStore(context.applicationContext), MemberApi())
+    private var photoPromise: Promise? = null
+    private val photoPickerCode = 47031
+    private val photoListener = object : BaseActivityEventListener() {
+        override fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?) {
+            if (requestCode != photoPickerCode) return
+            val pending = photoPromise ?: return
+            photoPromise = null
+            if (resultCode != Activity.RESULT_OK || data?.data == null) {
+                pending.resolve(null)
+                return
+            }
+            val uri = data.data ?: return
+            executor.execute {
+                try {
+                    val resolver = reactApplicationContext.contentResolver
+                    val contentType = resolver.getType(uri) ?: throw IllegalArgumentException()
+                    require(contentType in listOf("image/jpeg", "image/png", "image/webp"))
+                    val bytes = resolver.openInputStream(uri)?.use { input ->
+                        val output = ByteArrayOutputStream()
+                        val chunk = ByteArray(8192)
+                        while (true) {
+                            val read = input.read(chunk)
+                            if (read < 0) break
+                            if (read == 0) continue
+                            if (output.size() + read > 5_242_880) throw IllegalArgumentException()
+                            output.write(chunk, 0, read)
+                        }
+                        output.toByteArray()
+                    } ?: throw IllegalArgumentException()
+                    require(bytes.isNotEmpty())
+                    val api = MemberApi()
+                    val authorization = sessions.withSession {
+                        api.startPhotoUpload(it.accessToken, contentType, bytes)
+                    }
+                    val uploadId = api.sendPhotoUpload(authorization, contentType, bytes)
+                    pending.resolve(sessions.withSession { api.completePhotoUpload(it.accessToken, uploadId) })
+                } catch (_: SessionEnded) {
+                    pending.reject("SIGN_IN_REQUIRED", "Sign in again to upload a photo")
+                } catch (_: IllegalArgumentException) {
+                    pending.reject("PHOTO_INVALID", "Choose a JPEG, PNG or WebP photo under 5 MB")
+                } catch (_: Exception) {
+                    pending.reject("PHOTO_UNAVAILABLE", "Could not upload this photo")
+                }
+            }
+        }
+    }
+
+    init { reactApplicationContext.addActivityEventListener(photoListener) }
 
     override fun getName() = "AmikoSession"
+
+    @ReactMethod
+    fun pickProfilePhoto(promise: Promise) {
+        val activity = reactApplicationContext.currentActivity
+        if (activity == null || photoPromise != null) {
+            promise.reject("PHOTO_UNAVAILABLE", "Open Amiko before choosing a photo")
+            return
+        }
+        photoPromise = promise
+        try {
+            activity.startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "image/*"
+            }, photoPickerCode)
+        } catch (_: Exception) {
+            photoPromise = null
+            promise.reject("PHOTO_UNAVAILABLE", "Could not open photos")
+        }
+    }
 
     @ReactMethod
     fun getUiLanguage(promise: Promise) {
@@ -200,6 +270,9 @@ class AmikoSessionModule(context: ReactApplicationContext) : ReactContextBaseJav
     }
 
     override fun invalidate() {
+        reactApplicationContext.removeActivityEventListener(photoListener)
+        photoPromise?.reject("PHOTO_UNAVAILABLE", "Photo choice was interrupted")
+        photoPromise = null
         executor.shutdownNow()
         super.invalidate()
     }

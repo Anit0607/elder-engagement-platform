@@ -14,6 +14,7 @@ type NativeMemberSession = {
   setUiLanguage(language: Language): Promise<void>;
   listCircles(): Promise<string>;
   changeCircleMembership(id: string, join: boolean): Promise<void>;
+  pickProfilePhoto(): Promise<string | null>;
 };
 
 function nativeSession(): NativeMemberSession {
@@ -56,6 +57,7 @@ export type MemberProfile = {
   interests: string[];
   broadLocation: {countryCode?: string; state?: string; city?: string} | null;
   notificationWindow: {enabled: boolean; startLocalTime?: string | null; endLocalTime?: string | null; timeZone: string};
+  photoUrl?: string | null;
 };
 
 export type MemberProfileUpdate = Partial<MemberProfile>;
@@ -81,6 +83,11 @@ export async function getMemberProfile(): Promise<MemberProfile | null> {
 
 export async function updateMemberProfile(change: MemberProfileUpdate): Promise<MemberProfile> {
   return parseProfile(await nativeSession().updateProfile(JSON.stringify(change)));
+}
+
+export async function uploadMemberPhoto(): Promise<MemberProfile | null> {
+  const json = await nativeSession().pickProfilePhoto();
+  return json === null ? null : parseProfile(json);
 }
 
 export type MemberDevice = {

@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
-import {Pressable, StyleSheet, Switch, Text, TextInput, View} from 'react-native';
+import {Image, Pressable, StyleSheet, Switch, Text, TextInput, View} from 'react-native';
 import {copy, type Language} from './copy';
-import {getMemberProfile, updateMemberProfile, type MemberProfileUpdate} from './memberSession';
+import {getMemberProfile, updateMemberProfile, uploadMemberPhoto, type MemberProfileUpdate} from './memberSession';
 
 type Form = {
   name: string; age55: boolean; interests: string; state: string; city: string;
@@ -44,12 +44,15 @@ export function ProfileEditor({language}: {language: Language}) {
   const [form, setForm] = useState<Form>(emptyForm);
   const [status, setStatus] = useState<'loading' | 'ready' | 'saving' | 'saved' | 'error'>('loading');
   const [error, setError] = useState<'load' | 'save' | 'name' | 'invalid' | ''>('');
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoState, setPhotoState] = useState<'ready' | 'uploading' | 'saved' | 'error'>('ready');
 
   useEffect(() => {
     let active = true;
     getMemberProfile().then(profile => {
       if (!active) {return;}
       if (profile) {
+        setPhotoUrl(profile.photoUrl ?? null);
         setForm({
           name: profile.displayName,
           age55: profile.ageGroup === '55+',
@@ -82,6 +85,15 @@ export function ProfileEditor({language}: {language: Language}) {
     setStatus('saving'); setError('');
     try {await updateMemberProfile(update); setStatus('saved');}
     catch {setStatus('error'); setError('save');}
+  }
+
+  async function choosePhoto() {
+    setPhotoState('uploading');
+    try {
+      const profile = await uploadMemberPhoto();
+      if (profile) {setPhotoUrl(profile.photoUrl ?? null); setPhotoState('saved');}
+      else {setPhotoState('ready');}
+    } catch {setPhotoState('error');}
   }
 
   if (status === 'loading') {return <Text style={styles.message}>{t.loadingProfile}</Text>;}
@@ -126,7 +138,15 @@ export function ProfileEditor({language}: {language: Language}) {
           accessibilityLabel={t.endTime} placeholder="20:00" keyboardType="numbers-and-punctuation" maxLength={5} />
       </>}
 
-      <Text style={styles.hint}>{t.photoLater}</Text>
+      {photoUrl?.startsWith('https://storage.googleapis.com/') &&
+        <Image source={{uri: photoUrl}} accessibilityLabel={t.profilePhoto} style={styles.photo} />}
+      <Pressable accessibilityRole="button" accessibilityState={{disabled: photoState === 'uploading'}}
+        disabled={photoState === 'uploading'} onPress={choosePhoto} style={styles.photoButton}>
+        <Text style={styles.photoButtonText}>{photoState === 'uploading' ? t.uploadingPhoto : t.choosePhoto}</Text>
+      </Pressable>
+      <Text style={styles.hint}>{t.photoHelp}</Text>
+      {photoState === 'saved' && <Text style={styles.success}>{t.photoSaved}</Text>}
+      {photoState === 'error' && <Text style={styles.error}>{t.photoFailed}</Text>}
       <Pressable accessibilityRole="button" accessibilityState={{disabled: status === 'saving'}}
         disabled={status === 'saving'} onPress={save} style={styles.saveButton}>
         <Text style={styles.saveText}>{status === 'saving' ? t.savingProfile : t.saveProfile}</Text>
@@ -146,6 +166,10 @@ const styles = StyleSheet.create({
   choice: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 52, marginTop: 14},
   choiceText: {fontSize: 17, color: '#234331'},
   hint: {fontSize: 14, lineHeight: 22, color: '#5d7061', marginTop: 20},
+  photo: {width: 108, height: 108, borderRadius: 54, marginTop: 20},
+  photoButton: {minHeight: 52, borderRadius: 10, borderWidth: 1, borderColor: '#225940',
+    marginTop: 18, alignItems: 'center', justifyContent: 'center'},
+  photoButtonText: {fontSize: 16, fontWeight: '700', color: '#225940'},
   saveButton: {minHeight: 54, backgroundColor: '#225940', borderRadius: 12, marginTop: 18,
     alignItems: 'center', justifyContent: 'center'},
   saveText: {fontSize: 17, fontWeight: '700', color: '#fff'},
