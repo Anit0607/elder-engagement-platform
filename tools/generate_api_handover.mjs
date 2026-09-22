@@ -126,16 +126,16 @@ const manifest = {
   apiVersion: spec.info.version,
   implementedRouteCount: allowed.size,
   excludedOperations: planned,
-  knownUnhealthyOperationalRoute: 'GET /ready returned HTTP 503 on 2026-09-23; not an iOS integration endpoint',
-  deployedBackendSourceRevision: 'c9abcfadcf77f206ecb7f4d027a62f730ddc0fec',
-  lastRecordedDevelopmentImageDigest: 'sha256:83ef6323db34660967bec09345f89a4b159e9f66ffec902d6426166ba0f095ca',
-  buildEvidence: 'https://github.com/Anit0607/elder-engagement-platform/actions/runs/35028738394',
-  gatewaySmokeEvidence: 'https://github.com/Anit0607/elder-engagement-platform/actions/runs/35680338910',
+  verifiedOperationalRoute: 'GET /ready returned HTTP 200 twice after the 2026-09-23 development deployment; not an iOS integration endpoint',
+  deployedBackendSourceRevision: '7b7f2afc040d07233b574ebf1fae678cdb56a1eb',
+  lastRecordedDevelopmentImageDigest: 'sha256:f5ef5dca510f231586d47ad4482fa2cd3537ed9b1790f3fcab151ad8e90053e1',
+  buildEvidence: 'https://github.com/Anit0607/elder-engagement-platform/actions/runs/35775799854',
+  gatewaySmokeEvidence: 'https://github.com/Anit0607/elder-engagement-platform/actions/runs/35776484294',
   files: {
     'openapi.json': digest(specText),
     'postman_collection.json': digest(collectionText),
   },
-  note: 'The pinned image and source revision are the last recorded deployment evidence, not a fresh Cloud Run metadata read. This package contains no live credentials or client personal data.',
+  note: 'The pinned image and source revision were checked against the running Cloud Run service after deployment. The protected public address passed health, readiness, unauthenticated denial and direct-address safeguards. This package contains no live credentials or client personal data.',
 };
 const files = {
   'openapi.json': specText,

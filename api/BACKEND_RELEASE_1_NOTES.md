@@ -42,10 +42,11 @@ This is not a production release or client acceptance.
 ## Release gates still required
 
 1. Nominate the client acceptance owner and testers.
-2. Resolve the `/ready` dependency-check issue; the public operational check returned 503 on 23 September 2026, though `/health` returned 200 and a private route rejected unauthenticated access.
-3. Implement the approved privacy direction and obtain the final category-specific retention/legal review before any real production data. The client approved the direction in `../architecture/Amiko_Data_Lifecycle_Decision.md`; approval alone does not deliver the age gate, export or deletion operations.
-4. Complete the client test guide and record pass/fail evidence. iOS application implementation/testing is not a backend release gate.
+2. Implement the approved privacy direction and obtain the final category-specific retention/legal review before any real production data. The client approved the direction in `../architecture/Amiko_Data_Lifecycle_Decision.md`; approval alone does not deliver the age gate, export or deletion operations.
+3. Complete the client test guide and record pass/fail evidence. iOS application implementation/testing is not a backend release gate.
 
 The development integration handover, recorded backend source revision, checksums,
 build evidence and gateway smoke evidence are in `handover/backend-release-1/`.
 That package does not itself establish client acceptance or production readiness.
+The EE-052 development readiness check is repaired and verified in
+`evidence/ee-052-readiness-development.md`.
