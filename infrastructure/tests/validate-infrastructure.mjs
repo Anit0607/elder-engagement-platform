@@ -16,6 +16,10 @@ const deploymentWorkflow = readFileSync(
   resolve(root, '..', '.github', 'workflows', 'verify-development-deployment.yml'),
   'utf8'
 );
+const publicGatewayWorkflow = readFileSync(
+  resolve(root, '..', '.github', 'workflows', 'verify-development-public-gateway.yml'),
+  'utf8'
+);
 const migrationWorkflow = readFileSync(
   resolve(root, '..', '.github', 'workflows', 'build-database-migration-candidate.yml'),
   'utf8'
@@ -140,7 +144,8 @@ assert.match(gatewaySource, /port_range\s*=\s*"443"/, 'the public entry point mu
 assert.doesNotMatch(gatewaySource, /target_http_proxy|port_range\s*=\s*"80"/, 'unencrypted HTTP must not be exposed');
 assert.match(source, /var\.activate_public_gateway\s*\?\s*"INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"\s*:\s*"INGRESS_TRAFFIC_ALL"/, 'activation must prevent bypassing Cloud Armor through the Cloud Run address');
 assert.match(source, /!var\.allow_unauthenticated\s*\|\|\s*var\.activate_public_gateway/, 'direct unauthenticated Cloud Run access must be prohibited');
-assert.match(source, /var\.deploy_application\s*&&\s*var\.activate_public_gateway\s*&&\s*var\.allow_unauthenticated/, 'public invoke permission must exist only after protected-gateway activation');
+assert.match(source, /invoker_iam_disabled\s*=\s*var\.activate_public_gateway\s*&&\s*var\.allow_unauthenticated/, 'the Cloud Run public-invoker alternative must be enabled only with the protected gateway');
+assert.doesNotMatch(source, /member\s*=\s*"allUsers"/, 'domain-restricted sharing must not be bypassed with an allUsers IAM binding');
 assert.match(source, /output "public_gateway_ip"/, 'the DNS manager needs the reserved address as a controlled output');
 assert.match(source, /google_cloud_run_v2_service_iam_member" "github_verifier"/, 'the keyless verifier requires explicit Cloud Run invoke permission');
 assert.match(source, /member\s*=\s*"serviceAccount:\$\{google_service_account\.github_deployer\.email\}"/, 'Cloud Run verification must use the existing federated service account');
@@ -290,6 +295,11 @@ assert.match(deploymentWorkflow, /id_token_include_email:\s*true/, 'Cloud Run id
 assert.match(deploymentWorkflow, /--max-redirs 0/, 'deployment verification must reject redirects');
 assert.match(deploymentWorkflow, /\$SERVICE_ORIGIN\/health/, 'deployment verification must call the private health endpoint');
 assert.doesNotMatch(deploymentWorkflow, /echo[^\n]*ID_TOKEN/i, 'deployment verification must never print the identity token');
+assert.match(publicGatewayWorkflow, /PUBLIC_ORIGIN:\s*https:\/\/api-test\.eldercaresaathi\.com/, 'public smoke test must use the approved test hostname');
+assert.match(publicGatewayWorkflow, /\$PUBLIC_ORIGIN\/health/, 'public smoke test must check the protected health endpoint');
+assert.match(publicGatewayWorkflow, /\$PUBLIC_ORIGIN\/v1\/me\/sessions/, 'public smoke test must prove private account access requires sign-in');
+assert.match(publicGatewayWorkflow, /\$SERVICE_ORIGIN\/health/, 'public smoke test must check that the direct service address is blocked');
+assert.doesNotMatch(publicGatewayWorkflow, /echo[^\n]*ID_TOKEN/i, 'public smoke test must never print the identity token');
 
 assert.match(migrationWorkflow, /workflow_dispatch:/, 'migration candidate publication must be manually started');
 assert.match(migrationWorkflow, /environment:\s*development/, 'migration candidate publication must use the protected development environment');

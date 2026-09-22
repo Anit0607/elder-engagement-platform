@@ -6,7 +6,11 @@ resource "google_cloud_run_v2_service" "api" {
   location            = var.region
   deletion_protection = var.environment == "production"
   ingress             = var.activate_public_gateway ? "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER" : "INGRESS_TRAFFIC_ALL"
-  labels              = local.common_labels
+  # Domain-restricted sharing can reject an allUsers IAM binding. Only the
+  # activated gateway may use Google's public-invoker alternative; ingress
+  # then prevents bypassing Cloud Armor through the direct run.app address.
+  invoker_iam_disabled = var.activate_public_gateway && var.allow_unauthenticated
+  labels               = local.common_labels
 
   template {
     service_account                  = google_service_account.runtime.email
@@ -215,14 +219,4 @@ resource "google_cloud_run_v2_service_iam_member" "github_verifier" {
   name     = google_cloud_run_v2_service.api[0].name
   role     = "roles/run.invoker"
   member   = "serviceAccount:${google_service_account.github_deployer.email}"
-}
-
-resource "google_cloud_run_v2_service_iam_member" "public_api" {
-  count = var.deploy_application && var.activate_public_gateway && var.allow_unauthenticated ? 1 : 0
-
-  project  = var.project_id
-  location = var.region
-  name     = google_cloud_run_v2_service.api[0].name
-  role     = "roles/run.invoker"
-  member   = "allUsers"
 }
