@@ -1,6 +1,6 @@
 # iOS REST API Integration Checklist
 
-Status: Pre-Sprint draft pending the client's iOS developer contact
+Status: Historical planning checklist, superseded for backend delivery by `handover/backend-release-1/README.md`. Items about collecting the iOS developer's identity, building/testing their app, or receiving their sign-off are **not** backend handover requirements.
 Owner: Lead Orchestrator
 Tracker items: EE-051 and EE-023
 

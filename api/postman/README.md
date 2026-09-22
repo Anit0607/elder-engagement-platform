@@ -10,4 +10,4 @@ node tools\generate_engagement_postman.mjs
 
 The collection is contract-only. Its presence does not mean that an endpoint is implemented, callable, deployed or accepted. The default origin is loopback, all identity values are synthetic and credential variables are empty or explicitly non-working placeholders.
 
-Before an iOS handoff, regenerate the collection from the same Git commit as the OpenAPI and deployed backend, use only approved staging access delivered through a secure channel, run the agreed smoke tests and record receipt by the named iOS developer.
+For iOS development integration, share `../handover/backend-release-1/postman_collection.json` together with its README and OpenAPI file. That collection uses the protected development address and excludes the two unimplemented Administrator routes. It contains no live test credential. The historical collection here remains for source-contract regression checks, not direct handover.

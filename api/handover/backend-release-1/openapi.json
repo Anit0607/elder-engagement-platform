@@ -1,0 +1,3891 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "Elder Engagement REST API",
+    "version": "0.3.5",
+    "summary": "Backend Release 1 callable REST API for development integration",
+    "description": "Shareable development-integration contract for the protected client-owned Amiko test address. This is not production deployment, Google Play release, or client acceptance. Only routes implemented in Backend Release 1 are listed. Test identities and credentials are provided separately through an approved private channel."
+  },
+  "x-contract-status": "backend-release-1-development-handover",
+  "x-implementation-status": "The 36 listed operations have matching backend routes in the development release; authenticated scenarios require separately authorised test access.",
+  "x-client-error-actions": {
+    "ACCESS_TOKEN_EXPIRED": "Attempt one serialized refresh; if refresh fails, return to sign-in.",
+    "INVALID_REFRESH_TOKEN": "Delete local tokens and return to sign-in without retrying the same token.",
+    "REFRESH_OUTCOME_UNKNOWN": "Do not retry the same refresh token. Delete local tokens and return to sign-in because this release defines no safe session-status recovery operation.",
+    "SESSION_REVOKED": "Delete local tokens and return to sign-in.",
+    "REFRESH_TOKEN_REUSED": "Delete all local tokens and return to sign-in because the token family is revoked.",
+    "ACCOUNT_SUSPENDED": "Delete local tokens, stop protected requests and show the client-approved support route.",
+    "MFA_REQUIRED": "Prompt the authorised staff user for the configured second factor and retry once.",
+    "RATE_LIMITED": "Wait for the Retry-After duration before retrying.",
+    "CIRCLE_LIMIT_REACHED": "Explain the current membership limit and let the Member leave another circle before trying again.",
+    "UPLOAD_MISMATCH": "Do not retry completion. Ask the Contributor to select the correct file and start a new upload.",
+    "INVALID_CURSOR": "Discard the saved cursor and reload the first feed page."
+  },
+  "x-http-status-by-error-code": {
+    "INVALID_REQUEST": 400,
+    "VALIDATION_FAILED": 400,
+    "AUTHENTICATION_FAILED": 401,
+    "ACCESS_TOKEN_EXPIRED": 401,
+    "INVALID_REFRESH_TOKEN": 401,
+    "SESSION_REVOKED": 401,
+    "REFRESH_TOKEN_REUSED": 409,
+    "REFRESH_OUTCOME_UNKNOWN": 409,
+    "ACCOUNT_SUSPENDED": 403,
+    "MFA_REQUIRED": 403,
+    "FORBIDDEN": 403,
+    "NOT_FOUND": 404,
+    "CONFLICT": 409,
+    "CIRCLE_LIMIT_REACHED": 409,
+    "UPLOAD_MISMATCH": 409,
+    "INVALID_CURSOR": 400,
+    "RATE_LIMITED": 429,
+    "DEPENDENCY_UNAVAILABLE": 503,
+    "INTERNAL_ERROR": 500,
+    "PAYLOAD_TOO_LARGE": 413,
+    "METHOD_NOT_ALLOWED": 405
+  },
+  "servers": [
+    {
+      "url": "https://api-test.eldercaresaathi.com",
+      "description": "Protected development integration address; not production"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Operations"
+    },
+    {
+      "name": "Authentication"
+    },
+    {
+      "name": "Profile"
+    },
+    {
+      "name": "Notifications"
+    },
+    {
+      "name": "Circles"
+    },
+    {
+      "name": "Content"
+    },
+    {
+      "name": "Events"
+    },
+    {
+      "name": "Administration"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "operationId": "getHealth",
+        "summary": "Confirm that the process is running",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Process is running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "operationId": "getReadiness",
+        "summary": "Confirm that required dependencies are ready",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Service can accept traffic",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/auth/member/session": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "createMemberSession",
+        "summary": "Exchange a verified phone-identity token for a platform session",
+        "description": "The Android or iOS client completes phone one-time-password verification with the client-approved Firebase Authentication or Identity Platform project, then submits the resulting provider token. The backend accepts only the configured issuer and audience, requires a provider-verified phone identity, and resolves the Member role itself. The backend does not accept or log the one-time password. A verified new phone identity creates one active Member account atomically and receives a session immediately. The response uses profileComplete=false until the Member creates their profile. Contributors cannot be created through this operation.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberSessionRequest"
+              },
+              "examples": {
+                "syntheticMember": {
+                  "$ref": "#/components/examples/SyntheticMemberSessionRequest"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Session created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                },
+                "examples": {
+                  "returningMember": {
+                    "$ref": "#/components/examples/SyntheticSessionResponse"
+                  },
+                  "newMember": {
+                    "$ref": "#/components/examples/SyntheticNewMemberSessionResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/auth/staff/session": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "createStaffSession",
+        "summary": "Create a Contributor or Administrator session",
+        "description": "The backend resolves Contributor or Administrator role from the stored account and never trusts a role supplied by the client. Contributors use Administrator-created usernames and passwords. Administrators require a password plus a verified authenticator-app code. Fictional development staff accounts are available only through the approved private test-access process; real staff onboarding belongs to the later Administrator console.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffSessionRequest"
+              },
+              "examples": {
+                "syntheticContributor": {
+                  "$ref": "#/components/examples/SyntheticStaffSessionRequest"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Session created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/auth/refresh": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "refreshSession",
+        "summary": "Rotate a refresh token and issue a new access token",
+        "description": "Mobile clients must serialize refresh so only one request uses a token at a time. A successful response replaces both stored tokens atomically and retains the same user identifier. Member renewal preserves the original session-family expiry (configured as 30 days by default), rather than extending it on each renewal. Reuse of a replaced refresh token revokes its whole family. Suspended, deleted, revoked or expired sessions cannot renew. After an uncertain network outcome or a 503 response, do not retry the same refresh token: clear local tokens and return to sign-in because this release defines no safe recovery/status operation. This rule applies to Member and staff sessions.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              },
+              "examples": {
+                "placeholder": {
+                  "$ref": "#/components/examples/SyntheticRefreshRequest"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Credentials replaced within the existing token family",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/auth/logout": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "logoutSession",
+        "summary": "Revoke the current session",
+        "description": "Member session controls verify the platform access token and current account/session state. Successful logout revokes the token family. Later use of the removed session is rejected; a repeated logout is unauthorised. Member and staff sessions are supported.",
+        "responses": {
+          "204": {
+            "description": "Session revoked; response has no body"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/me/profile": {
+      "get": {
+        "tags": [
+          "Profile"
+        ],
+        "operationId": "getMyProfile",
+        "summary": "Get the authenticated user's detailed profile",
+        "responses": {
+          "200": {
+            "description": "Profile returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                },
+                "examples": {
+                  "syntheticMember": {
+                    "$ref": "#/components/examples/SyntheticProfile"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Profile"
+        ],
+        "operationId": "updateMyProfile",
+        "summary": "Create or update the authenticated user's permitted profile fields",
+        "description": "For a newly verified Member with profileComplete=false, the first valid request creates the profile. Later requests update only fields the authenticated user is permitted to change.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileUpdate"
+              },
+              "examples": {
+                "languageAndWindow": {
+                  "$ref": "#/components/examples/SyntheticProfileUpdate"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/me/profile/photo-upload": {
+      "post": {
+        "tags": [
+          "Profile"
+        ],
+        "operationId": "startMyProfilePhotoUpload",
+        "summary": "Create a short-lived profile-photo upload authorisation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhotoUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Upload authorised",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadAuthorisation"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/v1/me/profile/photo-upload/{uploadId}/complete": {
+      "post": {
+        "tags": [
+          "Profile"
+        ],
+        "operationId": "completeMyProfilePhotoUpload",
+        "summary": "Validate the uploaded object and attach it to the profile",
+        "parameters": [
+          {
+            "name": "uploadId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Photo attached and profile returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/v1/contributor/content-uploads": {
+      "post": {
+        "tags": [
+          "Content"
+        ],
+        "operationId": "startContributorContentUpload",
+        "summary": "Create a short-lived private content-upload authorisation",
+        "description": "Contributor only. The Contributor must confirm ownership or permission before Amiko creates a draft item and a private upload authorisation. The file remains outside the approved-content area.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContentUploadRequest"
+              },
+              "examples": {
+                "syntheticPdf": {
+                  "$ref": "#/components/examples/SyntheticContentUploadRequest"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Private upload authorised",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentUploadAuthorisation"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/contributor/content-uploads/{uploadId}/complete": {
+      "post": {
+        "tags": [
+          "Content"
+        ],
+        "operationId": "completeContributorContentUpload",
+        "summary": "Validate a private upload and place it in the Administrator review queue",
+        "description": "Checks the stored object's exact content type, size, SHA-256 fingerprint and file signature. The signed upload is create-only, so a verified object cannot be replaced through the same link. Success records a quarantined asset with pending scan and moderation status; it does not publish or move the file to approved storage.",
+        "parameters": [
+          {
+            "name": "uploadId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Upload validated and waiting for Administrator review",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentUploadReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/admin/content-moderation": {
+      "get": {
+        "tags": [
+          "Administration"
+        ],
+        "operationId": "listContentModerationQueue",
+        "summary": "List private Contributor content waiting for review",
+        "description": "Administrator only. Returns at most 100 pending items and metadata; it does not expose a permanent file address.",
+        "responses": {
+          "200": {
+            "description": "Pending review queue",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "maxItems": 100,
+                  "items": {
+                    "$ref": "#/components/schemas/ModerationQueueItem"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/admin/content-moderation/{contentItemId}/preview": {
+      "get": {
+        "tags": [
+          "Administration"
+        ],
+        "operationId": "previewContentForModeration",
+        "summary": "Create a short-lived private preview for one pending item",
+        "parameters": [
+          {
+            "name": "contentItemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private preview authorised",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModerationPreview"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/admin/content-moderation/{contentItemId}/decision": {
+      "post": {
+        "tags": [
+          "Administration"
+        ],
+        "operationId": "decideContentModeration",
+        "summary": "Approve or reject one pending item with a controlled reason",
+        "description": "Administrator only. The decision is final and audited. Approval does not publish the item; audience selection and publication belong to EE-020.",
+        "parameters": [
+          {
+            "name": "contentItemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModerationDecisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Final private moderation decision recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModerationDecisionReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/admin/content/{contentItemId}/publication": {
+      "post": {
+        "tags": [
+          "Administration"
+        ],
+        "operationId": "publishApprovedContent",
+        "summary": "Publish an approved item to all Members or selected circles",
+        "description": "Administrator only. The item must be approved, unpublished and backed by a clean reviewed file. Publication moves the file from quarantine to private approved storage and records the selected audience atomically.",
+        "parameters": [
+          {
+            "name": "contentItemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContentPublicationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Content published to its controlled audience",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentPublicationReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/feed": {
+      "get": {
+        "tags": [
+          "Content"
+        ],
+        "operationId": "getMyContentFeed",
+        "summary": "List approved content visible to the signed-in Member",
+        "description": "Member only. Every page rechecks current active-circle membership. Unapproved, unpublished and quarantined items are excluded.",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 256
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Visible content page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/feed/{contentItemId}/media": {
+      "get": {
+        "tags": [
+          "Content"
+        ],
+        "operationId": "openVisibleContentMedia",
+        "summary": "Create a short-lived private link for one visible feed item",
+        "description": "Member only. Circle visibility is rechecked before issuing the five-minute media link. The link is sensitive and must not be logged or retained.",
+        "parameters": [
+          {
+            "name": "contentItemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private media access authorised",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedMedia"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/admin/events": {
+      "post": {
+        "tags": [
+          "Administration"
+        ],
+        "operationId": "createEvent",
+        "summary": "Create a basic Member event",
+        "description": "Administrator only. The event is information-only in EE-021; Google Meet and telephone joining are separate later integrations. Audience circles must be active. Reminder timings are recorded but delivery is handled separately.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Event created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/events": {
+      "get": {
+        "tags": [
+          "Events"
+        ],
+        "operationId": "getMyEvents",
+        "summary": "List events visible to the signed-in Member",
+        "description": "Member only. Every page rechecks current active-circle membership. Upcoming events are oldest-first and past events are newest-first.",
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "upcoming",
+                "past"
+              ],
+              "default": "upcoming"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 256
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Visible event page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/me/notification-preferences": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "operationId": "getMyNotificationPreferences",
+        "summary": "Get my notification choices and delivery window",
+        "description": "Returns only the authenticated account's choices. A missing saved row returns safe defaults without writing data.",
+        "responses": {
+          "200": {
+            "description": "Notification preferences returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPreferences"
+                },
+                "examples": {
+                  "synthetic": {
+                    "$ref": "#/components/examples/SyntheticNotificationPreferences"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Notifications"
+        ],
+        "operationId": "replaceMyNotificationPreferences",
+        "summary": "Replace my complete notification choices and delivery window",
+        "description": "A complete replacement avoids ambiguous partial updates. The authenticated account can change only its own preferences.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationPreferencesUpdate"
+              },
+              "examples": {
+                "synthetic": {
+                  "$ref": "#/components/examples/SyntheticNotificationPreferencesUpdate"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Notification preferences replaced and audited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPreferences"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/me/circles": {
+      "get": {
+        "tags": [
+          "Circles"
+        ],
+        "operationId": "listMyCircles",
+        "summary": "List active and joined circles with recommendations",
+        "description": "Returns active predefined circles plus any inactive circle the authenticated Member still belongs to. suggested is calculated from the Member's saved interests and preferred language. Membership information is never returned for another Member.",
+        "responses": {
+          "200": {
+            "description": "Circles returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CircleSummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/me/circles/{circleId}/membership": {
+      "parameters": [
+        {
+          "name": "circleId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "tags": [
+          "Circles"
+        ],
+        "operationId": "joinCircle",
+        "summary": "Join an active circle",
+        "description": "The authenticated Member joins immediately. Repeating a completed join is safe. The Administrator-configured active-membership limit starts at five.",
+        "responses": {
+          "204": {
+            "description": "Membership is active; response has no body"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Circles"
+        ],
+        "operationId": "leaveCircle",
+        "summary": "Leave a circle",
+        "description": "Closes the authenticated Member's active membership while retaining its history. Repeating a completed leave is safe.",
+        "responses": {
+          "204": {
+            "description": "Membership is inactive; response has no body"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/admin/circles": {
+      "get": {
+        "tags": [
+          "Administration"
+        ],
+        "operationId": "listAdminCircles",
+        "summary": "List all predefined circles",
+        "description": "Administrator-only list that includes inactive circles so they can be reviewed or reactivated.",
+        "responses": {
+          "200": {
+            "description": "All circles returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CircleSummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Administration"
+        ],
+        "operationId": "createCircle",
+        "summary": "Create a predefined circle",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CircleCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Circle created and audited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CircleSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/admin/circles/{circleId}": {
+      "patch": {
+        "tags": [
+          "Administration"
+        ],
+        "operationId": "updateCircle",
+        "summary": "Update, deactivate or reactivate a circle",
+        "parameters": [
+          {
+            "name": "circleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CircleUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Circle updated and audited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CircleSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/admin/users/{userId}/circles/{circleId}/membership": {
+      "parameters": [
+        {
+          "name": "userId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "circleId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "tags": [
+          "Administration"
+        ],
+        "operationId": "assignMemberToCircle",
+        "summary": "Assign an active Member to an active circle",
+        "responses": {
+          "204": {
+            "description": "Membership is active; response has no body"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Administration"
+        ],
+        "operationId": "removeMemberFromCircle",
+        "summary": "Remove a Member from a circle",
+        "responses": {
+          "204": {
+            "description": "Membership is inactive; response has no body"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/admin/circle-settings": {
+      "get": {
+        "tags": [
+          "Administration"
+        ],
+        "operationId": "getCircleSettings",
+        "summary": "Get the current circle-membership limit",
+        "responses": {
+          "200": {
+            "description": "Circle settings returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CircleSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Administration"
+        ],
+        "operationId": "replaceCircleSettings",
+        "summary": "Change the circle-membership limit",
+        "description": "Administrator-only complete replacement. The accepted range is one to twenty and the initial value is five.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CircleSettingsUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Circle settings changed and audited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CircleSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/me/sessions": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "listMySessions",
+        "summary": "List active sessions for the authenticated account",
+        "description": "Return only the authenticated Member's unexpired, unrevoked, unreplaced sessions, without token values or hashes. Current account state is checked on every request. Member and staff sessions are supported.",
+        "responses": {
+          "200": {
+            "description": "Sessions returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SessionSummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/me/sessions/{sessionId}": {
+      "delete": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "revokeMySession",
+        "summary": "Revoke one session",
+        "description": "An authenticated Member can revoke only their own active target session and its token family. Missing, inactive and other users' targets have the same not-found response. Member and staff sessions are supported.",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Session revoked; response has no body"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/admin/users/{userId}/status": {
+      "patch": {
+        "tags": [
+          "Administration"
+        ],
+        "operationId": "changeUserStatus",
+        "summary": "Suspend or reactivate a user",
+        "description": "Requires a current Administrator session. Suspension revokes saved sessions; reactivation requires a new sign-in. Invitations use separate credential activation. The last usable active Administrator cannot be suspended. Updates and their audit commit together.",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusChangeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status changed and audited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/admin/users/{userId}/role": {
+      "patch": {
+        "tags": [
+          "Administration"
+        ],
+        "operationId": "changeUserRole",
+        "summary": "Change a user role with an audit reason",
+        "description": "Requires a current Administrator session. Role changes revoke saved sessions. Member-to-Contributor creates invited status until credential activation. Administrator promotion requires a confirmed authenticator. Staff-to-Member requires existing Google phone identity. The last usable active Administrator cannot be demoted. Mutations and audit commit together.",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleChangeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Role changed and audited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "responses": {
+      "InvalidRequest": {
+        "description": "Request is invalid",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "Unauthorised": {
+        "description": "Authentication is missing or invalid",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "The authenticated user is not permitted to perform the operation",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "The resource is unavailable to the caller",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "The request conflicts with the current resource or session state",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Request rate exceeded; Retry-After is expressed in seconds",
+        "headers": {
+          "Retry-After": {
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "A required dependency is unavailable",
+        "headers": {
+          "Retry-After": {
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "PayloadTooLarge": {
+        "description": "The received request body exceeds the configured maximum",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "MethodNotAllowed": {
+        "description": "The HTTP method is not supported for this resource",
+        "headers": {
+          "Allow": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        },
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "InternalError": {
+        "description": "An unexpected internal error occurred; sensitive details are not returned",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "UserRole": {
+        "type": "string",
+        "enum": [
+          "member",
+          "contributor",
+          "administrator"
+        ]
+      },
+      "UserStatus": {
+        "type": "string",
+        "enum": [
+          "invited",
+          "active",
+          "suspended",
+          "deleted"
+        ]
+      },
+      "HealthResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          }
+        }
+      },
+      "MemberSessionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "providerIdToken",
+          "installationId",
+          "platform"
+        ],
+        "properties": {
+          "providerIdToken": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 8192,
+            "writeOnly": true
+          },
+          "installationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "android",
+              "ios"
+            ]
+          },
+          "deviceName": {
+            "type": "string",
+            "maxLength": 120
+          }
+        }
+      },
+      "StaffSessionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "username",
+          "password",
+          "installationId",
+          "platform"
+        ],
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 120
+          },
+          "password": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 256,
+            "writeOnly": true
+          },
+          "secondFactorCode": {
+            "type": "string",
+            "pattern": "^[0-9]{6,8}$",
+            "writeOnly": true
+          },
+          "installationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "android",
+              "ios",
+              "web"
+            ]
+          },
+          "deviceName": {
+            "type": "string",
+            "maxLength": 120
+          }
+        }
+      },
+      "RefreshRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "refreshToken"
+        ],
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 512,
+            "writeOnly": true
+          }
+        }
+      },
+      "SessionResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "accessToken",
+          "refreshToken",
+          "tokenType",
+          "expiresInSeconds",
+          "user"
+        ],
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Sensitive response value. Store only in operating-system protected storage and never log it."
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Sensitive rotating response value. Store only in operating-system protected storage and never log it."
+          },
+          "tokenType": {
+            "type": "string",
+            "const": "Bearer"
+          },
+          "expiresInSeconds": {
+            "type": "integer",
+            "minimum": 60,
+            "maximum": 3600
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserSummary"
+          }
+        }
+      },
+      "UserSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "role",
+          "status",
+          "displayName",
+          "preferredLanguage",
+          "profileComplete",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "role": {
+            "$ref": "#/components/schemas/UserRole"
+          },
+          "status": {
+            "$ref": "#/components/schemas/UserStatus"
+          },
+          "displayName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "preferredLanguage": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "bn",
+              "hi",
+              "en",
+              null
+            ]
+          },
+          "profileComplete": {
+            "type": "boolean",
+            "description": "False directs the client to the self-service profile setup journey without blocking access."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        }
+      },
+      "BroadLocation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "countryCode": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$",
+            "default": "IN"
+          },
+          "state": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "city": {
+            "type": "string",
+            "maxLength": 120
+          }
+        }
+      },
+      "Profile": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "role",
+          "status",
+          "displayName",
+          "preferredLanguage",
+          "createdAt",
+          "updatedAt",
+          "interests",
+          "notificationWindow"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "role": {
+            "$ref": "#/components/schemas/UserRole"
+          },
+          "status": {
+            "$ref": "#/components/schemas/UserStatus"
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "preferredLanguage": {
+            "type": "string",
+            "enum": [
+              "bn",
+              "hi",
+              "en"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "ageGroup": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 64
+          },
+          "interests": {
+            "type": "array",
+            "maxItems": 30,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          },
+          "broadLocation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BroadLocation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "photoUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri",
+            "readOnly": true
+          },
+          "notificationWindow": {
+            "$ref": "#/components/schemas/NotificationWindow"
+          }
+        }
+      },
+      "NotificationWindow": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "enabled",
+          "timeZone"
+        ],
+        "description": "If enabled is true, both local times are required. A start later than the end represents a window crossing midnight. The server validates timeZone against its supported IANA time-zone database. If enabled is false, both times must be null or omitted.",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "startLocalTime": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "endLocalTime": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "timeZone": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^(UTC|[A-Za-z_]+/[A-Za-z0-9_+\\-]+(?:/[A-Za-z0-9_+\\-]+)*)$",
+            "example": "Asia/Kolkata"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "enabled": {
+                  "const": true
+                }
+              },
+              "required": [
+                "enabled"
+              ]
+            },
+            "then": {
+              "required": [
+                "startLocalTime",
+                "endLocalTime"
+              ],
+              "properties": {
+                "startLocalTime": {
+                  "type": "string"
+                },
+                "endLocalTime": {
+                  "type": "string"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "startLocalTime": {
+                  "type": "null"
+                },
+                "endLocalTime": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "NotificationPreferencesUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "eventReminders",
+          "contentUpdates",
+          "deliveryWindow"
+        ],
+        "description": "Complete replacement of an account's notification choices. deliveryWindow.enabled=false allows delivery at any local time. A window whose start is later than its end crosses midnight.",
+        "properties": {
+          "eventReminders": {
+            "type": "boolean"
+          },
+          "contentUpdates": {
+            "type": "boolean"
+          },
+          "deliveryWindow": {
+            "$ref": "#/components/schemas/NotificationWindow"
+          }
+        }
+      },
+      "NotificationPreferences": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "eventReminders",
+          "contentUpdates",
+          "deliveryWindow",
+          "updatedAt"
+        ],
+        "properties": {
+          "eventReminders": {
+            "type": "boolean"
+          },
+          "contentUpdates": {
+            "type": "boolean"
+          },
+          "deliveryWindow": {
+            "$ref": "#/components/schemas/NotificationWindow"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        }
+      },
+      "CircleSuggestionRules": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "interests": {
+            "type": "array",
+            "maxItems": 10,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 50
+            }
+          },
+          "preferredLanguages": {
+            "type": "array",
+            "maxItems": 3,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "en",
+                "bn",
+                "hi"
+              ]
+            }
+          }
+        }
+      },
+      "CircleCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 1000
+          },
+          "suggestionRules": {
+            "$ref": "#/components/schemas/CircleSuggestionRules"
+          }
+        }
+      },
+      "CircleUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 1000
+          },
+          "suggestionRules": {
+            "$ref": "#/components/schemas/CircleSuggestionRules"
+          },
+          "active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CircleSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "description",
+          "active",
+          "suggestionRules",
+          "joined",
+          "selectedByUser",
+          "suggested",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 1000
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "suggestionRules": {
+            "$ref": "#/components/schemas/CircleSuggestionRules"
+          },
+          "joined": {
+            "type": "boolean"
+          },
+          "selectedByUser": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "suggested": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CircleSettingsUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "maxMemberships"
+        ],
+        "properties": {
+          "maxMemberships": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
+        }
+      },
+      "CircleSettings": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "maxMemberships",
+          "updatedAt"
+        ],
+        "properties": {
+          "maxMemberships": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ProfileUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "description": "This is a documented partial-update object carried as application/json, not JSON Merge Patch. Omitted fields remain unchanged. Explicit null clears only fields whose schema permits null. Arrays replace the complete previous array. notificationWindow replaces the complete nested object and must therefore contain enabled and timeZone plus both local times when enabled.",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "preferredLanguage": {
+            "type": "string",
+            "enum": [
+              "bn",
+              "hi",
+              "en"
+            ]
+          },
+          "ageGroup": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 64
+          },
+          "interests": {
+            "type": "array",
+            "maxItems": 30,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          },
+          "broadLocation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BroadLocation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notificationWindow": {
+            "$ref": "#/components/schemas/NotificationWindow"
+          }
+        }
+      },
+      "SessionSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "installationId",
+          "platform",
+          "current",
+          "createdAt",
+          "lastSeenAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "installationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "android",
+              "ios",
+              "web"
+            ]
+          },
+          "deviceName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "current": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UserPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserSummary"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "StatusChangeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "reason"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          }
+        }
+      },
+      "RoleChangeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "role",
+          "reason"
+        ],
+        "properties": {
+          "role": {
+            "$ref": "#/components/schemas/UserRole"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          }
+        }
+      },
+      "AdminCreateUserRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Manual onboarding follows role-specific identity rules. A Member requires a non-null phone number matching the later verified provider identity and cannot use a username. A Contributor or Administrator requires a non-null username; an optional phone may also be recorded. Staff accounts are created with invited status and cannot authenticate until the separate EE-010 credential-activation flow is implemented and completed.",
+        "required": [
+          "role",
+          "displayName",
+          "preferredLanguage",
+          "interests",
+          "notificationWindow"
+        ],
+        "properties": {
+          "role": {
+            "$ref": "#/components/schemas/UserRole"
+          },
+          "phoneE164": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^\\+[1-9][0-9]{7,14}$"
+          },
+          "username": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 3,
+            "maxLength": 120
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "preferredLanguage": {
+            "type": "string",
+            "enum": [
+              "bn",
+              "hi",
+              "en"
+            ]
+          },
+          "ageGroup": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 64
+          },
+          "interests": {
+            "type": "array",
+            "maxItems": 30,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          },
+          "broadLocation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BroadLocation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notificationWindow": {
+            "$ref": "#/components/schemas/NotificationWindow"
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "phoneE164"
+            ],
+            "properties": {
+              "role": {
+                "const": "member"
+              },
+              "phoneE164": {
+                "type": "string",
+                "pattern": "^\\+[1-9][0-9]{7,14}$"
+              },
+              "username": {
+                "type": "null"
+              }
+            }
+          },
+          {
+            "required": [
+              "username"
+            ],
+            "properties": {
+              "role": {
+                "enum": [
+                  "contributor",
+                  "administrator"
+                ]
+              },
+              "username": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 120
+              }
+            }
+          }
+        ]
+      },
+      "PhotoUploadRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contentType",
+          "sizeBytes",
+          "sha256"
+        ],
+        "properties": {
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "image/jpeg",
+              "image/png",
+              "image/webp"
+            ]
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5242880
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{64}$"
+          }
+        }
+      },
+      "UploadAuthorisation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uploadId",
+          "uploadUrl",
+          "method",
+          "requiredHeaders",
+          "expiresAt"
+        ],
+        "properties": {
+          "uploadId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "uploadUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Sensitive short-lived value that must not be logged."
+          },
+          "method": {
+            "type": "string",
+            "const": "PUT"
+          },
+          "requiredHeaders": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ContentUploadRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "language",
+          "contentType",
+          "sizeBytes",
+          "sha256",
+          "rightsConfirmed"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "bn",
+              "hi"
+            ]
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "video/mp4",
+              "audio/mpeg",
+              "audio/mp4",
+              "audio/x-m4a",
+              "application/pdf"
+            ]
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 262144000,
+            "description": "Maximum 250 MiB for MP4 video, 50 MiB for MP3/M4A audio and 25 MiB for PDF."
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{64}$"
+          },
+          "rightsConfirmed": {
+            "type": "boolean",
+            "const": true,
+            "description": "Confirms that the Contributor owns the material or has permission to upload it."
+          }
+        }
+      },
+      "ContentUploadAuthorisation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contentItemId",
+          "uploadId",
+          "uploadUrl",
+          "method",
+          "requiredHeaders",
+          "expiresAt"
+        ],
+        "properties": {
+          "contentItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "uploadId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "uploadUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Sensitive short-lived value that must not be logged or stored after use."
+          },
+          "method": {
+            "type": "string",
+            "const": "PUT"
+          },
+          "requiredHeaders": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ContentUploadReceipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contentItemId",
+          "uploadId",
+          "status",
+          "kind"
+        ],
+        "properties": {
+          "contentItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "uploadId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "const": "pending"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "video",
+              "audio",
+              "pdf"
+            ]
+          }
+        }
+      },
+      "ModerationQueueItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contentItemId",
+          "contributorId",
+          "contributorDisplayName",
+          "kind",
+          "title",
+          "description",
+          "language",
+          "contentType",
+          "sizeBytes",
+          "scanStatus",
+          "rightsConfirmedAt",
+          "submittedAt"
+        ],
+        "properties": {
+          "contentItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contributorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contributorDisplayName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 120
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "video",
+              "audio",
+              "pdf"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 4000
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "bn",
+              "hi"
+            ]
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "video/mp4",
+              "audio/mpeg",
+              "audio/mp4",
+              "audio/x-m4a",
+              "application/pdf"
+            ]
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 262144000
+          },
+          "scanStatus": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "clean",
+              "rejected",
+              "failed"
+            ]
+          },
+          "rightsConfirmedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ModerationPreview": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contentItemId",
+          "previewUrl",
+          "expiresAt"
+        ],
+        "properties": {
+          "contentItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "previewUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Sensitive short-lived private value that must not be logged or retained."
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ModerationDecisionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "outcome",
+          "reasonCode"
+        ],
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected"
+            ]
+          },
+          "reasonCode": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "copyright_permission",
+              "unsafe_inappropriate",
+              "misleading",
+              "poor_quality",
+              "duplicate",
+              "other"
+            ]
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 900
+          }
+        },
+        "oneOf": [
+          {
+            "properties": {
+              "outcome": {
+                "const": "approved"
+              },
+              "reasonCode": {
+                "const": "approved"
+              }
+            }
+          },
+          {
+            "properties": {
+              "outcome": {
+                "const": "rejected"
+              },
+              "reasonCode": {
+                "enum": [
+                  "copyright_permission",
+                  "unsafe_inappropriate",
+                  "misleading",
+                  "poor_quality",
+                  "duplicate"
+                ]
+              }
+            }
+          },
+          {
+            "required": [
+              "note"
+            ],
+            "properties": {
+              "outcome": {
+                "const": "rejected"
+              },
+              "reasonCode": {
+                "const": "other"
+              },
+              "note": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 900,
+                "pattern": ".*\\S.*"
+              }
+            }
+          }
+        ]
+      },
+      "ModerationDecisionReceipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contentItemId",
+          "status",
+          "reasonCode",
+          "note",
+          "decidedAt",
+          "published"
+        ],
+        "properties": {
+          "contentItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected"
+            ]
+          },
+          "reasonCode": {
+            "type": "string"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "published": {
+            "type": "boolean",
+            "const": false
+          }
+        }
+      },
+      "ContentPublicationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "audience"
+        ],
+        "properties": {
+          "audience": {
+            "type": "string",
+            "enum": [
+              "all_members",
+              "circles"
+            ]
+          },
+          "circleIds": {
+            "type": "array",
+            "maxItems": 20,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "default": []
+          }
+        },
+        "oneOf": [
+          {
+            "properties": {
+              "audience": {
+                "const": "all_members"
+              },
+              "circleIds": {
+                "maxItems": 0
+              }
+            }
+          },
+          {
+            "required": [
+              "circleIds"
+            ],
+            "properties": {
+              "audience": {
+                "const": "circles"
+              },
+              "circleIds": {
+                "minItems": 1,
+                "maxItems": 20
+              }
+            }
+          }
+        ]
+      },
+      "ContentPublicationReceipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contentItemId",
+          "audience",
+          "circleIds",
+          "publishedAt"
+        ],
+        "properties": {
+          "contentItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "audience": {
+            "type": "string",
+            "enum": [
+              "all_members",
+              "circles"
+            ]
+          },
+          "circleIds": {
+            "type": "array",
+            "maxItems": 20,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FeedItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contentItemId",
+          "kind",
+          "title",
+          "description",
+          "language",
+          "contributorDisplayName",
+          "publishedAt"
+        ],
+        "properties": {
+          "contentItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "video",
+              "audio",
+              "pdf",
+              "youtube",
+              "broadcast_replay"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 4000
+          },
+          "language": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "en",
+              "bn",
+              "hi",
+              null
+            ]
+          },
+          "contributorDisplayName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 120
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FeedPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/FeedItem"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 8,
+            "maxLength": 256
+          }
+        }
+      },
+      "FeedMedia": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contentItemId",
+          "mediaUrl",
+          "contentType",
+          "expiresAt"
+        ],
+        "properties": {
+          "contentItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mediaUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Sensitive five-minute private value that must not be logged or retained."
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "video/mp4",
+              "audio/mpeg",
+              "audio/mp4",
+              "audio/x-m4a",
+              "application/pdf"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "EventCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "startsAt",
+          "audience",
+          "reminderMinutesBefore"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 4000
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Must include an offset and be in the future."
+          },
+          "endsAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When supplied, must be after startsAt."
+          },
+          "audience": {
+            "type": "string",
+            "enum": [
+              "all_members",
+              "circles"
+            ]
+          },
+          "circleIds": {
+            "type": "array",
+            "maxItems": 20,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "default": []
+          },
+          "reminderMinutesBefore": {
+            "type": "array",
+            "maxItems": 5,
+            "uniqueItems": true,
+            "items": {
+              "type": "integer",
+              "minimum": 5,
+              "maximum": 10080
+            }
+          }
+        },
+        "oneOf": [
+          {
+            "properties": {
+              "audience": {
+                "const": "all_members"
+              },
+              "circleIds": {
+                "maxItems": 0
+              }
+            }
+          },
+          {
+            "required": [
+              "circleIds"
+            ],
+            "properties": {
+              "audience": {
+                "const": "circles"
+              },
+              "circleIds": {
+                "minItems": 1,
+                "maxItems": 20
+              }
+            }
+          }
+        ]
+      },
+      "EventSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title",
+          "description",
+          "startsAt",
+          "endsAt",
+          "audience",
+          "circleIds",
+          "reminderMinutesBefore",
+          "joinKind",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 4000
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "audience": {
+            "type": "string",
+            "enum": [
+              "all_members",
+              "circles"
+            ]
+          },
+          "circleIds": {
+            "type": "array",
+            "maxItems": 20,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "reminderMinutesBefore": {
+            "type": "array",
+            "maxItems": 5,
+            "uniqueItems": true,
+            "items": {
+              "type": "integer",
+              "minimum": 5,
+              "maximum": 10080
+            }
+          },
+          "joinKind": {
+            "type": "string",
+            "const": "information_only",
+            "description": "EE-021 does not yet provide Google Meet or telephone joining."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "EventPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/EventSummary"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 8,
+            "maxLength": 256
+          }
+        }
+      },
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "title",
+          "status",
+          "code",
+          "traceId"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri-reference"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "status": {
+            "type": "integer",
+            "minimum": 400,
+            "maximum": 599
+          },
+          "detail": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128
+          },
+          "retryable": {
+            "type": "boolean",
+            "default": false
+          },
+          "fieldErrors": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "field",
+                "code"
+              ],
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                "code": {
+                  "type": "string",
+                  "maxLength": 64
+                }
+              }
+            }
+          }
+        }
+      },
+      "ErrorCode": {
+        "type": "string",
+        "enum": [
+          "INVALID_REQUEST",
+          "VALIDATION_FAILED",
+          "AUTHENTICATION_FAILED",
+          "ACCESS_TOKEN_EXPIRED",
+          "INVALID_REFRESH_TOKEN",
+          "REFRESH_OUTCOME_UNKNOWN",
+          "SESSION_REVOKED",
+          "REFRESH_TOKEN_REUSED",
+          "ACCOUNT_SUSPENDED",
+          "MFA_REQUIRED",
+          "FORBIDDEN",
+          "NOT_FOUND",
+          "CONFLICT",
+          "CIRCLE_LIMIT_REACHED",
+          "UPLOAD_MISMATCH",
+          "INVALID_CURSOR",
+          "RATE_LIMITED",
+          "DEPENDENCY_UNAVAILABLE",
+          "INTERNAL_ERROR",
+          "PAYLOAD_TOO_LARGE",
+          "METHOD_NOT_ALLOWED"
+        ]
+      }
+    },
+    "examples": {
+      "SyntheticMemberSessionRequest": {
+        "summary": "Synthetic provider-token exchange; token is not a real credential",
+        "value": {
+          "providerIdToken": "synthetic-provider-token-not-a-real-secret",
+          "installationId": "22222222-2222-4222-8222-222222222222",
+          "platform": "ios",
+          "deviceName": "iOS contract-test device"
+        }
+      },
+      "SyntheticStaffSessionRequest": {
+        "summary": "Synthetic Contributor sign-in; password is a non-working placeholder",
+        "value": {
+          "username": "synthetic.contributor",
+          "password": "not-a-real-password-value",
+          "installationId": "33333333-3333-4333-8333-333333333333",
+          "platform": "ios",
+          "deviceName": "iOS contract-test device"
+        }
+      },
+      "SyntheticRefreshRequest": {
+        "summary": "Non-working refresh-token placeholder",
+        "value": {
+          "refreshToken": "synthetic-refresh-token-not-a-real-secret-value"
+        }
+      },
+      "SyntheticContentUploadRequest": {
+        "summary": "Synthetic PDF upload metadata; no client content or credential",
+        "value": {
+          "title": "Synthetic activity guide",
+          "description": "Fictional content used only for contract testing",
+          "language": "en",
+          "contentType": "application/pdf",
+          "sizeBytes": 32768,
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "rightsConfirmed": true
+        }
+      },
+      "SyntheticSessionResponse": {
+        "summary": "Synthetic response; token strings are not usable credentials",
+        "value": {
+          "accessToken": "synthetic-access-token-not-a-real-secret",
+          "refreshToken": "synthetic-refresh-token-not-a-real-secret-value",
+          "tokenType": "Bearer",
+          "expiresInSeconds": 900,
+          "user": {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "role": "member",
+            "status": "active",
+            "displayName": "Test Member",
+            "preferredLanguage": "bn",
+            "profileComplete": true,
+            "createdAt": "2026-09-09T09:00:00Z",
+            "updatedAt": "2026-09-09T09:00:00Z"
+          }
+        }
+      },
+      "SyntheticNewMemberSessionResponse": {
+        "summary": "A verified new Member receives immediate access before creating a profile",
+        "value": {
+          "accessToken": "synthetic-access-token-not-a-real-secret",
+          "refreshToken": "synthetic-refresh-token-not-a-real-secret-value",
+          "tokenType": "Bearer",
+          "expiresInSeconds": 900,
+          "user": {
+            "id": "44444444-4444-4444-8444-444444444444",
+            "role": "member",
+            "status": "active",
+            "displayName": null,
+            "preferredLanguage": null,
+            "profileComplete": false,
+            "createdAt": "2026-09-12T12:00:00Z",
+            "updatedAt": "2026-09-12T12:00:00Z"
+          }
+        }
+      },
+      "SyntheticProfileUpdate": {
+        "summary": "Replace preferred language and complete notification window",
+        "value": {
+          "preferredLanguage": "hi",
+          "notificationWindow": {
+            "enabled": true,
+            "startLocalTime": "20:00",
+            "endLocalTime": "08:00",
+            "timeZone": "Asia/Kolkata"
+          }
+        }
+      },
+      "SyntheticNotificationPreferencesUpdate": {
+        "summary": "Receive event reminders but not general content updates, during an overnight window",
+        "value": {
+          "eventReminders": true,
+          "contentUpdates": false,
+          "deliveryWindow": {
+            "enabled": true,
+            "startLocalTime": "22:00",
+            "endLocalTime": "06:00",
+            "timeZone": "Asia/Kolkata"
+          }
+        }
+      },
+      "SyntheticNotificationPreferences": {
+        "summary": "Saved synthetic notification choices",
+        "value": {
+          "eventReminders": true,
+          "contentUpdates": false,
+          "deliveryWindow": {
+            "enabled": true,
+            "startLocalTime": "22:00",
+            "endLocalTime": "06:00",
+            "timeZone": "Asia/Kolkata"
+          },
+          "updatedAt": "2026-09-15T12:00:00Z"
+        }
+      },
+      "SyntheticEventCreate": {
+        "summary": "Create a fictional circle event with two reminder times",
+        "value": {
+          "title": "Synthetic music gathering",
+          "description": "Fictional event used only for contract testing",
+          "startsAt": "2026-10-10T10:00:00+05:30",
+          "endsAt": "2026-10-10T11:00:00+05:30",
+          "audience": "circles",
+          "circleIds": [
+            "66666666-6666-4666-8666-666666666666"
+          ],
+          "reminderMinutesBefore": [
+            1440,
+            60
+          ]
+        }
+      },
+      "SyntheticEventSummary": {
+        "summary": "Saved fictional information-only event",
+        "value": {
+          "id": "77777777-7777-4777-8777-777777777777",
+          "title": "Synthetic music gathering",
+          "description": "Fictional event used only for contract testing",
+          "startsAt": "2026-10-10T04:30:00Z",
+          "endsAt": "2026-10-10T05:30:00Z",
+          "audience": "circles",
+          "circleIds": [
+            "66666666-6666-4666-8666-666666666666"
+          ],
+          "reminderMinutesBefore": [
+            1440,
+            60
+          ],
+          "joinKind": "information_only",
+          "createdAt": "2026-09-16T12:00:00Z"
+        }
+      },
+      "SyntheticAdminCreateMember": {
+        "summary": "Pre-provision a synthetic Member",
+        "value": {
+          "role": "member",
+          "phoneE164": "+919999999901",
+          "displayName": "Synthetic Member",
+          "preferredLanguage": "bn",
+          "interests": [
+            "music"
+          ],
+          "notificationWindow": {
+            "enabled": false,
+            "timeZone": "Asia/Kolkata"
+          }
+        }
+      },
+      "SyntheticAdminCreateContributor": {
+        "summary": "Create an invited synthetic Contributor profile",
+        "value": {
+          "role": "contributor",
+          "username": "synthetic.contributor",
+          "displayName": "Synthetic Contributor",
+          "preferredLanguage": "hi",
+          "interests": [
+            "community"
+          ],
+          "notificationWindow": {
+            "enabled": false,
+            "timeZone": "Asia/Kolkata"
+          }
+        }
+      },
+      "SyntheticProfile": {
+        "summary": "Synthetic Bengali-speaking Member",
+        "value": {
+          "id": "11111111-1111-4111-8111-111111111111",
+          "role": "member",
+          "status": "active",
+          "displayName": "Test Member",
+          "preferredLanguage": "bn",
+          "createdAt": "2026-09-09T09:00:00Z",
+          "updatedAt": "2026-09-09T09:00:00Z",
+          "ageGroup": "55+",
+          "interests": [
+            "music",
+            "community"
+          ],
+          "broadLocation": {
+            "countryCode": "IN",
+            "state": "West Bengal",
+            "city": "Kolkata"
+          },
+          "photoUrl": null,
+          "notificationWindow": {
+            "enabled": true,
+            "startLocalTime": "09:00",
+            "endLocalTime": "20:00",
+            "timeZone": "Asia/Kolkata"
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ]
+}

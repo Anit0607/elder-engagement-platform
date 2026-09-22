@@ -1,9 +1,10 @@
 # iOS contract notification log
 
-No iOS technical contact has been supplied and no handoff is claimed.
+The public backend handover can be forwarded by the project manager without an iOS developer contact. Direct delivery to the developer and their receipt are not claimed.
 
 | Date | Contract version/checksum | Recipient | Change summary | Receipt/questions | Status |
 |---|---|---|---|---|---|
+| 23 September 2026 | Backend Release 1 package; file checksums in `handover/backend-release-1/manifest.json` | Project manager via public GitHub handover | Published protected development base address, OpenAPI/Postman for 36 implemented routes, sign-in and error guidance, evidence, and known limitations; excluded two unimplemented Administrator routes | Project manager can forward the package; direct iOS developer receipt and authenticated integration test are not claimed | Development integration package; not production acceptance |
 | 21 September 2026 | `0.3.5`; SHA-256 `d3b12c3a6623a34ac03b16d9c030ee4b06fed5b4a6f65d2c2b6c215ac4d39410` | Client-nominated iOS developer pending | Clarified that Administrator user listing and creation are planned, not callable, and marked both Postman requests accordingly | No developer contact or handoff channel supplied; receipt not claimed | Private development contract clarification; handoff not sent |
 | 16 September 2026 | `0.3.5`; SHA-256 `ec5b2315bf8a010d4ce29eae57615d1773197d4df67d7b599e715276cc25a2b6` | Client-nominated iOS developer pending | Administrator creation of information-only all-Member/circle events; reminder offsets and circle-filtered upcoming/past Member event pages | Direct handoff remains pending until the client supplies the iOS contact and agreed delivery channel | Private development verified; handoff not sent |
 | 16 September 2026 | `0.3.4`; SHA-256 `d46acd1b39acb06d11888546b58ea90be3255d8ca0e1c7789ab66f4df9e7df20` | Client-nominated iOS developer pending | Administrator publication to all Members or selected circles; cursor-paginated Member feed and five-minute private media access with current membership checks | Direct handoff remains pending until the client supplies the iOS contact and agreed delivery channel | Private development verified; handoff not sent |
@@ -17,4 +18,4 @@ No iOS technical contact has been supplied and no handoff is claimed.
 | 12 September 2026 | `0.2.0`; SHA-256 `ebc5b3ec7aa662afa02146a50e176daaf4a1cfd6a3002889a02eb8a78bf00faa` | Client-nominated iOS developer pending | Member self-registration, immediate access and incomplete-profile routing | Direct handoff deferred by client until the secure REST API is ready | Published; handoff deferred |
 | 10 September 2026 | `a7e0345`; SHA-256 `c38c986ecf9652b88f6a3926e5b26c3fcb8b55337237fa7c89293ee983f32c59` | Client-nominated iOS developer pending | Initial Week 2 controlled draft published to the project repository | Not sent | Waiting for CA-25 |
 
-This file is updated in the same pull request as every contract change after the iOS developer is nominated. Credentials and personal data are never entered here.
+This historical log records contract notices and public handover availability. It does not require us to collect the iOS developer's identity. Credentials and personal data are never entered here.
