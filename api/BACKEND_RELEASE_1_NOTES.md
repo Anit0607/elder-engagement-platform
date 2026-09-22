@@ -1,11 +1,12 @@
 # Amiko Backend Release 1 notes
 
-Status: client-test package prepared; the protected gateway has been prepared
-but remains inactive while the client-test Domain Name System record and
-certificate are pending. This file does not claim public or production
-availability.
+Status: protected development test address active at
+`https://api-test.eldercaresaathi.com`. The public health check, sign-in
+boundary and blocked direct Cloud Run address passed the
+[gateway verification run](https://github.com/Anit0607/elder-engagement-platform/actions/runs/35680338910).
+This is not a production release or client acceptance.
 
-## Included and verified in private development
+## Included and verified in development
 
 - Member phone sign-in, immediate Member access and secure saved sessions.
 - Contributor username/password sign-in and Administrator password plus
@@ -40,12 +41,10 @@ availability.
 
 ## Release gates still required
 
-1. Add the approved `api-test.eldercaresaathi.com` Domain Name System A record,
-   verify its certificate, activate the protected route and pass public-entry checks.
-2. Nominate the client acceptance owner and testers.
-3. Supply the iOS developer's technical contact and GitHub identity.
-4. Implement the approved privacy direction and obtain the final category-specific retention/legal review before any real production data. The client approved the direction in `../architecture/Amiko_Data_Lifecycle_Decision.md`; approval alone does not deliver the age gate, export or deletion operations.
-5. Complete the client test guide and record pass/fail evidence.
+1. Nominate the client acceptance owner and testers.
+2. Supply the iOS developer's technical contact and GitHub identity.
+3. Implement the approved privacy direction and obtain the final category-specific retention/legal review before any real production data. The client approved the direction in `../architecture/Amiko_Data_Lifecycle_Decision.md`; approval alone does not deliver the age gate, export or deletion operations.
+4. Complete the client test guide and record pass/fail evidence.
 
-The deployed source revision, OpenAPI checksum, Postman checksum and client-test
-address will be inserted only after the reviewed release candidate is deployed.
+The deployed application source revision and matching OpenAPI and Postman
+checksums still require a final handover record before client acceptance.
