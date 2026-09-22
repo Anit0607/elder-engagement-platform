@@ -1,8 +1,10 @@
 # Amiko Backend Release 1 client test guide
 
-Status: prepared for EE-026 and EE-027. Do not begin until Codex supplies the
-approved client-test address, build/package revision and test identities through
-the agreed secure channel.
+Status: protected development test address available at
+`https://api-test.eldercaresaathi.com`. Begin the eight acceptance journeys only
+after Codex supplies the matching build/package revision and fictional test
+identities through the agreed secure channel. Passing the gateway check is not
+the same as passing the client journeys.
 
 ## Before testing
 
