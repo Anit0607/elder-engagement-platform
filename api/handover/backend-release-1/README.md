@@ -7,7 +7,7 @@ Share this folder with the separately contracted iOS developer. It is the comple
 | File | What to do with it |
 |---|---|
 | `README.md` | Read this first for the address, sign-in flow, safety rules and known limitations. |
-| `openapi.json` | Import into an OpenAPI-capable tool or use as the definitive list of request/response fields and error formats. It lists 36 backend routes, including the currently unhealthy `/ready` operational check; see below. |
+| `openapi.json` | Import into an OpenAPI-capable tool or use as the definitive list of request/response fields and error formats. It lists 36 implemented backend routes. |
 | `postman_collection.json` | Import into Postman for example requests. Every password/token variable is empty. The example identifiers are fictional and must be replaced after sign-in. |
 | `manifest.json` | File checksums and the recorded backend build/gateway evidence. |
 
@@ -38,13 +38,13 @@ Share this folder with the separately contracted iOS developer. It is the comple
 ## Test access and current limitations
 
 - **No live token, test phone/code pair, staff password or authenticator setup is in the public package.** The client or authorised project operator provides fictional test access to the iOS developer through a private channel. The developer can build request/response handling now; authenticated end-to-end testing needs that access and the Google iOS app configuration.
-- `GET /ready` is an operational dependency check, **not an app integration endpoint**. On 23 September 2026 it returned HTTP 503 even while `/health` returned 200 and an unauthenticated private route returned 401. Do not use `/ready` as an iOS launch or connectivity gate. This is an open backend issue, not a claimed passing check.
+- `GET /ready` is an operational dependency check, **not an app integration endpoint**. After the 23 September 2026 fix, it returned HTTP 200 on repeat checks of the database, sign-in protection, storage and Google phone-verification certificates. A failure returns HTTP 503. External checks are cached briefly, so do not use `/ready` as an iOS launch or connectivity gate.
 - `GET` and `POST /v1/admin/users` are not implemented and are intentionally absent from this handover. Administrator account creation through the final web console remains later work.
 - Live streaming, group calls, Meet, YouTube, payments, automated translation/speech, artificial-intelligence moderation and notification delivery are **not** included in Backend Release 1. Basic events are information-only; reminder preferences are stored but reminders are not sent yet.
 - Public gateway checks passed for health, unauthenticated access denial and blocked direct Cloud Run access. The client acceptance journeys and a fresh authenticated public-route smoke test are **not yet signed off**. See `manifest.json` for the recorded build and gateway checks. No production readiness is claimed.
 
 ## Who does what next
 
-- **Our backend team:** maintain `/v1`, resolve the `/ready` issue, provide production address when deployed, and investigate reproducible backend defects.
+- **Our backend team:** maintain `/v1`, monitor the readiness check, provide the production address when deployed, and investigate reproducible backend defects.
 - **iOS developer:** build and test the iOS app against this contract; register their iOS app in the client's Google identity project; handle its Apple/iOS configuration. That work is not part of the Android/backend delivery.
 - **Client/project manager:** forward this public folder; privately arrange fictional test access and Google iOS app registration permission when the developer is ready. No credentials should be sent in the public repository or ordinary chat.

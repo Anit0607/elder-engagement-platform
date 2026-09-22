@@ -27,7 +27,7 @@ node tools\generate_engagement_postman.mjs
 node tools\generate_api_handover.mjs --check
 ```
 
-The historical source contract defines the Week 2 foundation plus Sprint 3 notification-preference, predefined-circle, private Contributor-upload, Administrator-moderation, circle-filtered Member-feed and basic event interfaces. EE-021 events are information-only and record reminder timing; Google Meet/telephone joining and reminder delivery remain later milestones. `GET` and `POST /v1/admin/users` are explicitly marked `planned-not-callable` in the source draft and omitted from the shareable handover. The other 36 documented routes match the application; the operational `/ready` check currently returns 503 and is not an iOS integration gate. No production availability is claimed.
+The historical source contract defines the Week 2 foundation plus Sprint 3 notification-preference, predefined-circle, private Contributor-upload, Administrator-moderation, circle-filtered Member-feed and basic event interfaces. EE-021 events are information-only and record reminder timing; Google Meet/telephone joining and reminder delivery remain later milestones. `GET` and `POST /v1/admin/users` are explicitly marked `planned-not-callable` in the source draft and omitted from the shareable handover. The other 36 documented routes match the application; the operational `/ready` check passed after the EE-052 development fix but is not an iOS integration gate. No production availability is claimed.
 
 ## Version and server rules
 
