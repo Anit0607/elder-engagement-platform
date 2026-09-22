@@ -102,6 +102,25 @@ The primary post-deployment check is the manually triggered `verify-development-
 
 The verifier resolves the service origin directly from Google Cloud, requests a short-lived token scoped to that exact origin, checks its audience and refuses redirects before validating the health response.
 
+After the approved development public gateway is activated, use the separate
+`verify-development-public-gateway.yml` workflow instead. It checks the approved
+HTTPS test hostname, verifies that a Member account endpoint rejects requests
+without sign-in, and confirms that even a valid service identity cannot bypass
+the gateway through the direct Cloud Run address. The private workflow above
+applies only before gateway activation.
+
+Google Cloud organisations with domain-restricted sharing may reject an
+`allUsers` Cloud Run permission. The activated gateway instead disables the
+Cloud Run Invoker IAM check, as Google recommends for that policy, while setting
+Cloud Run ingress to internal-and-load-balancer only. Cloud Armor remains
+attached to the HTTPS load balancer; application-level Member and staff
+authentication still controls private data. Terraform enables this alternative
+only when both `activate_public_gateway` and `allow_unauthenticated` are
+explicitly true. It does not change any organisation policy. Before activation,
+confirm the managed certificate, DNS, load balancer, Cloud Armor, and current
+private backend; after activation, run the public workflow and verify direct
+service access is denied.
+
 ## Secret-value procedure
 
 The reviewed Member-login runtime is enabled separately with `enable_member_session`.

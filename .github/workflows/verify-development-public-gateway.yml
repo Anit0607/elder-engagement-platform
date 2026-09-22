@@ -1,0 +1,86 @@
+name: Verify development public gateway
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: verify-development-public-gateway
+  cancel-in-progress: false
+
+jobs:
+  verify-gateway:
+    name: Verify protected API entry and direct-address block
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: development
+
+    env:
+      SERVICE_ORIGIN: ${{ vars.GCP_CLOUD_RUN_ORIGIN }}
+      PUBLIC_ORIGIN: https://api-test.eldercaresaathi.com
+
+    steps:
+      - name: Validate exact approved addresses
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from urllib.parse import urlsplit
+
+          service = urlsplit(os.environ['SERVICE_ORIGIN'])
+          public = urlsplit(os.environ['PUBLIC_ORIGIN'])
+          if (service.scheme != 'https' or not service.hostname or
+              not service.hostname.endswith('.run.app') or
+              service.port is not None or service.username or service.password or
+              service.path not in ('', '/') or service.query or service.fragment):
+              raise SystemExit('The private Cloud Run origin is not an exact HTTPS origin')
+          if (public.scheme != 'https' or
+              public.hostname != 'api-test.eldercaresaathi.com' or
+              public.port is not None or public.username or public.password or
+              public.path not in ('', '/') or public.query or public.fragment):
+              raise SystemExit('The public API origin is not the approved test address')
+          PY
+
+      - name: Mint a short-lived token for the direct-address test
+        id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          token_format: id_token
+          id_token_audience: ${{ env.SERVICE_ORIGIN }}
+          id_token_include_email: true
+          create_credentials_file: false
+
+      - name: Verify public health, sign-in boundary and blocked direct address
+        shell: bash
+        env:
+          ID_TOKEN: ${{ steps.auth.outputs.id_token }}
+        run: |
+          set -euo pipefail
+          health_body="$RUNNER_TEMP/ee-gateway-health"
+          health_headers="$RUNNER_TEMP/ee-gateway-headers"
+          cleanup() { rm -f "$health_body" "$health_headers"; }
+          trap cleanup EXIT
+
+          health_status=$(curl --silent --show-error --proto '=https' --tlsv1.2 \
+            --max-redirs 0 --dump-header "$health_headers" --output "$health_body" \
+            --write-out '%{http_code}' "$PUBLIC_ORIGIN/health")
+          [[ "$health_status" == "200" ]]
+          [[ "$(tr -d '\r\n' < "$health_body")" == '{"status":"ok"}' ]]
+          grep --ignore-case --quiet '^cache-control:.*no-store' "$health_headers"
+
+          private_status=$(curl --silent --show-error --proto '=https' --tlsv1.2 \
+            --max-redirs 0 --output /dev/null --write-out '%{http_code}' \
+            "$PUBLIC_ORIGIN/v1/me/sessions")
+          [[ "$private_status" == "401" ]]
+
+          direct_status=$(curl --silent --show-error --proto '=https' --tlsv1.2 \
+            --max-redirs 0 --header "Authorization: Bearer $ID_TOKEN" \
+            --output /dev/null --write-out '%{http_code}' "$SERVICE_ORIGIN/health")
+          [[ "$direct_status" == "403" || "$direct_status" == "404" ]]
+          echo "Protected public gateway passed; private account access and direct service access remain blocked."
