@@ -1,17 +1,18 @@
 # Elder Engagement REST API v1
 
-Status: Sprint 3 controlled contract with verified private development through EE-021
-Tracker ownership: EE-051 for the initial contract and EE-023 for the Week 4 production-ready integration package.
+Status: Backend Release 1 development handover package published separately from the historical Sprint 3 draft.
+Tracker ownership: EE-051 for the initial contract and EE-023 for the backend REST integration handover.
 
 ## Current source of truth
 
+- `handover/backend-release-1/README.md` — **start here for the shareable iOS-developer handover**: protected test address, sign-in, known limitations and the OpenAPI/Postman/manifest files. It lists only implemented routes; this is development integration, not production acceptance.
 - `openapi/elder-engage-v1.openapi.json` — current OpenAPI 3.1.1 contract draft for the approved engagement platform.
-- `IOS_REST_API_INTEGRATION_CHECKLIST.md` — receipt, review, test, and acceptance checklist for the client's separate iOS developer.
+- `IOS_REST_API_INTEGRATION_CHECKLIST.md` — historical planning checklist; the handover README is the current delivery guide. iOS application implementation/testing is the separate developer's responsibility.
 - `BACKEND_RELEASE_1_NOTES.md` — Week 4 capability, evidence and limitation summary.
 - `BACKEND_RELEASE_1_CLIENT_TEST_GUIDE.md` — role-by-role client acceptance steps and defect-reporting format.
 - `../tools/validate_engagement_openapi.mjs` — dependency-free contract integrity check.
 - `contract-tests/` — repeatable JSON Schema compilation, example validation, and negative contract tests.
-- `postman/Elder_Engage_Sprint3_Draft.postman_collection.json` — generated safe, synthetic Sprint 3 companion collection.
+- `postman/Elder_Engage_Sprint3_Draft.postman_collection.json` — generated historical Sprint 3 companion collection; use the handover collection for integration.
 - `CHANGELOG.md` and `IOS_CONTRACT_NOTIFICATION_LOG.md` — interface history and iOS receipt evidence.
 
 Run the current check from the project root:
@@ -23,14 +24,15 @@ npm install
 npm test
 cd ..\..
 node tools\generate_engagement_postman.mjs
+node tools\generate_api_handover.mjs --check
 ```
 
-The contract defines the Week 2 foundation plus Sprint 3 notification-preference, predefined-circle, private Contributor-upload, Administrator-moderation, circle-filtered Member-feed and basic event interfaces. The private development deployment verifies the callable capabilities through basic events. EE-021 events are information-only and record reminder timing; Google Meet/telephone joining and reminder delivery remain later milestones. `GET` and `POST /v1/admin/users` are explicitly marked `planned-not-callable` in the OpenAPI file and in the Postman request descriptions. They remain unavailable until the planned Administrator workflow is implemented; the other 36 documented operations have matching application routes. No staging or production availability is claimed.
+The historical source contract defines the Week 2 foundation plus Sprint 3 notification-preference, predefined-circle, private Contributor-upload, Administrator-moderation, circle-filtered Member-feed and basic event interfaces. EE-021 events are information-only and record reminder timing; Google Meet/telephone joining and reminder delivery remain later milestones. `GET` and `POST /v1/admin/users` are explicitly marked `planned-not-callable` in the source draft and omitted from the shareable handover. The other 36 documented routes match the application; the operational `/ready` check currently returns 503 and is not an iOS integration gate. No production availability is claimed.
 
 ## Version and server rules
 
 - Operations use the `/v1` path prefix; a deployment origin does not repeat `/v1`.
-- The local origin in the draft is not a promised staging or production address.
+- The local origin in the historical draft is not the integration address. Use the protected development address in `handover/backend-release-1/README.md`.
 - Removing a field, changing its meaning, or making optional input mandatory requires `/v2` and a documented migration window unless the client and iOS developer explicitly approve a recorded exception before implementation.
 - Additive optional fields may remain in version 1 when old clients continue to work.
 - Contract, examples, automated checks, change log, and iOS notification must change in the same GitHub pull request.

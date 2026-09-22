@@ -50,7 +50,9 @@ jobs:
           node tools/validate_engagement_config.mjs
           node --test config/engagement/validation.test.mjs
       - name: Validate REST contract
-        run: node tools/validate_engagement_openapi.mjs
+        run: |
+          node tools/validate_engagement_openapi.mjs
+          node tools/generate_api_handover.mjs --check
       - uses: actions/setup-python@v7.0.0
         with:
           python-version: '3.12'

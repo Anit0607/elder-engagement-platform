@@ -29,6 +29,7 @@ $allowed = @(
     '^\.github/workflows/[^/]+\.ya?ml$',
     '^api/(BACKEND_RELEASE_1_CLIENT_TEST_GUIDE\.md|BACKEND_RELEASE_1_NOTES\.md|CHANGELOG\.md|IOS_CONTRACT_NOTIFICATION_LOG\.md|IOS_REST_API_INTEGRATION_CHECKLIST\.md|README\.md)$',
     '^api/evidence/[a-z0-9-]+\.md$',
+    '^api/handover/backend-release-1/(README\.md|openapi\.json|postman_collection\.json|manifest\.json)$',
     '^api/contract-tests/',
     '^api/openapi/elder-engage-v1\.openapi\.json$',
     '^api/postman/(Elder_Engage_(Week2|Sprint3)_Draft\.postman_collection\.json|README\.md)$',
@@ -41,7 +42,7 @@ $allowed = @(
     '^infrastructure/',
     '^services/engagement-api/',
     '^apps/android/',
-    '^tools/(check_public_repository\.ps1|generate_engagement_postman\.mjs|generate_synthetic_upload_samples\.py|validate_database_migrations\.py|validate_engagement_config\.mjs|validate_engagement_openapi\.mjs|validate_engagement_schema\.mjs)$'
+    '^tools/(check_public_repository\.ps1|generate_api_handover\.mjs|generate_engagement_postman\.mjs|generate_synthetic_upload_samples\.py|validate_database_migrations\.py|validate_engagement_config\.mjs|validate_engagement_openapi\.mjs|validate_engagement_schema\.mjs)$'
 )
 
 $forbiddenExtension = '(?i)\.(docx?|pdf|xlsx?|pptx?|apk|aab|jks|keystore|p12|pfx|pem|key|db|sqlite|sqlite3)$'
