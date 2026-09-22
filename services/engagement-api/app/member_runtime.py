@@ -42,6 +42,13 @@ from app.profile_photos import (
     PostgresProfilePhotoService,
     verify_profile_photo_schema,
 )
+from app.readiness import NotConfiguredProbe
+from app.runtime_readiness import (
+    DatabaseProbe,
+    IdentityVerifierProbe,
+    ObjectStorageProbe,
+    RateLimitStoreProbe,
+)
 from app.session_refresh import PostgresSessionRefresh
 from app.shared_session_controls import SharedSessionControls
 from app.staff_credentials import StaffAuthenticator, StaffCredentialVerifier, StaffPasswords
@@ -213,6 +220,18 @@ async def member_runtime(
                     handler.account_controls = PostgresAccountControls(
                         authorization
                     )
+                handler.readiness_probes = {
+                    "database": DatabaseProbe(pool),
+                    "rate_limit_store": RateLimitStoreProbe(
+                        pool, staff_enabled=settings.staff_session_enabled
+                    ),
+                    "object_storage": (
+                        ObjectStorageProbe(signed_storage)
+                        if signed_storage is not None
+                        else NotConfiguredProbe()
+                    ),
+                    "identity_verifier": IdentityVerifierProbe(),
+                }
                 yield handler
     finally:
         verifier.close()

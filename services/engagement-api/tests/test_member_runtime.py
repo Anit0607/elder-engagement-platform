@@ -11,6 +11,7 @@ from app.config import ConfigurationError, Settings
 from app.main import create_app
 from app.member_auth import MemberSessionService, UnconfiguredMemberSessionService
 from app.member_runtime import _session_secret, member_runtime
+from app.readiness import DependencyStatus
 
 
 def connected_settings(settings):
@@ -120,3 +121,23 @@ def test_application_lifespan_connects_and_releases_runtime(settings):
         assert client.get("/health").status_code == 200
         assert lifecycle == ["connected"]
     assert lifecycle == ["connected", "closed"]
+
+
+def test_application_lifespan_connects_live_readiness_probes(settings):
+    class ReadyProbe:
+        async def check(self):
+            return DependencyStatus(ready=True)
+
+    @asynccontextmanager
+    async def factory(_config):
+        handler = UnconfiguredMemberSessionService()
+        handler.readiness_probes = {
+            name: ReadyProbe()
+            for name in ("database", "rate_limit_store", "object_storage", "identity_verifier")
+        }
+        yield handler
+
+    app = create_app(connected_settings(settings), member_runtime_factory=factory)
+    with TestClient(app) as client:
+        assert client.get("/ready").status_code == 200
+    assert all(type(probe).__name__ == "NotConfiguredProbe" for probe in app.state.readiness_probes.values())

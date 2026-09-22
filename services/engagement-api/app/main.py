@@ -137,7 +137,7 @@ def create_app(
     event_service=None,
     account_controls=None,
     member_runtime_factory=member_runtime,
-    probe_timeout_seconds: float = 2.0,
+    probe_timeout_seconds: float = 10.0,
     max_request_body_bytes: int = 1_048_576,
 ) -> FastAPI:
     if not 0 < probe_timeout_seconds <= 30:
@@ -160,6 +160,11 @@ def create_app(
         if config.member_session_enabled and member_session_handler is None:
             async with member_runtime_factory(config) as handler:
                 application.state.member_session_handler = handler
+                runtime_probes = getattr(handler, "readiness_probes", None)
+                if isinstance(runtime_probes, Mapping):
+                    for name in REQUIRED_DEPENDENCIES:
+                        if name not in provided_probes and name in runtime_probes:
+                            readiness_probes[name] = runtime_probes[name]
                 if session_controls_handler is None:
                     application.state.session_controls = (
                         getattr(handler, "session_controls", None) or UnconfiguredSessionControls()
@@ -213,6 +218,8 @@ def create_app(
                 try:
                     yield
                 finally:
+                    for name in REQUIRED_DEPENDENCIES:
+                        readiness_probes[name] = provided_probes.get(name, NotConfiguredProbe())
                     application.state.member_session_handler = UnconfiguredMemberSessionService()
                     application.state.session_controls = UnconfiguredSessionControls()
                     if staff_session_handler is None:
