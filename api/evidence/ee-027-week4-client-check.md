@@ -3,6 +3,10 @@
 Status: **awaiting client review and explicit acceptance**. Engineering checks
 are evidence for the client; they are not the client's acceptance decision.
 
+On 24 September 2026, the Project Manager reported that all five checks on the
+local review page worked as expected, with no defect reported. This records the
+Project Manager's test result; it does not presume the client's formal sign-off.
+
 Environment: client-owned development project `amiko-508302`, protected test
 address `https://api-test.eldercaresaathi.com`, backend source revision
 `7b7f2afc040d07233b574ebf1fae678cdb56a1eb`, running image digest
