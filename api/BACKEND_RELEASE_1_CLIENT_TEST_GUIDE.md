@@ -6,6 +6,15 @@ after Codex supplies the matching build/package revision and fictional test
 identities through the agreed secure channel. Passing the gateway check is not
 the same as passing the client journeys.
 
+For the Week 4 backend milestone, EE-027 concentrates on journeys **3–7** below.
+Journeys 1, 2 and 8 were covered by the earlier Week 2 client checks and remain
+on this release-level regression list. Codex can start a loopback-only review
+page at `http://127.0.0.1:8792/` for the five Week 4 journeys. The page runs
+repeatable fictional-account checks through the protected public test address;
+it is neither a final Administrator/Contributor console nor a replacement for
+the client's explicit business acceptance. The link works only while Codex has
+started that page on the Project Manager's computer.
+
 ## Before testing
 
 The client names one acceptance owner and the Member, Contributor and
